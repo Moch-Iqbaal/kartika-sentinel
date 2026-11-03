@@ -17,6 +17,28 @@ async function login() {
   return token;
 }
 
+test("keluar menghapus sesi dan halaman terlindungi kembali ke login", async () => {
+  const token = await login();
+  const loggedOut = await fetch(`${base}/api/auth/logout`, {
+    method: "POST",
+    headers: { cookie: token, origin: base },
+    redirect: "manual",
+  });
+  assert.equal(loggedOut.status, 303);
+  assert.match(loggedOut.headers.get("location") || "", /\/login$/);
+  assert.match(loggedOut.headers.get("cache-control") || "", /no-store/);
+  const cleared = (loggedOut.headers.getSetCookie?.() ?? []).find((item) => item.startsWith("ks_session="));
+  assert.ok(cleared, "set-cookie ks_session hilang");
+  assert.match(cleared, /Max-Age=0/);
+  assert.match(cleared, /Path=\//);
+  const home = await fetch(`${base}/`, { redirect: "manual" });
+  assert.equal(home.status, 307);
+  assert.match(home.headers.get("location") || "", /\/login$/);
+  assert.match(home.headers.get("cache-control") || "", /no-store/);
+  const loginPage = await fetch(`${base}/login`, { redirect: "manual" });
+  assert.equal(loginPage.status, 200);
+});
+
 test("tanpa sesi, analisis ditolak", async () => {
   const response = await fetch(`${base}/api/analisis`, {
     method: "POST",

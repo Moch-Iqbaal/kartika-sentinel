@@ -93,3 +93,44 @@ export function sessionCookieOptions(): {
     maxAge: MAX_AGE_SECONDS,
   };
 }
+
+/** Cookie Supabase atau sesi aplikasi yang harus dihapus saat keluar. */
+export function shouldExpireCookie(name: string): boolean {
+  return name === SESSION_COOKIE || name.startsWith("sb-") || name.includes("auth-token");
+}
+
+/**
+ * Atribut penghapus harus sama dengan saat cookie dipasang (path, secure, httpOnly).
+ * Sesi aplikasi memakai httpOnly + secure di production.
+ * Cookie Supabase dari @supabase/ssr default-nya bukan httpOnly dan bukan secure,
+ * jadi penghapusnya ikut atribut itu. Max-Age 0 saja tidak cukup di beberapa runtime;
+ * Expires masa lalu ikut dikirim.
+ */
+export function cookiesToExpire(names: string[]): Array<{
+  name: string;
+  value: "";
+  httpOnly: boolean;
+  sameSite: "lax";
+  secure: boolean;
+  path: "/";
+  maxAge: 0;
+  expires: Date;
+}> {
+  const app = sessionCookieOptions();
+  const unique = [...new Set(names.filter(shouldExpireCookie))];
+  if (!unique.includes(SESSION_COOKIE)) unique.push(SESSION_COOKIE);
+  const expires = new Date(0);
+  return unique.map((name) => {
+    const appSession = name === SESSION_COOKIE;
+    return {
+      name,
+      value: "",
+      httpOnly: appSession ? app.httpOnly : false,
+      sameSite: "lax",
+      secure: appSession ? app.secure : false,
+      path: "/",
+      maxAge: 0,
+      expires,
+    };
+  });
+}
