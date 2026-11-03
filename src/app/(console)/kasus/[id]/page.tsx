@@ -49,6 +49,15 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
         </Badge>
       </div>
       <Disclaimer mode={modelModeLabel(detail.modelStatus)} />
+      {detail.assessment.caution?.warning ? (
+        <Card className="border-warning/50 p-4 text-sm">
+          <p className="font-medium text-warning">{detail.assessment.caution.warning}</p>
+          <p className="mt-1">
+            Tubuh artikel yang terbaca {detail.assessment.caution.bodyChars} karakter, di bawah ambang 200.
+            Skor utama ditarik mendekati 50% dari keluaran mentah {percent(detail.assessment.caution.rawProbability)} karena teks sependek itu tidak cukup untuk menilai hoaks.
+          </p>
+        </Card>
+      ) : null}
       {detail.modelStatus === "ringan" || detail.modelStatus === "dilewati" ? (
         <Card className="p-4 text-sm">mode ringan. Skor ini dari model n-gram dan heuristik, tanpa panggilan IndoBERT.</Card>
       ) : null}
@@ -73,8 +82,8 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
       <Card className="space-y-2 p-4">
         <h2 className="font-medium">Mesin skor</h2>
         <p className="text-sm">Versi: {detail.modelVersion}</p>
-        {detail.assessment.indobert ? <p className="text-sm">IndoBERT on-premise ({detail.assessment.indobert.label}): {percent(detail.assessment.indobert.probability)}</p> : <p className="text-sm text-muted">IndoBERT on-premise tidak dipakai pada skor ini. Dalam mode ringan tombol skor ulang tetap memakai n-gram sampai LOCAL_HOAX_URL diisi.</p>}
-        {detail.assessment.linear ? <p className="text-sm">Model linier: {percent(detail.assessment.linear.probability)}</p> : null}
+        {detail.assessment.indobert ? <p className="text-sm">{detail.assessment.caution ? "IndoBERT on-premise mentah" : "IndoBERT on-premise"} ({detail.assessment.indobert.label}): {percent(detail.assessment.indobert.probability)}</p> : <p className="text-sm text-muted">IndoBERT on-premise tidak dipakai pada skor ini. Dalam mode ringan tombol skor ulang tetap memakai n-gram sampai LOCAL_HOAX_URL diisi.</p>}
+        {detail.assessment.linear ? <p className="text-sm">{detail.assessment.caution ? "Model linier mentah" : "Model linier"}: {percent(detail.assessment.linear.probability)}</p> : null}
         <ul className="list-disc pl-5 text-sm text-muted">
           {(detail.assessment.heuristic?.reasons ?? []).map((reason: string) => <li key={reason}>{reason}</li>)}
         </ul>

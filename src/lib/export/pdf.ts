@@ -52,6 +52,13 @@ export async function casePdf(detail: CaseDetail): Promise<Uint8Array> {
   draw("Skor", { bold: true, size: 12 });
   draw(`Risiko ${percent(detail.riskScore)} · pita ${bandLabel(detail.band)}`);
   draw(`Hoaks ${percent(detail.hoaxScore)} · mesin ${engineLabel(detail.engine)} · status model ${detail.modelStatus}`);
+  if (detail.assessment.caution?.warning) {
+    draw(detail.assessment.caution.warning, { bold: true, color: [0.55, 0.32, 0.05] });
+    draw(
+      `Tubuh artikel ${detail.assessment.caution.bodyChars} karakter. Keluaran mentah ${percent(detail.assessment.caution.rawProbability)} diturunkan.`,
+      { size: 9 },
+    );
+  }
   draw(`Sensitivitas ${percent(detail.sensitivity)} · viralitas ${percent(detail.virality)}`);
   draw(`Indikasi AI ${detail.ai.confidence} (${percent(detail.ai.score)}). ${detail.ai.disclaimer}`, { size: 9 });
   draw(`Peringatan: ${alertStatusLabel(detail.alertStatus)}${detail.caseStatus ? ` · Kasus: ${caseStatusLabel(detail.caseStatus)}` : ""}`);

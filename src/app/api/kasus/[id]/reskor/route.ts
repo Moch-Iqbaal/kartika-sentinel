@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { applyShortTextCaution } from "@/lib/analyze/apply-short-text";
 import { scoreContent } from "@/lib/analyze/score";
 import { isSession, requireSession } from "@/lib/auth/guard";
 import { corpusFromDb, getCase, rescoreAlert } from "@/lib/db";
@@ -22,7 +23,10 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const detail = await getCase(id);
   if (!detail) return NextResponse.json({ error: "Peringatan tidak ditemukan." }, { status: 404 });
   try {
-    const card = await scoreContent(detail.text, detail.virality, await corpusFromDb(), true);
+    const card = applyShortTextCaution(
+      await scoreContent(detail.text, detail.virality, await corpusFromDb(), true),
+      detail.assessment.caution?.bodyChars,
+    );
     const external = await searchGoogleFactChecks(detail.text);
     await rescoreAlert(session, id, card, external);
     return NextResponse.json({ ok: true, engine: card.assessment.engine });

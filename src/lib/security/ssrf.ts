@@ -23,8 +23,80 @@ const ALLOWED_TYPES = [
   "text/xml",
 ];
 
-const MAX_BYTES = 200_000;
+/**
+ * Batas unduhan HTML/teks. Dulu 200 KB, dan itu menolak halaman berita yang sah:
+ * Detik sekitar 250 KB dan Liputan6 sekitar 300 KB, dengan pesan
+ * "Respons melebihi batas ukuran."
+ * 4 MB cukup untuk halaman berat, tetapi pembacaan berhenti di batas ini
+ * dan awalan yang sudah diterima tetap dipakai. Respons tidak ditolak hanya
+ * karena panjang. Penjaga SSRF dan tipe konten tidak dilonggarkan.
+ */
+export const MAX_TEXT_BYTES = 4_000_000;
 const MAX_REDIRECTS = 2;
+
+function concatBytes(chunks: Uint8Array[], total: number): Uint8Array {
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
+}
+
+/**
+ * Baca aliran sampai `maxBytes`. Sisanya dibatalkan, bukan dibuang sebagai galat.
+ * Potongan terakhir yang melewati batas dipotong supaya hasilnya tepat `maxBytes`.
+ */
+export async function readAtMost(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  maxBytes: number,
+): Promise<{ bytes: Uint8Array; truncated: boolean }> {
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  while (total < maxBytes) {
+    const step = await reader.read();
+    if (step.done) return { bytes: concatBytes(chunks, total), truncated: false };
+    const room = maxBytes - total;
+    if (step.value.byteLength > room) {
+      chunks.push(step.value.subarray(0, room));
+      await reader.cancel().catch(() => undefined);
+      return { bytes: concatBytes(chunks, maxBytes), truncated: true };
+    }
+    chunks.push(step.value);
+    total += step.value.byteLength;
+  }
+  const extra = await reader.read();
+  if (!extra.done) {
+    await reader.cancel().catch(() => undefined);
+    return { bytes: concatBytes(chunks, total), truncated: true };
+  }
+  return { bytes: concatBytes(chunks, total), truncated: false };
+}
+
+/**
+ * Periksa tipe konten, lalu baca paling banyak `maxBytes`.
+ * `charset` pada header diabaikan. Tipe di luar daftar tetap ditolak
+ * sebelum badan dibaca.
+ */
+export async function readLimitedText(
+  response: Response,
+  maxBytes = MAX_TEXT_BYTES,
+): Promise<{ body: string; contentType: string; truncated: boolean }> {
+  const contentType = (response.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+  if (!ALLOWED_TYPES.includes(contentType)) {
+    await response.body?.cancel().catch(() => undefined);
+    throw new UnsafeUrlError("Tipe konten tidak diizinkan.");
+  }
+  const reader = response.body?.getReader();
+  if (!reader) throw new UnsafeUrlError("Badan respons kosong.");
+  const { bytes, truncated } = await readAtMost(reader, maxBytes);
+  return {
+    body: new TextDecoder("utf-8", { fatal: false }).decode(bytes),
+    contentType,
+    truncated,
+  };
+}
 
 export class UnsafeUrlError extends Error {
   constructor(message: string) {
@@ -136,34 +208,11 @@ export async function safeFetchText(input: string): Promise<{
     if (!response.ok) {
       throw new UnsafeUrlError(`Sumber menjawab HTTP ${response.status}.`);
     }
-    const contentType = (response.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
-    if (!ALLOWED_TYPES.includes(contentType)) {
-      throw new UnsafeUrlError("Tipe konten tidak diizinkan.");
-    }
-    const reader = response.body?.getReader();
-    if (!reader) throw new UnsafeUrlError("Badan respons kosong.");
-    const chunks: Uint8Array[] = [];
-    let total = 0;
-    while (true) {
-      const step = await reader.read();
-      if (step.done) break;
-      total += step.value.byteLength;
-      if (total > MAX_BYTES) {
-        await reader.cancel();
-        throw new UnsafeUrlError("Respons melebihi batas ukuran.");
-      }
-      chunks.push(step.value);
-    }
-    const bytes = new Uint8Array(total);
-    let offset = 0;
-    for (const chunk of chunks) {
-      bytes.set(chunk, offset);
-      offset += chunk.byteLength;
-    }
+    const limited = await readLimitedText(response);
     return {
       finalUrl: url.toString(),
-      contentType,
-      body: new TextDecoder("utf-8", { fatal: false }).decode(bytes),
+      contentType: limited.contentType,
+      body: limited.body,
     };
   }
   throw new UnsafeUrlError("Terlalu banyak redirect.");

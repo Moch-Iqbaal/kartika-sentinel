@@ -14,6 +14,15 @@ export type HoaxAssessment = {
   heuristic: HeuristicScore;
   ai: AiTextFlag;
   modelStatus: ModelAvailability;
+  /**
+   * Terisi hanya bila tubuh URL lebih pendek dari ambang.
+   * `probability` pada objek ini sudah diturunkan. `rawProbability` adalah keluaran mesin.
+   */
+  caution?: {
+    warning: string;
+    bodyChars: number;
+    rawProbability: number;
+  } | null;
 };
 
 /**

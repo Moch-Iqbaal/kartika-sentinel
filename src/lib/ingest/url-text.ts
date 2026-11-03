@@ -1,3 +1,4 @@
+import { extractArticle, scoredPageText } from "@/lib/ingest/article";
 import { redactSensitive } from "@/lib/security/redact";
 import { safeFetchText } from "@/lib/security/ssrf";
 import { sanitizeUntrusted } from "@/lib/security/untrusted";
@@ -7,6 +8,12 @@ export type ExtractedPage = {
   finalUrl: string;
   authorHandle: string | null;
   title: string | null;
+  /**
+   * Panjang tubuh artikel, tanpa judul.
+   * Di bawah 200 karakter, pemanggil wajib menurunkan keyakinan skor.
+   * Untuk YouTube dan JSON tidak ada tubuh terpisah, jadi panjang teks yang dinilai dipakai.
+   */
+  bodyChars: number;
 };
 
 function youtubeId(url: URL): string | null {
@@ -18,26 +25,6 @@ function youtubeId(url: URL): string | null {
     if (parts[0] === "shorts" || parts[0] === "embed") return parts[1] || null;
   }
   return null;
-}
-
-function htmlText(html: string): { title: string | null; description: string | null } {
-  const title = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? null;
-  const description =
-    html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']*)["']/i)?.[1] ??
-    html.match(/<meta[^>]+content=["']([^"']*)["'][^>]+property=["']og:description["']/i)?.[1] ??
-    html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)["']/i)?.[1] ??
-    null;
-  const clean = (value: string | null) =>
-    value
-      ?.replace(/<[^>]+>/g, " ")
-      .replace(/&amp;/g, "&")
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/\s+/g, " ")
-      .trim() || null;
-  return { title: clean(title), description: clean(description) };
 }
 
 export async function textFromUrl(input: string): Promise<ExtractedPage> {
@@ -63,21 +50,28 @@ export async function textFromUrl(input: string): Promise<ExtractedPage> {
       finalUrl: watch,
       authorHandle: payload.author_name?.trim() || null,
       title,
+      bodyChars: text.length,
     };
   }
 
   const response = await safeFetchText(input);
   if (response.contentType.includes("json")) {
+    const text = sanitizeUntrusted(redactSensitive(response.body.slice(0, 4000)));
     return {
-      text: sanitizeUntrusted(redactSensitive(response.body.slice(0, 4000))),
+      text,
       finalUrl: response.finalUrl,
       authorHandle: null,
       title: null,
+      bodyChars: text.length,
     };
   }
-  const extracted = htmlText(response.body);
-  const text = sanitizeUntrusted(
-    redactSensitive([extracted.title, extracted.description].filter(Boolean).join("\n")),
-  );
-  return { text, finalUrl: response.finalUrl, authorHandle: null, title: extracted.title };
+  const extracted = extractArticle(response.body);
+  const text = sanitizeUntrusted(redactSensitive(scoredPageText(extracted.title, extracted.body)));
+  return {
+    text,
+    finalUrl: response.finalUrl,
+    authorHandle: null,
+    title: extracted.title,
+    bodyChars: extracted.body.length,
+  };
 }

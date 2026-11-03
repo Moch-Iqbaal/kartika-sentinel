@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { applyShortTextCaution } from "@/lib/analyze/apply-short-text";
 import { scoreContent } from "@/lib/analyze/score";
 import { isSession, requireSession } from "@/lib/auth/guard";
 import { corpusFromDb, ensureReady, saveScoredAlert } from "@/lib/db";
@@ -39,6 +40,7 @@ export async function POST(request: Request) {
     let raw = "";
     let url: string | null = null;
     let author: string | null = null;
+    let bodyChars: number | null = null;
     let image: Awaited<ReturnType<typeof inspectImage>> | null = null;
     if (body.kind === "gambar") {
       const target = (body.url ?? "").trim();
@@ -55,6 +57,7 @@ export async function POST(request: Request) {
       raw = extracted.text;
       url = extracted.finalUrl;
       author = extracted.authorHandle;
+      bodyChars = extracted.bodyChars;
     } else {
       raw = body.text ?? "";
       if (raw.trim().length < 12) return NextResponse.json({ error: "Teks terlalu pendek." }, { status: 400 });
@@ -62,7 +65,7 @@ export async function POST(request: Request) {
     }
     if (!raw.trim()) return NextResponse.json({ error: "Tidak ada teks yang bisa dinilai." }, { status: 400 });
     const corpus = await corpusFromDb();
-    const card = await scoreContent(raw, 0, corpus, true);
+    const card = applyShortTextCaution(await scoreContent(raw, 0, corpus, true), bodyChars);
     card.assessment.ai = applyImageReport(card.assessment.ai, image);
     const external = await searchGoogleFactChecks(card.clean);
     const id = await saveScoredAlert({
