@@ -13,8 +13,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Kartika Sentinel",
-  description: "Peringatan dini dan triase narasi disinformasi yang menyasar TNI. Rekomendasi untuk analis, bukan putusan otomatis.",
+  metadataBase: new URL("https://kartika-sentinel.vercel.app"),
+  title: "Kartika Sentinel — Detektor hoaks berita Indonesia",
+  description: "Detektor hoaks berita Indonesia untuk personel TNI. Cek teks, tautan, atau video: hasilnya Kemungkinan HOAKS atau Kemungkinan FAKTA. Rekomendasi untuk analis, bukan putusan otomatis.",
+  openGraph: {
+    title: "Kartika Sentinel",
+    description: "Detektor hoaks berita Indonesia untuk personel TNI.",
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "Kartika Sentinel" }],
+  },
+  icons: { icon: "/favicon.svg" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

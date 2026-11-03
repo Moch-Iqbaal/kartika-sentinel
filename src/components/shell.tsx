@@ -22,7 +22,7 @@ export async function Shell({ children }: { children: React.ReactNode }) {
           </span>
           <div>
             <p className="font-semibold tracking-tight">Kartika Sentinel</p>
-            <p className="text-xs text-muted">Siber Sosial · TNI</p>
+            <p className="text-xs text-muted">Detektor hoaks berita Indonesia</p>
           </div>
         </div>
         <nav className="flex gap-1 overflow-x-auto px-3 pb-3 md:block md:px-3 md:pb-6">
