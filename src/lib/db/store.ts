@@ -7,7 +7,8 @@ import { scoreContentSync, type ScoreCard } from "@/lib/analyze/score";
 import { DEMO_ADMIN_ID, DEMO_ANALYST_ID, demoAccounts } from "@/lib/auth/demo-users";
 import type { Session } from "@/lib/auth/token";
 import type { ExternalFact, FactCheck, FactMatch } from "@/lib/factcheck/types";
-import { recommendation } from "@/lib/format";
+import { assessmentIsUnscored } from "@/lib/analyze/unscored";
+import { cardRecommendation, recommendation } from "@/lib/format";
 import type { HoaxAssessment } from "@/lib/model/classify";
 import type { AiTextFlag } from "@/lib/model/ai-text";
 import type { TopicHit } from "@/lib/ontology/topics";
@@ -275,7 +276,7 @@ function insertCard(
     topics: input.card.topics,
     assessment: input.card.assessment,
     external: input.external,
-    recommendation: recommendation(input.card.band),
+    recommendation: cardRecommendation(input.card.band, input.card.assessment.unscored?.nextStep),
   };
   opened.exec("begin");
   try {
@@ -335,6 +336,15 @@ function insertCard(
   return alertId;
 }
 
+function rationaleIsUnscored(raw: string): boolean {
+  try {
+    const parsed = JSON.parse(raw) as { assessment?: { unscored?: { reason?: string } } };
+    return assessmentIsUnscored(parsed.assessment);
+  } catch {
+    return false;
+  }
+}
+
 function mapList(row: Row): AlertListItem {
   const riskScore = num(row.risk_score);
   return {
@@ -344,6 +354,7 @@ function mapList(row: Row): AlertListItem {
     status: text(row.status) as AlertStatus,
     virality: num(row.virality),
     hoaxScore: num(row.hoax_score),
+    unscored: rationaleIsUnscored(text(row.rationale)),
     topicTags: JSON.parse(text(row.topic_tags) || "[]") as string[],
     aiFlag: num(row.ai_flag) === 1,
     modelVersion: text(row.model_version),
@@ -358,7 +369,7 @@ function mapList(row: Row): AlertListItem {
 export function listAlerts(): AlertListItem[] {
   const rows = db().prepare(`
     select a.id, a.risk_score, a.status, a.virality, an.hoax_score, an.topic_tags, an.ai_flag,
-           an.model_version, an.input_text, p.platform, p.author_handle_hash, p.posted_at, p.demo
+           an.model_version, an.input_text, an.rationale, p.platform, p.author_handle_hash, p.posted_at, p.demo
     from alerts a
     join analyses an on an.id = a.analysis_id
     left join posts p on p.id = an.post_id
@@ -556,7 +567,7 @@ export function rescoreAlert(session: Session, alertId: string, card: ScoreCard,
     topics: card.topics,
     assessment: card.assessment,
     external,
-    recommendation: recommendation(card.band),
+    recommendation: cardRecommendation(card.band, card.assessment.unscored?.nextStep),
   };
   db().exec("begin");
   try {

@@ -87,6 +87,7 @@ export function glossaryGroups(): GlossaryGroup[] {
         term("analisis-menu", "Analisis", "Menu untuk menempel teks, URL, atau tautan gambar."),
         term("ontologi-menu", "Ontologi", "Menu ke daftar topik narasi dan bobotnya."),
         term("audit-menu", "Audit", "Menu ke log perubahan. Hanya admin yang bisa membukanya."),
+        term("evaluasi-menu", "Evaluasi", "Menu ke hasil uji mesin pada data yang tidak ikut pelatihan."),
         term("panduan-menu", "Panduan Istilah", "Halaman ini. Semua kata di aplikasi dijelaskan di sini, per halaman."),
         term("peran", "admin / analis", "Admin boleh audit dan retensi. Analis mengubah berkas yang ditugaskan kepadanya."),
         term("keluar", "Keluar", "Menutup sesi dan kembali ke halaman masuk."),
@@ -193,8 +194,14 @@ export function glossaryGroups(): GlossaryGroup[] {
         term(
           "gambar-tombol",
           "Gambar",
-          "Mode tautan gambar. Yang dibaca metadata, bukan pikselnya.",
-          "Hanya JPEG, PNG, atau WebP, maksimal 2 MB.",
+          "Mode tautan gambar. Tanpa keterangan yang cukup, hasilnya Belum bisa dinilai.",
+          "JPEG, PNG, atau WebP, maksimal 2 MB. OCR tidak dipasang. Metadata tidak dinilai sebagai klaim.",
+        ),
+        term(
+          "keterangan-gambar",
+          "Keterangan gambar",
+          "Teks yang ditempel analis untuk gambar. Hanya teks ini yang boleh dinilai.",
+          "Minimal 12 karakter. Di bawah itu, berkas tetap tersimpan tanpa skor hoaks.",
         ),
         term(
           "ssrf",
@@ -213,7 +220,25 @@ export function glossaryGroups(): GlossaryGroup[] {
       entries: [
         term("kembali", "Kembali ke dasbor", "Tautan kembali ke antrean, tanpa mengubah status."),
         term("masukan-analis", "Masukan analis", "Berkas ini dari teks, URL, atau gambar yang ditempel analis, bukan data demo."),
-        term("berkas-peringatan", "Berkas peringatan", "Satu halaman untuk teks, skor, topik, padanan, dan tindakan analis."),
+        term("berkas-peringatan", "Berkas peringatan", "Satu halaman untuk bukti, skor, topik, dan tindakan analis."),
+        term(
+          "bukti-utama",
+          "Bukti utama",
+          "Padanan cek fakta dan tautan sumber. Ini yang dibaca lebih dulu, skor bukan bukti.",
+        ),
+        term(
+          "belum-dinilai",
+          "Belum bisa dinilai",
+          "Tidak ada teks isi, jadi skor hoaks tidak dihitung.",
+          "Gambar tanpa keterangan masuk sini. Angka 0 di basis data hanya pengisi kolom, bukan vonis.",
+        ),
+        term(
+          "keyakinan-hasil",
+          "Keyakinan hasil",
+          "Tinggi, Sedang, atau Rendah, dari panjang teks, kesepakatan mesin, dan ada tidaknya padanan.",
+          `Tinggi butuh teks minimal ${MIN_RELIABLE_CHARS} karakter, selisih IndoBERT–linier di bawah ${decimal(ENGINE_DIVERGENCE)}, dan minimal satu padanan. Teks pendek atau selisih pada ambang memaksa Rendah.`,
+          "Seberapa layak skor ini dipercaya. Bukan keyakinan isyarat AI.",
+        ),
         term(
           "skor-utama",
           "Skor utama",
@@ -319,6 +344,19 @@ export function glossaryGroups(): GlossaryGroup[] {
           "Tubuh artikel terlalu pendek, jadi skornya jangan dipercaya mentah-mentah.",
           `Di bawah ${MIN_RELIABLE_CHARS} karakter. Jarak skor ke 0,5 dikalikan ${decimal(SHORT_TEXT_KEEP)}.`,
         ),
+      ],
+    },
+    {
+      id: "evaluasi",
+      title: "Evaluasi",
+      entries: [
+        term("evaluasi-mesin", "Evaluasi mesin", "Hasil uji pada tweet yang tidak ikut melatih model linier."),
+        term("akurasi", "Akurasi", "Bagian contoh yang labelnya cocok dengan tebakan mesin."),
+        term("presisi-hoaks", "Presisi hoaks", "Dari yang dibilang hoaks, berapa yang labelnya memang hoaks."),
+        term("recall-hoaks", "Recall hoaks", "Dari yang labelnya hoaks, berapa yang ketahuan mesin."),
+        term("f1-hoaks", "F1 hoaks", "Gabungan presisi dan recall untuk kelas hoaks."),
+        term("matriks-kekeliruan", "Matriks kekeliruan", "Empat hitungan: benar hoaks, salah hoaks, terlewat, dan benar valid."),
+        term("positif-palsu", "Contoh positif palsu", "Teks berlabel valid yang mesin sebut hoaks. Kutipannya dari korpus, bukan karangan."),
       ],
     },
     {

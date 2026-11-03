@@ -1,4 +1,5 @@
 import "server-only";
+import { assertScorableText } from "@/lib/analyze/content-guard";
 import { embedText } from "@/lib/embed/hashing";
 import { MATCH_MIN_SIMILARITY, matchFactChecks } from "@/lib/factcheck/match";
 import type { FactCheck, FactMatch } from "@/lib/factcheck/types";
@@ -25,6 +26,7 @@ export type ScoreCard = {
 
 /** Skor batch tanpa IndoBERT, supaya umpan demo tetap deterministik dan cepat. */
 export function scoreContentSync(raw: string, virality: number, corpus: FactCheck[]): ScoreCard {
+  assertScorableText(raw);
   const clean = redactSensitive(sanitizeUntrusted(raw));
   const heuristic = heuristicHoax(clean);
   const linear = linearHoaxProbability(clean);
@@ -76,6 +78,7 @@ export async function scoreContent(
   corpus: FactCheck[],
   allowIndobert: boolean,
 ): Promise<ScoreCard> {
+  assertScorableText(raw);
   const clean = redactSensitive(sanitizeUntrusted(raw));
   const assessment = await assessHoax(clean, { allowIndobert });
   return finish(clean, assessment, virality, corpus);

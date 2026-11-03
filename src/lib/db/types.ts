@@ -15,6 +15,7 @@ export type AlertListItem = {
   status: AlertStatus;
   virality: number;
   hoaxScore: number;
+  unscored: boolean;
   topicTags: string[];
   aiFlag: boolean;
   modelVersion: string;

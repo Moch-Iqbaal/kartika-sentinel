@@ -25,6 +25,14 @@ export type HoaxAssessment = {
     bodyChars: number;
     rawProbability: number;
   } | null;
+  /**
+   * Terisi bila tidak ada teks isi yang boleh dinilai.
+   * `probability` lalu hanya pengisi kolom, bukan skor hoaks.
+   */
+  unscored?: {
+    reason: string;
+    nextStep: string;
+  } | null;
 };
 
 /**

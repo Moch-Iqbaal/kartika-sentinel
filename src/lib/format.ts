@@ -59,6 +59,11 @@ export function modelModeLabel(status: string): string {
   return "mode ringan";
 }
 
+export function cardRecommendation(band: RiskBand, nextStep?: string | null): string {
+  if (nextStep) return nextStep;
+  return recommendation(band);
+}
+
 export function recommendation(band: RiskBand): string {
   if (band === "kritis") {
     return "Prioritaskan peninjauan manusia. Jangan terbitkan sanggahan sebelum klaim dicocokkan ke sumber primer.";

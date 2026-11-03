@@ -17,6 +17,9 @@ function input(patch: Partial<RingkasanInput> = {}): RingkasanInput {
     aiFlagged: false,
     aiConfidence: "rendah",
     shortText: false,
+    textChars: 400,
+    unscored: false,
+    unscoredReason: "",
     topicLabels: [],
     matches: [],
     externalCount: 0,
@@ -102,9 +105,11 @@ test("mode ringan tanpa IndoBERT tetap memakai skor utama", () => {
   const card = input({ hoaxScore: 0.2, linear: 0.2, indobert: null });
   const text = buildRingkasan(card);
   assert.equal(text.headline, "Kemungkinan BUKAN hoaks");
+  const joined = text.sentences.join(" ");
   assert.match(text.sentences[0], /IndoBERT tidak dipakai/);
-  assert.match(text.sentences[1], /tidak ada data sebaran/);
-  assert.match(text.sentences[1], /isyarat media AI tidak menonjol/);
+  assert.match(joined, /tidak ada data sebaran/);
+  assert.match(joined, /isyarat media AI tidak menonjol/);
+  assert.match(joined, /Keyakinan hasil Sedang/);
 });
 
 test("ringkasan menyebut isyarat, topik, padanan, dan bahwa analis yang memutuskan", () => {
@@ -128,7 +133,33 @@ test("ringkasan menyebut isyarat, topik, padanan, dan bahwa analis yang memutusk
   assert.match(joined, /isyarat media AI/);
   assert.match(joined, /Prioritaskan peninjauan manusia/);
   assert.match(joined, /keputusan akhir ada pada analis/);
-  assert.ok(text.sentences.length >= 2 && text.sentences.length <= 4);
+  assert.match(joined, /Keyakinan hasil/);
+  assert.ok(text.sentences.length >= 3 && text.sentences.length <= 5);
+});
+
+test("berkas tanpa teks isi tidak punya skor hoaks", () => {
+  const text = buildRingkasan(input({
+    unscored: true,
+    hoaxScore: 0,
+    unscoredReason: "Belum bisa dinilai. Gambar tidak punya teks yang bisa diekstrak.",
+  }));
+  assert.equal(decideVerdict(input({ unscored: true, hoaxScore: 0.99 })), "unscored");
+  assert.equal(text.headline, "Belum bisa dinilai");
+  assert.doesNotMatch(text.sentences.join(" "), /Skor utama/);
+  assert.match(text.sentences.join(" "), /keputusan akhir ada pada analis/);
+});
+
+test("keyakinan tinggi masuk ringkasan bila mesin sejalan dan ada padanan", () => {
+  const text = buildRingkasan(input({
+    hoaxScore: 0.8,
+    engine: "indobert-local",
+    indobert: 0.8,
+    linear: 0.8,
+    heuristic: 0.8,
+    textChars: 400,
+    matches: [{ verdict: "hoax", similarity: 0.5 }],
+  }));
+  assert.match(text.sentences.join(" "), /Keyakinan hasil Tinggi/);
 });
 
 test("hasil sama bila masukan sama", () => {

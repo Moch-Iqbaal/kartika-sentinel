@@ -1,0 +1,69 @@
+{
+  "generatedAt": "2026-11-03T05:52:42.112Z",
+  "dataset": {
+    "name": "9uz/IDNHoaxCorpus",
+    "url": "https://github.com/9uz/IDNHoaxCorpus",
+    "file": "dataset/datasetUMPOHoax.csv",
+    "sha256": "bcc77bb51c1f662912654328fa6fc357c83dfc98d83ed6bd5007b211f201f651",
+    "license": "MIT",
+    "copyright": "Copyright (c) 2024 Gus nanang syaifuddiin",
+    "collectedYear": "2020",
+    "collectedBy": "Universitas Muhammadiyah Ponorogo",
+    "rowsInFile": 4617,
+    "labeledUsed": 3756,
+    "excludedUnlabeledOrShort": 861
+  },
+  "split": {
+    "seed": 2026,
+    "trainFraction": 0.8,
+    "trainN": 3004,
+    "holdoutN": 752,
+    "evaluatedN": 728,
+    "droppedTrainText": 24,
+    "indexOverlap": 0
+  },
+  "linear": {
+    "ran": true,
+    "note": "Model linear-ngram-v1 yang sudah ada di repo, tidak dilatih ulang. Ambang 0.5. Kelas positif adalah hoaks. Hold-out seed 2026 setelah teks yang juga ada di potongan latih dibuang.",
+    "threshold": 0.5,
+    "positiveClass": "hoax",
+    "n": 728,
+    "confusion": {
+      "tp": 451,
+      "fp": 57,
+      "fn": 133,
+      "tn": 87
+    },
+    "falsePositives": [
+      {
+        "excerpt": "Tak hanya daun pepaya, buah nanas juga dapat digunakan untuk membuat daging menjadi lebih empuk. #iNewsIntermezzo",
+        "probability": 0.938235,
+        "label": "valid"
+      },
+      {
+        "excerpt": "Hati\" mitosnya foto bertiga yang tengah mati duluan",
+        "probability": 0.932722,
+        "label": "valid"
+      },
+      {
+        "excerpt": "Nabi ibrahim as ketika di bakar Ada semut yg membawa air Untuk memadamkan api dan cicak yg meniup untuk menjadikan api semakin besar. Kita tau kedua hewan tidak akan memberi manfaa",
+        "probability": 0.929415,
+        "label": "valid"
+      },
+      {
+        "excerpt": "gua minum sirop obat batuk malah ngantuk, terus batuknya malah jadi tambah tambah Wajah tidak senang",
+        "probability": 0.929005,
+        "label": "valid"
+      },
+      {
+        "excerpt": "Latihan seperti bermain basket dan berenang bisa membantu menambah tinggi badan lho ! https://goo.gl/6dZxLE",
+        "probability": 0.920818,
+        "label": "valid"
+      }
+    ]
+  },
+  "indobert": {
+    "ran": false,
+    "note": "IndoBERT tidak dijalankan. LOCAL_HOAX_URL kosong pada mesin ini, dan bobot model tidak dimuat di CI. Angka di laporan ini hanya model linier. Isi LOCAL_HOAX_URL lalu jalankan npm run eval untuk menambah matriks IndoBERT pada hold-out yang sama."
+  }
+}

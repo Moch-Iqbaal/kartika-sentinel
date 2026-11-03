@@ -1,4 +1,5 @@
 import type { CaseDetail } from "../db/types";
+import { confidenceSentence, decideConfidence } from "./confidence";
 import { engineLabel, percent, recommendation, verdictLabel } from "../format";
 import { ENGINE_DIVERGENCE } from "../model/divergence";
 import { BAND_KRITIS_MIN, BAND_PRIORITAS_MIN, type RiskBand } from "../scoring/risk";
@@ -10,12 +11,13 @@ import { BAND_KRITIS_MIN, BAND_PRIORITAS_MIN, type RiskBand } from "../scoring/r
  * Selisih mesin memakai ENGINE_DIVERGENCE (0,35), ambang yang sudah dipakai berkas.
  */
 
-export type SummaryVerdict = "hoax" | "not-hoax" | "uncertain";
+export type SummaryVerdict = "hoax" | "not-hoax" | "uncertain" | "unscored";
 
 export const VERDICT_LINE: Record<SummaryVerdict, string> = {
   hoax: "Kemungkinan HOAKS",
   "not-hoax": "Kemungkinan BUKAN hoaks",
   uncertain: "Belum bisa dipastikan",
+  unscored: "Belum bisa dinilai",
 };
 
 export type RingkasanInput = {
@@ -30,6 +32,9 @@ export type RingkasanInput = {
   aiFlagged: boolean;
   aiConfidence: string;
   shortText: boolean;
+  textChars: number;
+  unscored: boolean;
+  unscoredReason: string;
   topicLabels: string[];
   matches: { verdict: string; similarity: number }[];
   externalCount: number;
@@ -76,6 +81,7 @@ function contradicts(base: SummaryVerdict, verdict: string): boolean {
  * Urutan: skor tidak valid, teks pendek, selisih mesin, padanan yang bertentangan, lalu ambang skor.
  */
 export function decideVerdict(input: RingkasanInput): SummaryVerdict {
+  if (input.unscored) return "unscored";
   const base = scoreVerdict(input.hoaxScore);
   if (base === "uncertain" && !Number.isFinite(input.hoaxScore)) return "uncertain";
   if (input.shortText) return "uncertain";
@@ -124,8 +130,29 @@ function contextSentence(input: RingkasanInput): string {
 
 export function buildRingkasan(input: RingkasanInput): Ringkasan {
   const verdict = decideVerdict(input);
+  if (verdict === "unscored") {
+    return {
+      verdict,
+      headline: VERDICT_LINE.unscored,
+      sentences: [
+        input.unscoredReason || "Tidak ada teks isi yang bisa dinilai, jadi skor hoaks tidak dihitung.",
+        "Metadata dan teks sistem tidak dipakai sebagai klaim.",
+        "Tempel keterangan gambar bila ingin teks itu dinilai.",
+        "Ini rekomendasi sistem, keputusan akhir ada pada analis.",
+      ],
+    };
+  }
+  const confidence = decideConfidence({
+    textChars: input.textChars,
+    shortText: input.shortText,
+    indobert: input.indobert,
+    linear: input.linear,
+    matchCount: input.matches.length,
+    externalCount: input.externalCount,
+  });
   const sentences = [
     engineSentence(input),
+    confidenceSentence(confidence),
     contextSentence(input),
     recommendation(input.band),
     "Ini rekomendasi sistem, keputusan akhir ada pada analis.",
@@ -146,6 +173,9 @@ export function ringkasanFromCase(detail: CaseDetail): Ringkasan {
     aiFlagged: detail.ai.flagged,
     aiConfidence: detail.ai.confidence,
     shortText: Boolean(detail.assessment.caution?.warning),
+    textChars: detail.assessment.caution?.bodyChars ?? detail.text.trim().length,
+    unscored: Boolean(detail.assessment.unscored?.reason),
+    unscoredReason: detail.assessment.unscored?.reason ?? "",
     topicLabels: detail.topics.map((topic) => topic.label),
     matches: detail.matches.map((match) => ({ verdict: match.verdict, similarity: match.similarity })),
     externalCount: detail.external.length,

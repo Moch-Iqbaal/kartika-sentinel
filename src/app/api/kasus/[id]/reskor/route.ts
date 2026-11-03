@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { applyShortTextCaution } from "@/lib/analyze/apply-short-text";
+import { isNonContentText } from "@/lib/analyze/content-guard";
 import { scoreContent } from "@/lib/analyze/score";
 import { isSession, requireSession } from "@/lib/auth/guard";
 import { corpusFromDb, getCase, rescoreAlert } from "@/lib/db";
@@ -22,6 +23,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const { id } = await context.params;
   const detail = await getCase(id);
   if (!detail) return NextResponse.json({ error: "Peringatan tidak ditemukan." }, { status: 404 });
+  if (detail.assessment.unscored?.reason || isNonContentText(detail.text)) {
+    return NextResponse.json(
+      { error: "Berkas ini tidak punya teks isi. Metadata tidak diskor ulang. Tempel keterangan lewat Analisis." },
+      { status: 400 },
+    );
+  }
   try {
     const card = applyShortTextCaution(
       await scoreContent(detail.text, detail.virality, await corpusFromDb(), true),

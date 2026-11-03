@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { applyShortTextCaution } from "@/lib/analyze/apply-short-text";
+import { isNonContentText, NonContentTextError } from "@/lib/analyze/content-guard";
 import { scoreContent } from "@/lib/analyze/score";
+import { UNSCORED_IMAGE_REASON, UNSCORED_SHORT_CAPTION_REASON, unscoredImageCard } from "@/lib/analyze/unscored";
 import { isSession, requireSession } from "@/lib/auth/guard";
 import { corpusFromDb, ensureReady, saveScoredAlert } from "@/lib/db";
 import { searchGoogleFactChecks } from "@/lib/factcheck/google";
@@ -31,7 +33,7 @@ export async function POST(request: Request) {
   }
   const length = Number(request.headers.get("content-length") ?? 0);
   if (length > 32_768) return NextResponse.json({ error: "Badan permintaan terlalu besar." }, { status: 413 });
-  const body = (await request.json().catch(() => null)) as { kind?: string; text?: string; url?: string } | null;
+  const body = (await request.json().catch(() => null)) as { kind?: string; text?: string; url?: string; caption?: string } | null;
   if (!body || (body.kind !== "text" && body.kind !== "url" && body.kind !== "gambar")) {
     return NextResponse.json({ error: "Masukan tidak dikenali." }, { status: 400 });
   }
@@ -46,8 +48,34 @@ export async function POST(request: Request) {
       const target = (body.url ?? "").trim();
       const fetched = await safeFetchBytes(target);
       image = inspectImage(fetched.bytes, fetched.contentType);
-      raw = `Berkas gambar ${fetched.contentType}. ${image.signals.join(" ")}`;
       url = fetched.finalUrl;
+      const caption = (body.caption ?? "").trim();
+      if (caption && isNonContentText(caption)) {
+        return NextResponse.json({ error: "Keterangan itu teks sistem, bukan isi gambar." }, { status: 400 });
+      }
+      if (caption.length > 6000) {
+        return NextResponse.json({ error: "Keterangan terlalu panjang." }, { status: 413 });
+      }
+      if (caption.length >= 12) {
+        raw = caption;
+        bodyChars = caption.length;
+      } else {
+        const reason = caption.length > 0 ? UNSCORED_SHORT_CAPTION_REASON : UNSCORED_IMAGE_REASON;
+        const card = unscoredImageCard(image, reason);
+        const id = await saveScoredAlert({
+          platform: "gambar",
+          externalId: crypto.randomUUID(),
+          url,
+          authorHandle: null,
+          postedAt: new Date().toISOString(),
+          demo: false,
+          card,
+          metrics: [],
+          external: [],
+          actor: session.sub,
+        });
+        return NextResponse.json({ id });
+      }
     } else if (body.kind === "url") {
       const target = (body.url ?? "").trim();
       if (target.length < 8 || target.length > 2000) {
@@ -82,7 +110,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ id });
   } catch (error) {
-    if (error instanceof UnsafeUrlError) {
+    if (error instanceof UnsafeUrlError || error instanceof NonContentTextError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
     console.error("analisis gagal");

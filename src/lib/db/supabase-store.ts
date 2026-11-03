@@ -5,7 +5,8 @@ import { scoreContentSync, type ScoreCard } from "@/lib/analyze/score";
 import type { Session } from "@/lib/auth/token";
 import { embedText } from "@/lib/embed/hashing";
 import type { ExternalFact, FactCheck } from "@/lib/factcheck/types";
-import { recommendation } from "@/lib/format";
+import { assessmentIsUnscored } from "@/lib/analyze/unscored";
+import { cardRecommendation, recommendation } from "@/lib/format";
 import { AUDIT_LIST_LIMIT, DEMO_RETENTION_DAYS } from "@/lib/limits";
 import { hashHandle } from "@/lib/security/redact";
 import { riskBand, viralityFromMetrics, type MetricPoint } from "@/lib/scoring/risk";
@@ -109,6 +110,7 @@ function mapAlert(row: Record<string, unknown>): AlertListItem {
     status: String(row.status) as AlertStatus,
     virality: Number(row.virality ?? 0),
     hoaxScore: Number(analysis.hoax_score ?? 0),
+    unscored: assessmentIsUnscored(asRecord(asRecord(analysis.rationale).assessment)),
     topicTags: Array.isArray(tags) ? tags.map(String) : [],
     aiFlag: Boolean(analysis.ai_flag),
     modelVersion: String(analysis.model_version ?? ""),
@@ -312,7 +314,7 @@ export async function saveScoredAlert(input: {
       topics: input.card.topics,
       assessment: input.card.assessment,
       external: input.external,
-      recommendation: recommendation(input.card.band),
+      recommendation: cardRecommendation(input.card.band, input.card.assessment.unscored?.nextStep),
     },
     created_at: now,
   }));
@@ -439,7 +441,7 @@ export async function rescoreAlert(session: Session, alertId: string, card: Scor
       topics: card.topics,
       assessment: card.assessment,
       external,
-      recommendation: recommendation(card.band),
+      recommendation: cardRecommendation(card.band, card.assessment.unscored?.nextStep),
     },
   }).eq("id", row.analysis_id));
   unwrap(await supabaseAdmin().from("matches").delete().eq("analysis_id", row.analysis_id));

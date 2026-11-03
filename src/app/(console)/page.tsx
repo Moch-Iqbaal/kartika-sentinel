@@ -35,7 +35,7 @@ export default async function DashboardPage({
   }
   const filtered = alerts.filter((alert) => {
     if (params.topik && !alert.topicTags.includes(params.topik)) return false;
-    if (params.pita && riskBand(alert.riskScore) !== params.pita) return false;
+    if (params.pita && (alert.unscored || riskBand(alert.riskScore) !== params.pita)) return false;
     return true;
   });
   const critical = alerts.filter((alert) => alert.band === "kritis").length;
@@ -119,8 +119,10 @@ export default async function DashboardPage({
         {filtered.map((alert) => (
           <Link key={alert.id} href={`/kasus/${alert.id}`} className="rounded-xl border border-border bg-card p-4">
             <div className="flex items-center justify-between gap-2">
-              <span className="font-mono text-sm">{percent(alert.riskScore)}</span>
-              <Badge className={alert.band === "kritis" ? "border-danger text-danger" : ""}>{bandLabel(alert.band)}</Badge>
+              <span className="font-mono text-sm">{alert.unscored ? "Belum bisa dinilai" : percent(alert.riskScore)}</span>
+              <Badge className={!alert.unscored && alert.band === "kritis" ? "border-danger text-danger" : ""}>
+                {alert.unscored ? "Belum dinilai" : bandLabel(alert.band)}
+              </Badge>
             </div>
             <p className="mt-2 text-sm leading-6">{alert.excerpt}</p>
             <p className="mt-2 text-xs text-muted">{alert.demo ? "Data demo · " : ""}{displayHandle(alert.authorHash)}</p>
@@ -146,10 +148,10 @@ export default async function DashboardPage({
               </tr>
             ) : filtered.map((alert) => (
               <tr key={alert.id} className="border-t border-border">
-                <td className="px-3 py-3 font-mono">{percent(alert.riskScore)}</td>
+                <td className="px-3 py-3 font-mono">{alert.unscored ? "Belum bisa dinilai" : percent(alert.riskScore)}</td>
                 <td className="px-3 py-3">
-                  <Badge className={alert.band === "kritis" ? "border-danger text-danger" : alert.band === "prioritas" ? "border-warning text-warning" : ""}>
-                    {bandLabel(alert.band)}
+                  <Badge className={!alert.unscored && alert.band === "kritis" ? "border-danger text-danger" : !alert.unscored && alert.band === "prioritas" ? "border-warning text-warning" : ""}>
+                    {alert.unscored ? "Belum dinilai" : bandLabel(alert.band)}
                   </Badge>
                 </td>
                 <td className="max-w-md px-3 py-3">

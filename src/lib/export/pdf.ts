@@ -1,6 +1,8 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { confidenceSentence, decideConfidence } from "@/lib/analyze/confidence";
 import { ringkasanFromCase } from "@/lib/analyze/ringkasan";
 import type { CaseDetail } from "@/lib/db/types";
+import { evidenceFirst, hasHttpUrl } from "@/lib/factcheck/order";
 import { alertStatusLabel, bandLabel, caseStatusLabel, engineLabel, formatWhen, percent, verdictLabel } from "@/lib/format";
 
 function winAnsi(value: string): string {
@@ -47,12 +49,43 @@ export async function casePdf(detail: CaseDetail): Promise<Uint8Array> {
     color: rgb(0.88, 0.7, 0.36),
   });
   y = 790;
+  const unscored = Boolean(detail.assessment.unscored?.reason);
   draw("Berkas peringatan untuk analis", { bold: true, size: 16 });
   draw("Rekomendasi saja. Bukan penetapan hoaks. Manusia yang memutuskan.", { size: 9, color: [0.35, 0.38, 0.42] });
   y -= 8;
+  draw("Bukti utama: padanan cek fakta", { bold: true, size: 12 });
+  draw("Tautan sumber adalah bukti yang dibaca lebih dulu. Skor bukan bukti.", { size: 9 });
+  const matches = evidenceFirst(detail.matches);
+  if (matches.length === 0 && detail.external.length === 0) draw("Tidak ada padanan di atas ambang dan tidak ada tautan sumber.");
+  for (const match of matches) {
+    draw(`${verdictLabel(match.verdict)} · kemiripan ${percent(match.similarity)} · ${match.source}`, { bold: true });
+    draw(match.title);
+    draw(match.summary, { size: 9 });
+    draw(match.url && hasHttpUrl(match.url) ? match.url : "Tautan sumber tidak ada di korpus ini.", { size: 8 });
+  }
+  for (const item of detail.external) {
+    draw(`${item.publisher ? `${item.publisher}: ` : ""}${item.title}${item.rating ? ` (${item.rating})` : ""}`, { bold: true });
+    if (item.url && hasHttpUrl(item.url)) draw(item.url, { size: 8 });
+  }
+  y -= 6;
   draw("Skor", { bold: true, size: 12 });
-  draw(`Risiko ${percent(detail.riskScore)} · pita ${bandLabel(detail.band)}`);
-  draw(`Hoaks ${percent(detail.hoaxScore)} · mesin ${engineLabel(detail.engine)} · status model ${detail.modelStatus}`);
+  if (unscored) {
+    draw("Belum bisa dinilai", { bold: true });
+    draw(detail.assessment.unscored?.reason ?? "Tidak ada teks isi.");
+    draw("Skor hoaks tidak dihitung.");
+  } else {
+    const confidence = decideConfidence({
+      textChars: detail.assessment.caution?.bodyChars ?? detail.text.trim().length,
+      shortText: Boolean(detail.assessment.caution?.warning),
+      indobert: detail.assessment.indobert?.probability ?? null,
+      linear: detail.assessment.linear?.probability ?? null,
+      matchCount: detail.matches.length,
+      externalCount: detail.external.length,
+    });
+    draw(confidenceSentence(confidence), { bold: true });
+    draw(`Risiko ${percent(detail.riskScore)} · pita ${bandLabel(detail.band)}`);
+    draw(`Hoaks ${percent(detail.hoaxScore)} · mesin ${engineLabel(detail.engine)} · status model ${detail.modelStatus}`);
+  }
   if (detail.assessment.caution?.warning) {
     draw(detail.assessment.caution.warning, { bold: true, color: [0.55, 0.32, 0.05] });
     draw(
@@ -69,15 +102,6 @@ export async function casePdf(detail: CaseDetail): Promise<Uint8Array> {
   draw(detail.demo ? "Sumber: data demo sintetis." : "Sumber: masukan analis.");
   if (detail.sourceUrl) draw(detail.sourceUrl, { size: 9 });
   draw(detail.text);
-  y -= 6;
-  draw("Padanan cek fakta", { bold: true, size: 12 });
-  if (detail.matches.length === 0) draw("Tidak ada padanan di atas ambang.");
-  for (const match of detail.matches) {
-    draw(`${verdictLabel(match.verdict)} · kemiripan ${percent(match.similarity)} · ${match.source}`, { bold: true });
-    draw(match.title);
-    draw(match.summary, { size: 9 });
-    if (match.url) draw(match.url, { size: 8 });
-  }
   y -= 6;
   draw("Linimasa", { bold: true, size: 12 });
   if (detail.timeline.length === 0) draw("Tidak ada jejak waktu.");

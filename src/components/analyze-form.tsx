@@ -24,6 +24,7 @@ export function AnalyzeForm() {
         kind: mode,
         text: String(form.get("text") ?? ""),
         url: String(form.get("url") ?? ""),
+        caption: String(form.get("caption") ?? ""),
       }),
     });
     const payload = (await response.json().catch(() => ({}))) as { id?: string; error?: string };
@@ -52,8 +53,14 @@ export function AnalyzeForm() {
       {mode === "text" ? (
         <Textarea name="text" required minLength={12} maxLength={6000} placeholder="Tempel narasi berbahasa Indonesia…" />
       ) : (
-        <Input name="url" required type="url" placeholder={mode === "gambar" ? "https://contoh.go.id/berkas.jpg" : "https://www.youtube.com/watch?v=…"} />
+        <Input name="url" required type="url" placeholder={mode === "gambar" ? "https://cdn.contoh/gambar.jpg" : "https://www.youtube.com/watch?v=…"} />
       )}
+      {mode === "gambar" ? (
+        <>
+          <Textarea name="caption" maxLength={6000} placeholder="Keterangan gambar, bila ada. Tanpa keterangan yang cukup, hasilnya Belum bisa dinilai." />
+          <p className="text-xs text-muted">OCR tidak dipasang. Metadata gambar tidak dinilai sebagai klaim.</p>
+        </>
+      ) : null}
       {error ? <p className="text-sm text-danger">{error}</p> : null}
       <Button type="submit" disabled={pending}>
         {pending ? "Menunggu model. Cold start bisa sekitar satu menit, lalu cadangan dipakai bila layanan belum siap." : "Analisis"}

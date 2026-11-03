@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CaseActions } from "@/components/case-actions";
+import { CaseEvidence } from "@/components/case-evidence";
 import { TermTip } from "@/components/term-tip";
+import { confidenceSentence, CONFIDENCE_LABEL, decideConfidence } from "@/lib/analyze/confidence";
 import { ringkasanFromCase } from "@/lib/analyze/ringkasan";
 import { glossaryTip } from "@/lib/glossary";
 import { Disclaimer } from "@/components/disclaimer";
@@ -9,29 +11,10 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { currentSession } from "@/lib/auth/session";
 import { getCase } from "@/lib/db";
-import { alertStatusLabel, bandLabel, caseStatusLabel, engineLabel, modelModeLabel, percent, verdictLabel } from "@/lib/format";
+import { alertStatusLabel, bandLabel, caseStatusLabel, engineLabel, modelModeLabel, percent } from "@/lib/format";
 import { ENGINE_DIVERGENCE, ENGINE_DIVERGENCE_WARNING } from "@/lib/model/classify";
+import { hasHttpUrl } from "@/lib/factcheck/order";
 import { displayHandle } from "@/lib/security/redact";
-
-function httpUrl(href: string): string | null {
-  try {
-    const url = new URL(href);
-    if (url.protocol !== "https:" && url.protocol !== "http:") return null;
-    return url.toString();
-  } catch {
-    return null;
-  }
-}
-
-function SafeLink({ href, children }: { href: string; children: string }) {
-  const safe = httpUrl(href);
-  if (!safe) return <span>{children}</span>;
-  return (
-    <a href={safe} target="_blank" rel="noreferrer noopener" className="text-info underline-offset-2 hover:underline">
-      {children}
-    </a>
-  );
-}
 
 export default async function CasePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -40,6 +23,15 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
   const session = await currentSession();
   const canEdit = Boolean(session && (session.role === "admin" || session.sub === detail.assignedTo));
   const ringkasan = ringkasanFromCase(detail);
+  const unscored = Boolean(detail.assessment.unscored?.reason);
+  const confidence = unscored ? null : decideConfidence({
+    textChars: detail.assessment.caution?.bodyChars ?? detail.text.trim().length,
+    shortText: Boolean(detail.assessment.caution?.warning),
+    indobert: detail.assessment.indobert?.probability ?? null,
+    linear: detail.assessment.linear?.probability ?? null,
+    matchCount: detail.matches.length,
+    externalCount: detail.external.length,
+  });
   const gap = detail.assessment.indobert
     && Math.abs(detail.assessment.indobert.probability - detail.assessment.heuristic.probability) >= ENGINE_DIVERGENCE;
   return (
@@ -50,11 +42,18 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
           <p className="text-xs uppercase tracking-wide text-muted">{detail.demo ? "Data demo" : "Masukan analis"}</p>
           <h1 className="mt-1 text-2xl font-semibold">Berkas peringatan</h1>
         </div>
-        <Badge className={detail.band === "kritis" ? "border-danger text-danger" : ""}>
-          {bandLabel(detail.band)} · {percent(detail.riskScore)}
+        <Badge className={!unscored && detail.band === "kritis" ? "border-danger text-danger" : ""}>
+          {unscored ? "Belum bisa dinilai" : `${bandLabel(detail.band)} · ${percent(detail.riskScore)}`}
         </Badge>
       </div>
       <Disclaimer mode={modelModeLabel(detail.modelStatus)} />
+      {unscored ? (
+        <Card className="border-warning/50 p-4 text-sm">
+          <p className="font-medium">Belum bisa dinilai</p>
+          <p className="mt-1">{detail.assessment.unscored?.reason}</p>
+          <p className="mt-1 text-muted">{detail.assessment.unscored?.nextStep}</p>
+        </Card>
+      ) : null}
       {detail.assessment.caution?.warning ? (
         <Card className="border-warning/50 p-4 text-sm">
           <p className="font-medium text-warning">{detail.assessment.caution.warning}</p>
@@ -64,7 +63,7 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
           </p>
         </Card>
       ) : null}
-      {detail.modelStatus === "ringan" || detail.modelStatus === "dilewati" ? (
+      {!unscored && (detail.modelStatus === "ringan" || detail.modelStatus === "dilewati") ? (
         <Card className="p-4 text-sm">mode ringan. Skor ini dari model n-gram dan heuristik, tanpa panggilan IndoBERT.</Card>
       ) : null}
       {detail.modelStatus === "bangun" ? (
@@ -73,19 +72,29 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
       {detail.modelStatus === "mati" ? (
         <Card className="p-4 text-sm text-muted">IndoBERT on-premise tidak menjawab. Skor memakai model n-gram atau heuristik di server web.</Card>
       ) : null}
+      <CaseEvidence detail={detail} />
+      {confidence ? (
+        <Card className="flex flex-wrap items-center justify-between gap-3 border-gold/40 p-4">
+          <div>
+            <p className="flex items-center text-xs uppercase text-muted">Keyakinan hasil <TermTip {...glossaryTip("keyakinan-hasil")} /></p>
+            <p className="text-3xl font-semibold">{CONFIDENCE_LABEL[confidence.level]}</p>
+          </div>
+          <p className="max-w-xl text-sm leading-6">{confidenceSentence(confidence)}</p>
+        </Card>
+      ) : null}
       <div className="grid gap-3 md:grid-cols-4">
         <Card className="p-4">
           <p className="flex items-center text-xs text-muted">Skor utama <TermTip {...glossaryTip("skor-utama")} /></p>
-          <p className="text-xl font-semibold">{percent(detail.hoaxScore)}</p>
-          <p className="text-xs text-muted">{engineLabel(detail.engine)}</p>
+          <p className="text-xl font-semibold">{unscored ? "—" : percent(detail.hoaxScore)}</p>
+          <p className="text-xs text-muted">{unscored ? "Tidak dihitung" : engineLabel(detail.engine)}</p>
         </Card>
         <Card className="p-4">
           <p className="flex items-center text-xs text-muted">Sensitivitas <TermTip {...glossaryTip("sensitivitas")} /></p>
-          <p className="text-xl font-semibold">{percent(detail.sensitivity)}</p>
+          <p className="text-xl font-semibold">{unscored ? "—" : percent(detail.sensitivity)}</p>
         </Card>
         <Card className="p-4">
           <p className="flex items-center text-xs text-muted">Viralitas <TermTip {...glossaryTip("viralitas")} /></p>
-          <p className="text-xl font-semibold">{percent(detail.virality)}</p>
+          <p className="text-xl font-semibold">{unscored ? "—" : percent(detail.virality)}</p>
         </Card>
         <Card className="p-4">
           <p className="flex items-center text-xs text-muted">Media AI <TermTip {...glossaryTip("media-ai")} /></p>
@@ -95,15 +104,26 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
       </div>
       <Card className="space-y-3 p-4">
         <h2 className="font-medium">Teks yang dinilai</h2>
+        {detail.platform === "gambar" && !unscored ? (
+          <p className="text-sm text-muted">Yang dinilai adalah keterangan yang ditempel analis, bukan piksel atau metadata gambar.</p>
+        ) : null}
         <p className="whitespace-pre-wrap text-sm leading-6">{detail.text}</p>
         <p className="text-xs text-muted">Pegangan: {displayHandle(detail.authorHash)} · {detail.platform}</p>
-        {detail.sourceUrl ? <SafeLink href={detail.sourceUrl}>{detail.sourceUrl}</SafeLink> : null}
+        {detail.sourceUrl && hasHttpUrl(detail.sourceUrl) ? (
+          <a href={detail.sourceUrl} target="_blank" rel="noreferrer noopener" className="text-sm text-info underline-offset-2 hover:underline">
+            {detail.sourceUrl}
+          </a>
+        ) : null}
       </Card>
       <Card className="space-y-2 p-4">
         <h2 className="font-medium">Mesin skor</h2>
-        <p className="text-sm">Versi: {detail.modelVersion}</p>
-        {detail.assessment.indobert ? <p className="text-sm">{detail.assessment.caution ? "IndoBERT on-premise mentah" : "IndoBERT on-premise"} ({detail.assessment.indobert.label}): {percent(detail.assessment.indobert.probability)}</p> : <p className="text-sm text-muted">IndoBERT on-premise tidak dipakai pada skor ini. Dalam mode ringan tombol skor ulang tetap memakai n-gram sampai LOCAL_HOAX_URL diisi.</p>}
-        {detail.assessment.linear ? <p className="text-sm">{detail.assessment.caution ? "Model linier mentah" : "Model linier"}: {percent(detail.assessment.linear.probability)}</p> : null}
+        {unscored ? <p className="text-sm">Tidak ada skor. Mesin tidak dijalankan pada metadata gambar.</p> : (
+          <>
+            <p className="text-sm">Versi: {detail.modelVersion}</p>
+            {detail.assessment.indobert ? <p className="text-sm">{detail.assessment.caution ? "IndoBERT on-premise mentah" : "IndoBERT on-premise"} ({detail.assessment.indobert.label}): {percent(detail.assessment.indobert.probability)}</p> : <p className="text-sm text-muted">IndoBERT on-premise tidak dipakai pada skor ini. Dalam mode ringan tombol skor ulang tetap memakai n-gram sampai LOCAL_HOAX_URL diisi.</p>}
+            {detail.assessment.linear ? <p className="text-sm">{detail.assessment.caution ? "Model linier mentah" : "Model linier"}: {percent(detail.assessment.linear.probability)}</p> : null}
+          </>
+        )}
         <ul className="list-disc pl-5 text-sm text-muted">
           {(detail.assessment.heuristic?.reasons ?? []).map((reason: string) => <li key={reason}>{reason}</li>)}
         </ul>
@@ -123,35 +143,6 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
             ))}
           </ul>
         )}
-      </Card>
-      <Card className="space-y-3 p-4">
-        <h2 className="font-medium">Padanan cek fakta</h2>
-        {detail.matches.length === 0 ? <p className="text-sm text-muted">Tidak ada padanan di atas ambang kemiripan.</p> : detail.matches.map((match) => (
-          <article key={match.id} className="border-t border-border pt-3 first:border-t-0 first:pt-0">
-            <p className="inline-flex items-center text-sm font-medium">
-              {match.title}
-              <TermTip {...glossaryTip("padanan")} />
-            </p>
-            <p className="text-xs text-muted">{verdictLabel(match.verdict)} · {percent(match.similarity)} · {match.source} · {match.license}</p>
-            <p className="mt-1 text-sm leading-6">{match.summary}</p>
-            {match.url ? <SafeLink href={match.url}>{match.url}</SafeLink> : null}
-          </article>
-        ))}
-        {detail.external.length > 0 ? (
-          <div className="border-t border-border pt-3">
-            <p className="inline-flex items-center text-sm font-medium">
-              Fact Check Tools
-              <TermTip {...glossaryTip("fact-check-tools")} />
-            </p>
-            {detail.external.map((item) => (
-              <p key={`${item.url}-${item.title}`} className="mt-1 text-sm">
-                {item.publisher ? `${item.publisher}: ` : ""}{item.title}
-                {item.rating ? ` (${item.rating})` : ""}{" "}
-                {item.url ? <SafeLink href={item.url}>tautan</SafeLink> : null}
-              </p>
-            ))}
-          </div>
-        ) : null}
       </Card>
       <Card className="space-y-3 p-4">
         <h2 className="font-medium">Tindakan analis</h2>
