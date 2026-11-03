@@ -1,6 +1,7 @@
 import type { CaseDetail } from "../db/types";
 import { decideConfidence } from "./confidence";
-import { HOAX_CALL_MIN } from "./bands";
+import { HOAX_ALONE_MIN, HOAX_CALL_MIN } from "./bands";
+import { credibleReporting, evidenceStance } from "./evidence-stance";
 import { percent } from "../format";
 import { OPINION_NOTE } from "./opinion";
 import { SHORT_WORD_VERDICT } from "../ingest/short-text";
@@ -11,7 +12,9 @@ import type { RiskBand } from "../scoring/risk";
  * Ringkasan pendek untuk orang awam. Tidak memanggil model bahasa.
  * "Belum bisa dipastikan" hanya bila keyakinan Rendah, teks terlalu pendek,
  * atau dua mesin berselisih pada ambang yang sudah dipakai berkas.
- * Selain itu: HOAKS bila skor minimal 0,5, kalau tidak FAKTA.
+ * Skor 50–70% tanpa bukti hoaks tidak menjadi HOAKS.
+ * Bukti yang menandai bukan hoaks, atau teks dari media/rilis resmi, menahan vonis HOAKS.
+ * Sensitivitas dan viralitas tidak masuk ke vonis.
  */
 
 export type SummaryVerdict = "hoax" | "not-hoax" | "uncertain" | "unscored" | "short";
@@ -44,6 +47,10 @@ export type RingkasanInput = {
   topicLabels: string[];
   matches: { verdict: string; similarity: number }[];
   externalCount: number;
+  /** Label pada cek fakta langsung, misalnya Salah atau Benar. */
+  externalRatings?: string[];
+  /** Teks dari media atau situs resmi yang memberitakan hal yang sama. */
+  credibleSource?: boolean;
 };
 
 export type Ringkasan = {
@@ -76,6 +83,21 @@ function enginesDisagree(input: RingkasanInput): "linear" | "heuristic" | null {
   return null;
 }
 
+function stances(input: RingkasanInput): { hoax: boolean; valid: boolean } {
+  const labels = [
+    ...input.matches.map((match) => match.verdict),
+    ...(input.externalRatings ?? []),
+  ];
+  return {
+    hoax: labels.some((label) => evidenceStance(label) === "hoax"),
+    valid: labels.some((label) => evidenceStance(label) === "valid"),
+  };
+}
+
+/**
+ * Vonis dari skor hoaks saja, lalu bukti.
+ * Sensitivitas dan viralitas tidak dibaca di sini.
+ */
 export function decideVerdict(input: RingkasanInput): SummaryVerdict {
   if (input.unscored) return "unscored";
   if (input.shortWords) return "short";
@@ -89,7 +111,18 @@ export function decideVerdict(input: RingkasanInput): SummaryVerdict {
     externalCount: input.externalCount,
   });
   if (input.shortText || confidence.level === "rendah" || enginesDisagree(input)) return "uncertain";
-  return scoreVerdict(input.hoaxScore);
+  if (!Number.isFinite(input.hoaxScore)) return "uncertain";
+  const evidence = stances(input);
+  const credible = Boolean(input.credibleSource);
+  const leansHoax = input.hoaxScore >= HOAX_CALL_MIN;
+  if (evidence.hoax && (evidence.valid || credible)) return "uncertain";
+  if ((evidence.valid || credible) && leansHoax) return "uncertain";
+  if (evidence.valid && !leansHoax) return "not-hoax";
+  if (evidence.hoax && leansHoax) return "hoax";
+  if (evidence.hoax && !leansHoax) return "uncertain";
+  if (input.hoaxScore >= HOAX_ALONE_MIN) return "hoax";
+  if (leansHoax) return "uncertain";
+  return "not-hoax";
 }
 
 function analystLine(): string {
@@ -132,13 +165,23 @@ export function buildRingkasan(input: RingkasanInput): Ringkasan {
   }
   if (verdict === "uncertain") {
     const disagree = enginesDisagree(input);
+    const evidence = stances(input);
+    const score = percent(Number.isFinite(input.hoaxScore) ? input.hoaxScore : 0);
     const why = input.shortText
       ? "Teks sumber terlalu pendek, jadi belum bisa dipastikan."
       : disagree === "heuristic"
         ? "IndoBERT dan heuristik tidak sejalan, jadi belum bisa dipastikan."
         : disagree === "linear"
           ? "IndoBERT dan model linier tidak sejalan, jadi belum bisa dipastikan."
-          : "Keyakinan hasil rendah, jadi belum bisa dipastikan.";
+          : evidence.valid && input.hoaxScore >= HOAX_CALL_MIN
+            ? "Cek fakta menandai ini bukan hoaks, jadi belum bisa dipastikan."
+            : input.credibleSource && input.hoaxScore >= HOAX_CALL_MIN
+              ? `Peluang hoaks ${score}. Teks ini dari media atau rilis resmi, jadi belum bisa dipastikan.`
+              : evidence.hoax && input.hoaxScore < HOAX_CALL_MIN
+                ? "Ada padanan hoaks, tetapi skor mesin rendah, jadi belum bisa dipastikan."
+                : input.hoaxScore >= HOAX_CALL_MIN && input.hoaxScore < HOAX_ALONE_MIN
+                  ? `Peluang hoaks ${score} belum cukup tanpa bukti hoaks, jadi belum bisa dipastikan.`
+                  : "Keyakinan hasil rendah, jadi belum bisa dipastikan.";
     return {
       verdict,
       headline: VERDICT_LINE.uncertain,
@@ -185,5 +228,7 @@ export function ringkasanFromCase(detail: CaseDetail): Ringkasan {
     topicLabels: detail.topics.map((topic) => topic.label),
     matches: detail.matches.map((match) => ({ verdict: match.verdict, similarity: match.similarity })),
     externalCount: detail.external.length,
+    externalRatings: detail.external.map((item) => item.rating ?? ""),
+    credibleSource: credibleReporting(detail.sourceUrl, detail.text),
   });
 }

@@ -8,8 +8,14 @@ import { BAND_KRITIS_MIN, BAND_PRIORITAS_MIN } from "../scoring/risk";
  */
 export type PlainBand = "rendah" | "sedang" | "tinggi";
 
-/** Ambang yang sama dengan uji mesin: skor 0,5 ke atas disebut hoaks. */
+/** Ambang model: 0,5 ke atas lebih mirip hoaks daripada fakta. Bukan vonis sendirian. */
 export const HOAX_CALL_MIN = 0.5;
+
+/**
+ * Di bawah angka ini, skor tanpa bukti hoaks tidak menjadi "Kemungkinan HOAKS".
+ * 50–70% adalah contoh yang dilaporkan: cukup untuk curiga, belum cukup untuk vonis.
+ */
+export const HOAX_ALONE_MIN = 0.7;
 
 export const SCORE_MEANING = "peluang ini hoaks menurut mesin";
 export const SENSITIVITY_MEANING = "seberapa rawan topiknya";

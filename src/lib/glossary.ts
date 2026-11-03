@@ -1,4 +1,4 @@
-import { HOAX_CALL_MIN } from "@/lib/analyze/bands";
+import { HOAX_ALONE_MIN, HOAX_CALL_MIN } from "@/lib/analyze/bands";
 import { MATCH_MIN_SIMILARITY } from "@/lib/factcheck/match";
 import { bandLabel, percent, recommendation } from "@/lib/format";
 import { MIN_RELIABLE_CHARS, MIN_RELIABLE_WORDS, SHORT_TEXT_KEEP, SHORT_TEXT_WARNING, SHORT_WORD_VERDICT } from "@/lib/ingest/short-text";
@@ -244,7 +244,7 @@ export function glossaryGroups(): GlossaryGroup[] {
           "vonis-laporan",
           "Kemungkinan HOAKS / Kemungkinan FAKTA",
           "Vonis di bagian atas. FAKTA berarti peluang hoaks di bawah setengah.",
-          `HOAKS bila skor minimal ${percent(HOAX_CALL_MIN)} dan keyakinan bukan Rendah. “Belum bisa dipastikan” hanya bila keyakinan Rendah, teks terlalu pendek, atau dua mesin berselisih.`,
+          `HOAKS bila ada bukti hoaks dan skor minimal ${percent(HOAX_CALL_MIN)}, atau skor minimal ${percent(HOAX_ALONE_MIN)} tanpa bukti yang menentang. Skor ${percent(HOAX_CALL_MIN)}–${percent(HOAX_ALONE_MIN)} tanpa bukti hoaks menjadi “Belum bisa dipastikan”. Sensitivitas dan viralitas tidak masuk ke vonis.`,
           "Vonis di atas: hoaks, fakta, atau belum bisa dipastikan.",
         ),
         term(

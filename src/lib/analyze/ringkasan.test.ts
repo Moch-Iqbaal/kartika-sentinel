@@ -80,21 +80,22 @@ test("selisih IndoBERT dan heuristik juga menahan vonis", () => {
   assert.match(buildRingkasan(card).sentences[0], /heuristik tidak sejalan/);
 });
 
-test("padanan yang bertentangan tidak memaksa belum pasti bila keyakinan cukup", () => {
+test("bukti yang bertentangan menahan vonis", () => {
   const hoaxButTrue = input({
     hoaxScore: 0.8,
     linear: 0.8,
     matches: [{ verdict: "true", similarity: 0.5 }],
   });
-  assert.equal(decideVerdict(hoaxButTrue), "hoax");
+  assert.equal(decideVerdict(hoaxButTrue), "uncertain");
+  assert.match(buildRingkasan(hoaxButTrue).sentences[0], /bukan hoaks/);
 
   const lowButHoax = input({
     hoaxScore: 0.1,
     linear: 0.1,
     matches: [{ verdict: "misleading", similarity: 0.2 }, { verdict: "hoax", similarity: 0.9 }],
   });
-  assert.equal(decideVerdict(lowButHoax), "not-hoax");
-  assert.equal(buildRingkasan(lowButHoax).headline, "Kemungkinan FAKTA");
+  assert.equal(decideVerdict(lowButHoax), "uncertain");
+  assert.equal(buildRingkasan(lowButHoax).headline, "Belum bisa dipastikan");
 });
 
 test("mode ringan tanpa IndoBERT memakai FAKTA bila skor di bawah 0,5", () => {
@@ -139,11 +140,21 @@ test("berkas tanpa teks isi tidak punya skor hoaks", () => {
   assert.ok(text.sentences.length <= 3);
 });
 
-test("skor tengah dengan keyakinan sedang tetap punya vonis, bukan belum pasti", () => {
-  const hoax = buildRingkasan(input({ hoaxScore: 0.62, linear: 0.62 }));
-  assert.equal(hoax.headline, "Kemungkinan HOAKS");
+test("skor 50–70% tanpa bukti hoaks belum pasti, di bawah 50% fakta", () => {
+  const mid = buildRingkasan(input({ hoaxScore: 0.62, linear: 0.62 }));
+  assert.equal(mid.headline, "Belum bisa dipastikan");
+  assert.match(mid.sentences.join(" "), /belum cukup/);
   const fact = buildRingkasan(input({ hoaxScore: 0.45, linear: 0.45 }));
   assert.equal(fact.headline, "Kemungkinan FAKTA");
+  const strong = buildRingkasan(input({ hoaxScore: 0.85, linear: 0.85 }));
+  assert.equal(strong.headline, "Kemungkinan HOAKS");
+});
+
+test("sensitivitas dan viralitas tidak mengubah vonis", () => {
+  const low = decideVerdict(input({ hoaxScore: 0.62, linear: 0.62, sensitivity: 0.95, virality: 0.9 }));
+  const high = decideVerdict(input({ hoaxScore: 0.62, linear: 0.62, sensitivity: 0.1, virality: 0 }));
+  assert.equal(low, "uncertain");
+  assert.equal(high, "uncertain");
 });
 
 test("opini tidak menahan vonis bila keyakinan bukan rendah", () => {
