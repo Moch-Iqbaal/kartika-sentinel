@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { scoreContent } from "@/lib/analyze/score";
 import { isSession, requireSession } from "@/lib/auth/guard";
-import { corpusFromDb, ensureReady, saveScoredAlert } from "@/lib/db/store";
+import { corpusFromDb, ensureReady, saveScoredAlert } from "@/lib/db";
 import { searchGoogleFactChecks } from "@/lib/factcheck/google";
 import { textFromUrl } from "@/lib/ingest/url-text";
+import { inspectImage } from "@/lib/media/metadata";
+import { applyImageReport } from "@/lib/model/ai-text";
+import { safeFetchBytes } from "@/lib/security/ssrf";
 import { rateLimit } from "@/lib/security/rate-limit";
 import { UnsafeUrlError } from "@/lib/security/ssrf";
 import { assertSameOrigin } from "@/lib/security/untrusted";
@@ -28,15 +31,22 @@ export async function POST(request: Request) {
   const length = Number(request.headers.get("content-length") ?? 0);
   if (length > 32_768) return NextResponse.json({ error: "Badan permintaan terlalu besar." }, { status: 413 });
   const body = (await request.json().catch(() => null)) as { kind?: string; text?: string; url?: string } | null;
-  if (!body || (body.kind !== "text" && body.kind !== "url")) {
+  if (!body || (body.kind !== "text" && body.kind !== "url" && body.kind !== "gambar")) {
     return NextResponse.json({ error: "Masukan tidak dikenali." }, { status: 400 });
   }
   try {
-    ensureReady();
+    await ensureReady();
     let raw = "";
     let url: string | null = null;
     let author: string | null = null;
-    if (body.kind === "url") {
+    let image: Awaited<ReturnType<typeof inspectImage>> | null = null;
+    if (body.kind === "gambar") {
+      const target = (body.url ?? "").trim();
+      const fetched = await safeFetchBytes(target);
+      image = inspectImage(fetched.bytes, fetched.contentType);
+      raw = `Berkas gambar ${fetched.contentType}. ${image.signals.join(" ")}`;
+      url = fetched.finalUrl;
+    } else if (body.kind === "url") {
       const target = (body.url ?? "").trim();
       if (target.length < 8 || target.length > 2000) {
         return NextResponse.json({ error: "URL tidak valid." }, { status: 400 });
@@ -51,11 +61,12 @@ export async function POST(request: Request) {
       if (raw.length > 6000) return NextResponse.json({ error: "Teks terlalu panjang." }, { status: 413 });
     }
     if (!raw.trim()) return NextResponse.json({ error: "Tidak ada teks yang bisa dinilai." }, { status: 400 });
-    const corpus = corpusFromDb();
+    const corpus = await corpusFromDb();
     const card = await scoreContent(raw, 0, corpus, true);
+    card.assessment.ai = applyImageReport(card.assessment.ai, image);
     const external = await searchGoogleFactChecks(card.clean);
-    const id = saveScoredAlert({
-      platform: body.kind === "url" ? "url" : "masukan-analis",
+    const id = await saveScoredAlert({
+      platform: body.kind === "gambar" ? "gambar" : body.kind === "url" ? "url" : "masukan-analis",
       externalId: crypto.randomUUID(),
       url,
       authorHandle: author,

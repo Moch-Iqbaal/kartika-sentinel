@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { isSession, requireSession } from "@/lib/auth/guard";
-import { openCase, updateAlertStatus, updateCaseStatus } from "@/lib/db/store";
+import { openCase, saveAnalystNote, updateAlertStatus, updateCaseStatus } from "@/lib/db";
 import type { AlertStatus, CaseStatus } from "@/lib/db/types";
 import { assertSameOrigin } from "@/lib/security/untrusted";
 
@@ -18,14 +18,16 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ error: "Origin ditolak." }, { status: 403 });
   }
   const { id } = await context.params;
-  const body = (await request.json().catch(() => null)) as { action?: string; status?: string } | null;
+  const body = (await request.json().catch(() => null)) as { action?: string; status?: string; note?: string } | null;
   try {
     if (body?.action === "open") {
-      openCase(session, id);
+      await openCase(session, id);
     } else if (body?.action === "alert" && body.status && ALERTS.has(body.status as AlertStatus)) {
-      updateAlertStatus(session, id, body.status as AlertStatus);
+      await updateAlertStatus(session, id, body.status as AlertStatus);
     } else if (body?.action === "case" && body.status && CASES.has(body.status as CaseStatus)) {
-      updateCaseStatus(session, id, body.status as CaseStatus);
+      await updateCaseStatus(session, id, body.status as CaseStatus);
+    } else if (body?.action === "note") {
+      await saveAnalystNote(session, id, body.note ?? "");
     } else {
       return NextResponse.json({ error: "Aksi tidak dikenali." }, { status: 400 });
     }

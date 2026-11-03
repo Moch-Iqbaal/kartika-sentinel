@@ -4,7 +4,7 @@ import { ViralityChart } from "@/components/virality-chart";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { displayHandle } from "@/lib/security/redact";
-import { listAlerts, topicCounts, velocitySeries } from "@/lib/db/store";
+import { listAlerts, topicCounts, velocitySeries } from "@/lib/db";
 import { localIndoBertHealth } from "@/lib/model/local-indobert";
 import { TOPICS } from "@/lib/ontology/topics";
 import { alertStatusLabel, bandLabel, percent } from "@/lib/format";
@@ -16,12 +16,21 @@ export default async function DashboardPage({
   searchParams: Promise<{ topik?: string; pita?: string }>;
 }) {
   const params = await searchParams;
-  const [alerts, series, counts, model] = await Promise.all([
-    Promise.resolve(listAlerts()),
-    Promise.resolve(velocitySeries()),
-    Promise.resolve(topicCounts()),
-    localIndoBertHealth(),
-  ]);
+  let alerts: Awaited<ReturnType<typeof listAlerts>> = [];
+  let series: Awaited<ReturnType<typeof velocitySeries>> = [];
+  let counts: Record<string, number> = {};
+  let loadError = "";
+  let model: Awaited<ReturnType<typeof localIndoBertHealth>> = "mati";
+  try {
+    [alerts, series, counts, model] = await Promise.all([
+      listAlerts(),
+      velocitySeries(),
+      topicCounts(),
+      localIndoBertHealth(),
+    ]);
+  } catch {
+    loadError = "Dasbor gagal memuat data. Periksa koneksi basis data, lalu muat ulang.";
+  }
   const filtered = alerts.filter((alert) => {
     if (params.topik && !alert.topicTags.includes(params.topik)) return false;
     if (params.pita && riskBand(alert.riskScore) !== params.pita) return false;
@@ -37,7 +46,13 @@ export default async function DashboardPage({
           Peringkat memakai hoaks × sensitivitas topik × viralitas efektif.
         </p>
       </div>
-      <Disclaimer modelReady={model === "siap" ? "siap" : "tidak tersambung, dasbor memakai model linier"} />
+      <Disclaimer modelReady={model === "siap" ? "siap" : model === "bangun" ? "sedang bangun (cold start)" : "tidak tersambung, cadangan linier dipakai"} />
+      {model === "bangun" ? (
+        <Card className="border-warning/50 p-4 text-sm">
+          IndoBERT sedang bangun. Instance Cloud Run yang tertidur butuh waktu untuk memuat bobot. Skor baru bisa jatuh ke model linier sampai layanan siap.
+        </Card>
+      ) : null}
+      {loadError ? <Card className="border-danger/50 p-4 text-sm text-danger">{loadError}</Card> : null}
       <div className="grid gap-3 sm:grid-cols-3">
         <Card className="p-4">
           <p className="text-xs uppercase text-muted">Peringatan</p>
@@ -68,7 +83,26 @@ export default async function DashboardPage({
         <Link className="rounded-full border border-border px-3 py-1" href="/?pita=prioritas">Prioritas</Link>
         <Link className="rounded-full border border-border px-3 py-1" href="/?pita=pantau">Pantau</Link>
       </div>
-      <div className="overflow-x-auto rounded-xl border border-border">
+      {filtered.length === 0 && !loadError ? (
+        <Card className="p-6 text-sm text-muted">
+          {alerts.length === 0
+            ? "Belum ada peringatan. Buka Analisis untuk menempel teks, URL, atau tautan gambar."
+            : "Tidak ada peringatan pada saringan ini. Pilih Semua untuk melihat antrean."}
+        </Card>
+      ) : null}
+      <div className="grid gap-3 md:hidden">
+        {filtered.map((alert) => (
+          <Link key={alert.id} href={`/kasus/${alert.id}`} className="rounded-xl border border-border bg-card p-4">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-mono text-sm">{percent(alert.riskScore)}</span>
+              <Badge className={alert.band === "kritis" ? "border-danger text-danger" : ""}>{bandLabel(alert.band)}</Badge>
+            </div>
+            <p className="mt-2 text-sm leading-6">{alert.excerpt}</p>
+            <p className="mt-2 text-xs text-muted">{alert.demo ? "Data demo · " : ""}{displayHandle(alert.authorHash)}</p>
+          </Link>
+        ))}
+      </div>
+      <div className="hidden overflow-x-auto rounded-xl border border-border md:block">
         <table className="min-w-full text-left text-sm">
           <thead className="bg-slate-950/50 text-xs uppercase text-muted">
             <tr>

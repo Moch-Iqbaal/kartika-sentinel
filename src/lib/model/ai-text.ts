@@ -1,63 +1,81 @@
+import type { ImageMetadataReport } from "../media/metadata";
+import { stylometrySignals } from "./stylometry";
+
+export type AiConfidence = "rendah" | "sedang" | "tinggi";
+
 export type AiTextFlag = {
   flagged: boolean;
   score: number;
+  confidence: AiConfidence;
   reasons: string[];
+  signals: { name: string; detail: string }[];
   disclaimer: string;
 };
 
 const DISCLAIMER =
-  "Indikasi heuristik, bukan deteksi deepfake. Tidak ada model penghasil-teks yang dijalankan di sini. Analis harus memeriksa berkas asli.";
+  "Indikasi gaya dan metadata, bukan deteksi deepfake dan bukan perplexity model bahasa. Keyakinan rendah berarti sinyal lemah. Analis harus melihat berkas asli.";
 
-/**
- * Bendera media/teks mungkin buatan AI.
- * Model shouwiku/detectai-indonesian (MIT) disebut di dokumentasi sebagai
- * peningkatan on-premise, tetapi tidak dipanggil lewat jaringan.
- */
-export function detectAiText(text: string): AiTextFlag {
+function confidenceOf(score: number): AiConfidence {
+  if (score >= 0.62) return "tinggi";
+  if (score >= 0.4) return "sedang";
+  return "rendah";
+}
+
+function cues(text: string): { name: string; detail: string; weight: number }[] {
   const lower = text.toLowerCase();
-  const reasons: string[] = [];
-  let score = 0.08;
-
-  const cues: Array<[string, number, string]> = [
-    ["deepfake", 0.42, "Teks menyebut deepfake."],
-    ["buatan ai", 0.36, "Teks menyebut buatan AI."],
-    ["hasil ai", 0.32, "Teks menyebut hasil AI."],
-    ["generate ai", 0.34, "Teks menyebut generate AI."],
-    ["generated", 0.16, "Ada kata generated."],
-    ["wajah kaku", 0.22, "Ada deskripsi visual yang sering menempel pada video sintetis."],
-    ["suara tidak sinkron", 0.22, "Ada keluhan sinkronisasi suara."],
-    ["rekaman eksklusif", 0.1, "Klaim rekaman eksklusif tanpa sumber primer."],
-    ["bocoran video", 0.12, "Pola bocoran video."],
+  const rows: Array<[string, number, string]> = [
+    ["deepfake", 0.28, "Teks menyebut deepfake."],
+    ["buatan ai", 0.24, "Teks menyebut buatan AI."],
+    ["hasil ai", 0.2, "Teks menyebut hasil AI."],
+    ["generate ai", 0.22, "Teks menyebut generate AI."],
   ];
-  for (const [needle, weight, reason] of cues) {
-    if (lower.includes(needle)) {
-      score += weight;
-      reasons.push(reason);
-    }
-  }
+  return rows
+    .filter(([needle]) => lower.includes(needle))
+    .map(([name, weight, detail]) => ({ name, weight, detail }));
+}
 
-  const sentences = text
-    .split(/[.!?]/)
-    .map((part) => part.trim())
-    .filter((part) => part.length > 0);
+/** Gabungan isyarat leksikal dan stilometri. Skor dibatasi dan dijelaskan. */
+export function detectAiText(text: string): AiTextFlag {
+  const found = [...cues(text), ...stylometrySignals(text)];
+  let score = found.reduce((sum, item) => sum + item.weight, 0.06);
+  const sentences = text.split(/[.!?]/).map((part) => part.trim()).filter(Boolean);
   const short = sentences.filter((part) => part.split(/\s+/).length <= 8);
-  if (sentences.length >= 4 && short.length / sentences.length >= 0.7) {
-    score += 0.16;
-    reasons.push("Banyak kalimat sangat pendek beruntun, pola yang sering dipakai narasi video sintetis.");
-  }
-  if (/(video|rekaman)/.test(lower) && /(viral|heboh|sebarkan)/.test(lower) && !/(rilis|kapuspen|menurut)/.test(lower)) {
+  if (sentences.length >= 4 && short.length / sentences.length >= 0.75) {
     score += 0.1;
-    reasons.push("Klaim video viral tanpa penanda sumber resmi.");
+    found.push({
+      name: "kalimat sangat pendek",
+      detail: "Banyak kalimat sangat pendek beruntun. Pola ini umum pada narasi video, termasuk yang sintetis.",
+      weight: 0.1,
+    });
   }
-
-  const capped = Math.min(0.95, score);
-  if (reasons.length === 0) {
-    reasons.push("Tidak ada penanda heuristik yang kuat.");
-  }
+  const capped = Math.min(0.9, score);
+  const confidence = confidenceOf(capped);
   return {
-    flagged: capped >= 0.45,
+    flagged: confidence !== "rendah" && found.length > 0,
     score: capped,
-    reasons,
+    confidence,
+    reasons: found.map((item) => item.detail),
+    signals: found.map((item) => ({ name: item.name, detail: item.detail })),
     disclaimer: DISCLAIMER,
+  };
+}
+
+export function applyImageReport(flag: AiTextFlag, image: ImageMetadataReport | null): AiTextFlag {
+  if (!image?.checked) return flag;
+  const reasons = [...flag.reasons, ...image.signals];
+  let score = flag.score;
+  if (image.generatorHint) score = Math.min(0.9, score + 0.34);
+  else if (image.c2paMarker) score = Math.min(0.9, score + 0.08);
+  const confidence = image.generatorHint ? "tinggi" : confidenceOf(score);
+  return {
+    flagged: Boolean(image.generatorHint) || confidence !== "rendah",
+    score,
+    confidence,
+    reasons,
+    signals: [
+      ...flag.signals,
+      ...image.signals.map((detail) => ({ name: image.generatorHint ? "metadata pembuat" : "metadata", detail })),
+    ],
+    disclaimer: `${flag.disclaimer} ${image.disclaimer}`,
   };
 }

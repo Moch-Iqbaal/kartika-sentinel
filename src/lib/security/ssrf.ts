@@ -168,3 +168,37 @@ export async function safeFetchText(input: string): Promise<{
   }
   throw new UnsafeUrlError("Terlalu banyak redirect.");
 }
+
+const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+/** Unduh gambar publik untuk pemeriksaan metadata. Bukan unggahan pengguna mentah. */
+export async function safeFetchBytes(input: string): Promise<{
+  finalUrl: string;
+  contentType: string;
+  bytes: Uint8Array;
+}> {
+  let current = input;
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
+    const url = assertPublicHttpUrl(current);
+    await assertResolvedHost(url.hostname);
+    const response = await fetch(url, {
+      method: "GET",
+      redirect: "manual",
+      signal: AbortSignal.timeout(8000),
+      headers: { accept: "image/jpeg,image/png,image/webp", "user-agent": "KartikaSentinel/0.1" },
+    });
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get("location");
+      if (!location) throw new UnsafeUrlError("Redirect tanpa tujuan.");
+      current = new URL(location, url).toString();
+      continue;
+    }
+    if (!response.ok) throw new UnsafeUrlError(`Sumber menjawab HTTP ${response.status}.`);
+    const contentType = (response.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+    if (!IMAGE_TYPES.includes(contentType)) throw new UnsafeUrlError("Berkas bukan JPEG, PNG, atau WebP.");
+    const raw = new Uint8Array(await response.arrayBuffer());
+    if (raw.byteLength > 2_000_000) throw new UnsafeUrlError("Gambar melebihi 2 MB.");
+    return { finalUrl: url.toString(), contentType, bytes: raw };
+  }
+  throw new UnsafeUrlError("Terlalu banyak redirect.");
+}

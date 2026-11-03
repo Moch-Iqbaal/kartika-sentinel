@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 export function AnalyzeForm() {
   const router = useRouter();
-  const [mode, setMode] = useState<"text" | "url">("text");
+  const [mode, setMode] = useState<"text" | "url" | "gambar">("text");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
 
@@ -45,15 +45,18 @@ export function AnalyzeForm() {
         <Button type="button" variant={mode === "url" ? "default" : "outline"} onClick={() => setMode("url")}>
           URL
         </Button>
+        <Button type="button" variant={mode === "gambar" ? "default" : "outline"} onClick={() => setMode("gambar")}>
+          Gambar
+        </Button>
       </div>
       {mode === "text" ? (
         <Textarea name="text" required minLength={12} maxLength={6000} placeholder="Tempel narasi berbahasa Indonesia…" />
       ) : (
-        <Input name="url" required type="url" placeholder="https://www.youtube.com/watch?v=…" />
+        <Input name="url" required type="url" placeholder={mode === "gambar" ? "https://contoh.go.id/berkas.jpg" : "https://www.youtube.com/watch?v=…"} />
       )}
       {error ? <p className="text-sm text-danger">{error}</p> : null}
       <Button type="submit" disabled={pending}>
-        {pending ? "Memeriksa…" : "Analisis"}
+        {pending ? "Menunggu model. Cold start bisa sekitar satu menit, lalu cadangan dipakai bila layanan belum siap." : "Analisis"}
       </Button>
     </form>
   );

@@ -1,9 +1,9 @@
 import { Card } from "@/components/ui/card";
-import { topicCounts } from "@/lib/db/store";
+import { topicCounts } from "@/lib/db";
 import { TOPICS } from "@/lib/ontology/topics";
 
-export default function OntologyPage() {
-  const counts = topicCounts();
+export default async function OntologyPage() {
+  const counts = await topicCounts();
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold">Ontologi narasi</h1>

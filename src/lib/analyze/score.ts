@@ -37,6 +37,7 @@ export function scoreContentSync(raw: string, virality: number, corpus: FactChec
         linear,
         heuristic,
         ai: detectAiText(clean),
+        modelStatus: "dilewati",
       }
     : {
         probability: heuristic.probability,
@@ -46,6 +47,7 @@ export function scoreContentSync(raw: string, virality: number, corpus: FactChec
         linear: null,
         heuristic,
         ai: detectAiText(clean),
+        modelStatus: "dilewati",
       };
   return finish(clean, assessment, virality, corpus);
 }

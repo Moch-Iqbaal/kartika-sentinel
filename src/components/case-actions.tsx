@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import type { AlertStatus, CaseStatus } from "@/lib/db/types";
 
 async function postJson(url: string, body: unknown): Promise<string | null> {
@@ -21,11 +22,13 @@ export function CaseActions({
   alertStatus,
   caseStatus,
   canEdit,
+  initialNote,
 }: {
   alertId: string;
   alertStatus: AlertStatus;
   caseStatus: CaseStatus | null;
   canEdit: boolean;
+  initialNote: string;
 }) {
   const router = useRouter();
   const [error, setError] = useState("");
@@ -86,6 +89,20 @@ export function CaseActions({
           <a href={`/api/kasus/${alertId}/pdf`}>Unduh PDF</a>
         </Button>
       </div>
+      <form
+        className="space-y-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const note = String(new FormData(event.currentTarget).get("note") ?? "");
+          void run(() => postJson(`/api/kasus/${alertId}`, { action: "note", note }));
+        }}
+      >
+        <label className="block text-sm">
+          Catatan analis
+          <Textarea name="note" defaultValue={initialNote} maxLength={2000} className="mt-1" placeholder="Temuan, sumber yang sudah dicek, atau alasan eskalasi." />
+        </label>
+        <Button type="submit" size="sm" variant="outline" disabled={pending}>Simpan catatan</Button>
+      </form>
       {error ? <p className="text-sm text-danger">{error}</p> : null}
     </div>
   );

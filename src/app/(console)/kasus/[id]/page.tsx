@@ -5,7 +5,7 @@ import { Disclaimer } from "@/components/disclaimer";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { currentSession } from "@/lib/auth/session";
-import { getCase } from "@/lib/db/store";
+import { getCase } from "@/lib/db";
 import { alertStatusLabel, bandLabel, caseStatusLabel, engineLabel, percent, verdictLabel } from "@/lib/format";
 import { displayHandle } from "@/lib/security/redact";
 
@@ -31,7 +31,7 @@ function SafeLink({ href, children }: { href: string; children: string }) {
 
 export default async function CasePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const detail = getCase(id);
+  const detail = await getCase(id);
   if (!detail) notFound();
   const session = await currentSession();
   const canEdit = Boolean(session && (session.role === "admin" || session.sub === detail.assignedTo));
@@ -49,6 +49,12 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
         </Badge>
       </div>
       <Disclaimer />
+      {detail.modelStatus === "bangun" ? (
+        <Card className="border-warning/50 p-4 text-sm">Model sedang bangun (cold start). Skor tersimpan memakai cadangan lokal. Skor ulang setelah layanan siap.</Card>
+      ) : null}
+      {detail.modelStatus === "mati" ? (
+        <Card className="p-4 text-sm text-muted">Layanan IndoBERT tidak menjawab. Skor memakai model linier atau heuristik di server web.</Card>
+      ) : null}
       <div className="grid gap-3 md:grid-cols-4">
         <Card className="p-4"><p className="text-xs text-muted">Skor utama</p><p className="text-xl font-semibold">{percent(detail.hoaxScore)}</p><p className="text-xs text-muted">{engineLabel(detail.engine)}</p></Card>
         <Card className="p-4"><p className="text-xs text-muted">Sensitivitas</p><p className="text-xl font-semibold">{percent(detail.sensitivity)}</p></Card>
@@ -67,12 +73,13 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
         {detail.assessment.indobert ? <p className="text-sm">IndoBERT lokal ({detail.assessment.indobert.label}): {percent(detail.assessment.indobert.probability)}</p> : <p className="text-sm text-muted">IndoBERT lokal tidak dipakai pada skor yang tersimpan. Tombol skor ulang akan memanggil proses lokal jika hidup.</p>}
         {detail.assessment.linear ? <p className="text-sm">Model linier: {percent(detail.assessment.linear.probability)}</p> : null}
         <ul className="list-disc pl-5 text-sm text-muted">
-          {detail.assessment.heuristic.reasons.map((reason: string) => <li key={reason}>{reason}</li>)}
+          {(detail.assessment.heuristic?.reasons ?? []).map((reason: string) => <li key={reason}>{reason}</li>)}
         </ul>
         {gap ? <p className="text-sm text-warning">IndoBERT dan heuristik berselisih jauh. Baca keduanya. Jangan mengandalkan satu angka.</p> : null}
+        <p className="text-sm">Keyakinan indikasi AI: {detail.ai.confidence ?? "rendah"} · {percent(detail.ai.score)}</p>
         <p className="text-sm text-muted">{detail.ai.disclaimer}</p>
         <ul className="list-disc pl-5 text-sm text-muted">
-          {detail.ai.reasons.map((reason) => <li key={reason}>{reason}</li>)}
+          {(detail.ai.reasons ?? []).map((reason) => <li key={reason}>{reason}</li>)}
         </ul>
       </Card>
       <Card className="space-y-3 p-4">
@@ -115,7 +122,26 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
           Peringatan: {alertStatusLabel(detail.alertStatus)}
           {detail.caseStatus ? ` · Kasus: ${caseStatusLabel(detail.caseStatus)}` : ""}
         </p>
-        <CaseActions alertId={detail.alertId} alertStatus={detail.alertStatus} caseStatus={detail.caseStatus} canEdit={canEdit} />
+        <CaseActions
+          alertId={detail.alertId}
+          alertStatus={detail.alertStatus}
+          caseStatus={detail.caseStatus}
+          canEdit={canEdit}
+          initialNote={detail.analystNote ?? ""}
+        />
+      </Card>
+      <Card className="space-y-2 p-4">
+        <h2 className="font-medium">Linimasa</h2>
+        {detail.timeline.length === 0 ? <p className="text-sm text-muted">Belum ada jejak waktu.</p> : (
+          <ol className="space-y-2 text-sm">
+            {detail.timeline.map((event) => (
+              <li key={`${event.at}-${event.label}`} className="border-l border-gold/40 pl-3">
+                <span className="text-muted">{event.at}</span> · {event.label}
+                <p className="text-muted">{event.detail}</p>
+              </li>
+            ))}
+          </ol>
+        )}
       </Card>
     </div>
   );

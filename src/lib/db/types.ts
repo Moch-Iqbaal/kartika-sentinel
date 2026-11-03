@@ -58,6 +58,9 @@ export type CaseDetail = {
   caseStatus: CaseStatus | null;
   assignedTo: string | null;
   recommendation: string;
+  analystNote: string | null;
+  modelStatus: "siap" | "bangun" | "mati" | "dilewati";
+  timeline: { at: string; label: string; detail: string }[];
 };
 
 export type AuditEntry = {

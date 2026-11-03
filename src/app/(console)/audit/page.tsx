@@ -1,5 +1,5 @@
 import { currentSession } from "@/lib/auth/session";
-import { listAudit } from "@/lib/db/store";
+import { listAudit } from "@/lib/db";
 import { formatWhen } from "@/lib/format";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,10 +15,10 @@ export default async function AuditPage() {
       </div>
     );
   }
-  let entries: ReturnType<typeof listAudit> = [];
+  let entries: Awaited<ReturnType<typeof listAudit>> = [];
   let error = "";
   try {
-    entries = listAudit(session);
+    entries = await listAudit(session);
   } catch (cause) {
     error = cause instanceof Error ? cause.message : "Log gagal dibaca.";
   }

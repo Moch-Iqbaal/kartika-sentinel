@@ -156,10 +156,18 @@ function migrate(opened: DatabaseSync): void {
       primary key (post_id, observed_at)
     );
   `);
+  ensureCaseNoteColumn(opened);
 }
 
 function loadCorpus(): FactCheck[] {
   return JSON.parse(fs.readFileSync(path.join(process.cwd(), "data/seed/fact-checks.json"), "utf8")) as FactCheck[];
+}
+
+function ensureCaseNoteColumn(opened: DatabaseSync): void {
+  const columns = opened.prepare("pragma table_info(cases)").all() as { name?: string }[];
+  if (!columns.some((column) => column.name === "analyst_note")) {
+    opened.exec("alter table cases add column analyst_note text");
+  }
 }
 
 function seed(opened: DatabaseSync): void {
@@ -229,7 +237,9 @@ function seed(opened: DatabaseSync): void {
 }
 
 function canMutate(session: Session, assignedTo: string | null): boolean {
-  return session.role === "admin" || (assignedTo !== null && assignedTo === session.sub);
+  if (session.role === "admin") return true;
+  if (!assignedTo) return true;
+  return assignedTo === session.sub;
 }
 
 function writeAudit(opened: DatabaseSync, table: string, rowId: string, action: string, actor: string | null, diff: unknown): void {
@@ -394,7 +404,7 @@ export function getCase(alertId: string): CaseDetail | null {
     select a.id as alert_id, a.risk_score, a.status as alert_status, a.virality, a.assigned_to, a.case_id,
            an.input_text, an.hoax_score, an.model_version, an.rationale, an.id as analysis_id,
            p.platform, p.author_handle_hash, p.url, p.demo, p.posted_at, p.id as post_id,
-           c.title as case_title, c.status as case_status
+           c.title as case_title, c.status as case_status, c.analyst_note
     from alerts a
     join analyses an on an.id = a.analysis_id
     left join posts p on p.id = an.post_id
@@ -428,7 +438,8 @@ export function getCase(alertId: string): CaseDetail | null {
     indobert: null,
     linear: null,
     heuristic: { probability: num(row.hoax_score), reasons: [] },
-    ai: { flagged: false, score: 0, reasons: [], disclaimer: "" } satisfies AiTextFlag,
+    ai: { flagged: false, score: 0, confidence: "rendah", reasons: [], signals: [], disclaimer: "" } satisfies AiTextFlag,
+    modelStatus: "dilewati",
   };
   return {
     alertId: text(row.alert_id),
@@ -473,7 +484,41 @@ export function getCase(alertId: string): CaseDetail | null {
     caseStatus: (text(row.case_status) || null) as CaseStatus | null,
     assignedTo: text(row.assigned_to) || null,
     recommendation: rationale.recommendation ?? recommendation(band),
+    analystNote: text(row.analyst_note) || null,
+    modelStatus: assessment.modelStatus ?? "dilewati",
+    timeline: buildTimeline(text(row.alert_id), text(row.case_id), text(row.posted_at), metrics.map((metric) => ({
+      observedAt: text(metric.observed_at),
+      likes: num(metric.likes),
+      shares: num(metric.shares),
+      comments: num(metric.comments),
+    }))),
   };
+}
+
+function buildTimeline(
+  alertId: string,
+  caseId: string,
+  postedAt: string,
+  metrics: MetricPoint[],
+): { at: string; label: string; detail: string }[] {
+  const events: { at: string; label: string; detail: string }[] = [];
+  if (postedAt) events.push({ at: postedAt, label: "Terbit", detail: "Waktu pada umpan atau masukan." });
+  for (const point of metrics) {
+    events.push({
+      at: point.observedAt,
+      label: "Sebaran",
+      detail: `${point.shares} sebar, ${point.likes} suka, ${point.comments} komentar`,
+    });
+  }
+  const audits = db().prepare(`
+    select created_at, action, diff from audit_log
+    where (table_name = 'alerts' and row_id = ?) or (table_name = 'cases' and row_id = ?)
+    order by id
+  `).all(alertId, caseId) as Row[];
+  for (const entry of audits) {
+    events.push({ at: text(entry.created_at), label: text(entry.action), detail: text(entry.diff).slice(0, 180) });
+  }
+  return events.sort((left, right) => left.at.localeCompare(right.at));
 }
 
 export function corpusFromDb(): FactCheck[] {
@@ -678,6 +723,19 @@ export function purgeOldDemo(session: Session): number {
     writeAudit(db(), "posts", "purge", "DELETE", session.sub, { removed, olderThanDays: 90 });
   }
   return removed;
+}
+
+export function saveAnalystNote(session: Session, alertId: string, note: string): void {
+  const detail = getCase(alertId);
+  if (!detail) throw new Error("Peringatan tidak ditemukan.");
+  if (!canMutate(session, detail.assignedTo)) {
+    throw new Error("Analis hanya dapat menulis catatan pada berkas yang ditugaskan kepadanya.");
+  }
+  const caseId = detail.caseId ?? openCase(session, alertId);
+  const clean = note.replace(/\u0000/g, "").trim().slice(0, 2000);
+  const now = new Date().toISOString();
+  db().prepare("update cases set analyst_note = ?, updated_at = ? where id = ?").run(clean, now, caseId);
+  writeAudit(db(), "cases", caseId, "UPDATE", session.sub, { analystNote: true, length: clean.length });
 }
 
 export function ensureReady(): void {
