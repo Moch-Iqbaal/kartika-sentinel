@@ -34,15 +34,16 @@ test("ambang skor: 0,5 ke atas hoaks, di bawahnya fakta", () => {
   assert.equal(scoreVerdict(1), "hoax");
   assert.equal(scoreVerdict(HOAX_CALL_MIN - 0.001), "not-hoax");
   assert.equal(scoreVerdict(0), "not-hoax");
-  assert.equal(scoreVerdict(Number.NaN), "uncertain");
+  assert.equal(scoreVerdict(Number.NaN), "not-hoax");
 });
 
-test("teks pendek memaksa belum pasti walau skor sangat tinggi", () => {
+test("teks pendek tetap punya vonis, dengan keyakinan rendah", () => {
   const card = input({ hoaxScore: 0.99, shortText: true, linear: 0.99 });
-  assert.equal(decideVerdict(card), "uncertain");
+  assert.equal(decideVerdict(card), "hoax");
   const text = buildRingkasan(card);
-  assert.equal(text.headline, "Belum bisa dipastikan");
-  assert.match(text.sentences.join(" "), /terlalu pendek/);
+  assert.equal(text.headline, "Kemungkinan HOAKS");
+  assert.equal(text.confidenceReason, "teks pendek");
+  assert.doesNotMatch(text.sentences.join(" "), /Belum bisa dipastikan/);
   assert.ok(text.sentences.length <= 3);
 });
 
@@ -53,8 +54,8 @@ test("selisih IndoBERT dan model linier pada ambang membuat belum pasti", () => 
     indobert: 0.9,
     linear: 0.9 - ENGINE_DIVERGENCE,
   });
-  assert.equal(decideVerdict(apart), "uncertain");
-  assert.match(buildRingkasan(apart).sentences[0], /tidak sejalan/);
+  assert.equal(decideVerdict(apart), "hoax");
+  assert.equal(buildRingkasan(apart).confidenceReason, "dua penilaian tidak sejalan");
 
   const close = input({
     hoaxScore: 0.9,
@@ -76,9 +77,9 @@ test("selisih IndoBERT dan heuristik juga menahan vonis", () => {
     linear: null,
     heuristic: 0.2 + ENGINE_DIVERGENCE,
   });
-  assert.equal(decideVerdict(card), "uncertain");
-  assert.match(buildRingkasan(card).sentences[0], /tidak sejalan/);
-  assert.doesNotMatch(buildRingkasan(card).sentences.join(" "), /IndoBERT|n-gram|model linier/);
+  assert.equal(decideVerdict(card), "not-hoax");
+  assert.equal(buildRingkasan(card).confidenceReason, "dua penilaian tidak sejalan");
+  assert.doesNotMatch(buildRingkasan(card).sentences.join(" "), /IndoBERT|n-gram|model linier|Belum bisa dipastikan/);
 });
 
 test("bukti yang bertentangan menahan vonis", () => {
@@ -95,17 +96,17 @@ test("bukti yang bertentangan menahan vonis", () => {
     linear: 0.1,
     matches: [{ verdict: "misleading", similarity: 0.2 }, { verdict: "hoax", similarity: 0.9 }],
   });
-  assert.equal(decideVerdict(lowButHoax), "uncertain");
-  assert.equal(buildRingkasan(lowButHoax).headline, "Belum bisa dipastikan");
+  assert.equal(decideVerdict(lowButHoax), "hoax");
+  assert.equal(buildRingkasan(lowButHoax).headline, "Kemungkinan HOAKS");
 });
 
-test("skor rendah tanpa sumber tidak dipaksa menjadi fakta", () => {
+test("skor rendah tanpa sumber lain tetap fakta, keyakinan rendah", () => {
   const card = input({ hoaxScore: 0.2, linear: 0.2, indobert: null });
   const text = buildRingkasan(card);
-  assert.equal(text.headline, "Belum bisa dipastikan");
-  assert.match(text.sentences.join(" "), /Belum ada sumber/);
+  assert.equal(text.headline, "Kemungkinan FAKTA");
+  assert.equal(text.confidenceReason, "bukti sedikit");
   assert.match(text.sentences.join(" "), /Keputusan akhir ada pada analis/);
-  assert.doesNotMatch(text.sentences.join(" "), /IndoBERT|n-gram|model linier/);
+  assert.doesNotMatch(text.sentences.join(" "), /IndoBERT|n-gram|model linier|Belum bisa dipastikan/);
   assert.ok(text.sentences.length <= 3);
 });
 
@@ -141,31 +142,32 @@ test("berkas tanpa teks isi tidak punya skor hoaks", () => {
   assert.ok(text.sentences.length <= 3);
 });
 
-test("skor 50–70% tanpa bukti hoaks belum pasti, di bawah 50% fakta", () => {
+test("skor 50 persen ke atas hoaks, di bawahnya fakta, tanpa sumber lain", () => {
   const mid = buildRingkasan(input({ hoaxScore: 0.62, linear: 0.62 }));
-  assert.equal(mid.headline, "Belum bisa dipastikan");
-  assert.match(mid.sentences.join(" "), /belum cukup/);
+  assert.equal(mid.headline, "Kemungkinan HOAKS");
+  assert.equal(mid.confidenceReason, "bukti sedikit");
   const fact = buildRingkasan(input({ hoaxScore: 0.45, linear: 0.45 }));
-  assert.equal(fact.headline, "Belum bisa dipastikan");
+  assert.equal(fact.headline, "Kemungkinan FAKTA");
   const strong = buildRingkasan(input({ hoaxScore: 0.85, linear: 0.85 }));
   assert.equal(strong.headline, "Kemungkinan HOAKS");
+  assert.doesNotMatch([mid, fact, strong].map((item) => item.headline).join(" "), /Belum bisa dipastikan/);
 });
 
 test("sensitivitas dan viralitas tidak mengubah vonis", () => {
   const low = decideVerdict(input({ hoaxScore: 0.62, linear: 0.62, sensitivity: 0.95, virality: 0.9 }));
   const high = decideVerdict(input({ hoaxScore: 0.62, linear: 0.62, sensitivity: 0.1, virality: 0 }));
-  assert.equal(low, "uncertain");
-  assert.equal(high, "uncertain");
+  assert.equal(low, "hoax");
+  assert.equal(high, "hoax");
 });
 
-test("opini tidak menahan vonis bila keyakinan bukan rendah", () => {
+test("kritik kebijakan menurunkan vonis ke fakta", () => {
   const text = buildRingkasan(input({
     hoaxScore: 0.8,
     linear: 0.8,
     opinion: true,
     textChars: 400,
   }));
-  assert.equal(text.headline, "Kemungkinan HOAKS");
+  assert.equal(text.headline, "Kemungkinan FAKTA");
   assert.match(text.sentences.join(" "), /Isinya terbaca sebagai kritik kebijakan, dan kritik bukan hoaks/);
   assert.doesNotMatch(text.sentences.join(" "), /Ini terbaca sebagai kritik\. kritik/);
   assert.ok(text.sentences.length <= 3);

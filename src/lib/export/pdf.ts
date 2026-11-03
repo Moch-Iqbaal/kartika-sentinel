@@ -49,6 +49,12 @@ export async function casePdf(detail: CaseDetail): Promise<Uint8Array> {
   });
   y = 790;
   draw(report.headline, { bold: true, size: 16 });
+  if (report.confidence) {
+    const reason = report.confidenceReason
+      ? `. ${report.confidenceReason[0].toUpperCase()}${report.confidenceReason.slice(1)}.`
+      : "";
+    draw(`Keyakinan: ${report.confidence}${reason}`);
+  }
   draw("Ini hanya saran. Keputusan tetap pada Anda.", { size: 9, color: [0.35, 0.38, 0.42] });
   draw(report.checkedLabel, { size: 9 });
   y -= 6;

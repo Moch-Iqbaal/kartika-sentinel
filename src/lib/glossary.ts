@@ -1,4 +1,4 @@
-import { HOAX_ALONE_MIN, HOAX_CALL_MIN } from "@/lib/analyze/bands";
+import { HOAX_CALL_MIN } from "@/lib/analyze/bands";
 import { MATCH_MIN_SIMILARITY } from "@/lib/factcheck/match";
 import { bandLabel, percent, recommendation } from "@/lib/format";
 import { MIN_RELIABLE_CHARS, MIN_RELIABLE_WORDS, SHORT_TEXT_KEEP, SHORT_TEXT_WARNING, SHORT_WORD_VERDICT } from "@/lib/ingest/short-text";
@@ -243,9 +243,9 @@ export function glossaryGroups(): GlossaryGroup[] {
         term(
           "vonis-laporan",
           "Kemungkinan HOAKS / Kemungkinan FAKTA",
-          "Vonis di bagian atas. FAKTA bila ada berita atau pemeriksaan yang menguatkan.",
-          `HOAKS bila ada bukti hoaks dan skor minimal ${percent(HOAX_CALL_MIN)}, atau skor minimal ${percent(HOAX_ALONE_MIN)} tanpa bukti yang menentang. Skor ${percent(HOAX_CALL_MIN)}–${percent(HOAX_ALONE_MIN)} tanpa bukti hoaks menjadi “Belum bisa dipastikan”. Sensitivitas dan viralitas tidak masuk ke vonis.`,
-          "Vonis di atas: hoaks, fakta, atau belum bisa dipastikan.",
+          "Hanya dua pilihan: kemungkinan hoaks atau kemungkinan fakta.",
+          `Pemeriksaan fakta hoaks menang dulu. Berita dari media lain, atau pemeriksaan yang menyebut benar, menjadi fakta. Selain itu angka ${percent(HOAX_CALL_MIN)} ke atas adalah hoaks. Kanal video sendiri tidak dihitung sebagai berita lain. Keyakinan rendah menjelaskan teks pendek, penilaian yang tidak sejalan, atau bukti sedikit.`,
+          "Vonis hanya hoaks atau fakta. Keyakinan di sampingnya menunjukkan seberapa kuat dasar vonis itu.",
         ),
         term(
           "dicek-pada",

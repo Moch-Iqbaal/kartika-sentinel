@@ -34,6 +34,7 @@ const NEWSROOM_MARKERS = [
   "metrotv",
   "tvone",
   "tribunnews",
+  "tribun",
   "republika",
 ];
 
@@ -104,4 +105,67 @@ export function credibleLabel(sourceUrl: string | null | undefined, text: string
 /** URL media/lembaga resmi, atau baris kanal video dari ruang redaksi yang dikenal. */
 export function credibleReporting(sourceUrl: string | null | undefined, text: string): boolean {
   return credibleLabel(sourceUrl, text) != null;
+}
+
+function markerFromKey(key: string): string | null {
+  if (!key) return null;
+  for (const marker of NEWSROOM_MARKERS) {
+    if (key.includes(marker)) return marker === "kompastv" ? "kompas" : marker === "tribunnews" ? "tribun" : marker;
+  }
+  if (key.includes("polri")) return "polri";
+  if (key.includes("milid")) return "mil";
+  if (key.includes("goid")) return "gov";
+  return null;
+}
+
+/** Penanda media asal teks. Kanal video dan domain artikel adalah asal, bukan penguat. */
+export function originMarker(sourceUrl: string | null | undefined, text: string): string | null {
+  const fromChannel = markerFromKey(channelKey(text));
+  if (fromChannel) return fromChannel;
+  if (!sourceUrl) return null;
+  try {
+    return markerFromKey(new URL(sourceUrl).hostname.toLowerCase().replace(/[^a-z0-9]+/g, ""));
+  } catch {
+    return null;
+  }
+}
+
+function factHostMarker(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    if (/turnbackhoax|cekfakta/.test(host)) return null;
+    if (!hostMatches(host)) return null;
+    return markerFromKey(host.replace(/[^a-z0-9]+/g, ""));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Berita dari media lain, bukan kanal atau situs yang menjadi asal teks.
+ * Pemeriksaan fakta yang berlabel hoaks tidak dihitung sebagai berita penguat.
+ */
+export function independentReports(
+  sourceUrl: string | null | undefined,
+  text: string,
+  facts: { source: string; title: string; url: string | null; rating: string | null; publisher: string | null }[],
+): { name: string; href: string | null }[] {
+  const origin = originMarker(sourceUrl, text);
+  const found: { name: string; href: string | null }[] = [];
+  for (const fact of facts) {
+    if (evidenceStance(fact.rating) === "hoax") continue;
+    const marker = factHostMarker(fact.url);
+    if (!marker || marker === origin) continue;
+    let host = "";
+    try {
+      host = new URL(fact.url ?? "").hostname;
+    } catch {
+      continue;
+    }
+    const name = labelFromHost(host);
+    if (!name || found.some((item) => item.name === name)) continue;
+    found.push({ name, href: fact.url });
+  }
+  return found;
 }

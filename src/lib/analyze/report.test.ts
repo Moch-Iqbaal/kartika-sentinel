@@ -53,7 +53,8 @@ test("bukti paling banyak tiga butir dan tidak mengandalkan satu sumber", () => 
       }),
     ],
   });
-  assert.equal(two.length, 2);
+  assert.equal(two.length, 3);
+  assert.match(two[2].text, /Belum ada sumber lain yang memberitakan/);
   assert.match(two[0].text, /TurnBackHoax/);
   assert.match(two[0].text, /2025/);
   assert.match(two[1].text, /Cek Fakta/);
@@ -68,7 +69,7 @@ test("bukti paling banyak tiga butir dan tidak mengandalkan satu sumber", () => 
     live: [fact({}), fact({ title: "Artikel kedua", url: "https://turnbackhoax.id/articles/2-lain" })],
   });
   assert.equal(one.length, 2);
-  assert.match(one[1].text, /Hanya satu sumber yang ketemu/);
+  assert.match(one[1].text, /Belum ada sumber lain yang memberitakan/);
 
   const none = buildEvidence({ unscored: false, hoaxScore: 0.2, engine: "linear-ngram", live: [] });
   assert.match(none.map((item) => item.text).join(" "), /Belum ada sumber/i);

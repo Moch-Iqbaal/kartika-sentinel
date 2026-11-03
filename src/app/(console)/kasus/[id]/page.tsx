@@ -34,6 +34,12 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
             {report.headline}
             <TermTip {...glossaryTip("vonis-laporan")} />
           </h1>
+          {report.confidence ? (
+            <p className="mt-1 text-sm">
+              Keyakinan: {report.confidence}
+              {report.confidenceReason ? `. ${report.confidenceReason[0].toUpperCase()}${report.confidenceReason.slice(1)}.` : ""}
+            </p>
+          ) : null}
           <p className="mt-1 inline-flex items-center text-sm text-muted">
             {report.checkedLabel}
             <TermTip {...glossaryTip("dicek-pada")} />
@@ -90,7 +96,7 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
         <TermTip {...glossaryTip("topik-berkas")} />
       </p>
       {detail.assessment.caution?.warning ? (
-        <p className="text-sm text-warning">{detail.assessment.caution.warning}</p>
+        <p className="text-sm text-warning">Teks pendek.</p>
       ) : null}
       {!unscored && detail.modelStatus !== "siap" ? (
         <p className="text-sm text-muted">Penilai utama belum tersambung. Angka ini dari cadangan.</p>

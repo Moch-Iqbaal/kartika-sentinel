@@ -1,7 +1,7 @@
 import type { CaseDetail } from "../db/types";
-import { decideConfidence } from "./confidence";
-import { HOAX_ALONE_MIN, HOAX_CALL_MIN } from "./bands";
-import { credibleLabel, evidenceStance } from "./evidence-stance";
+import { decideConfidence, CONFIDENCE_LABEL } from "./confidence";
+import { HOAX_CALL_MIN } from "./bands";
+import { evidenceStance, independentReports } from "./evidence-stance";
 import { percent } from "../format";
 import { OPINION_SENTENCE } from "./opinion";
 import { SHORT_WORD_VERDICT } from "../ingest/short-text";
@@ -9,22 +9,19 @@ import { ENGINE_DIVERGENCE } from "../model/divergence";
 import type { RiskBand } from "../scoring/risk";
 
 /**
- * Ringkasan pendek untuk orang awam. Tidak memanggil model bahasa.
- * "Belum bisa dipastikan" hanya bila keyakinan Rendah, teks terlalu pendek,
- * atau dua mesin berselisih pada ambang yang sudah dipakai berkas.
- * Skor 50–70% tanpa bukti hoaks tidak menjadi HOAKS.
- * Bukti yang menandai bukan hoaks, atau teks dari media/rilis resmi, menahan vonis HOAKS.
- * Sensitivitas dan viralitas tidak masuk ke vonis.
+ * Vonis hanya dua: HOAKS atau FAKTA.
+ * Urutan: pemeriksaan fakta hoaks, lalu fakta/berita lain, lalu kritik kebijakan, lalu angka.
+ * Angka memakai IndoBERT bila ada, kalau tidak angka yang tersimpan.
+ * Keyakinan rendah menjelaskan teks pendek, dua penilaian yang tidak sejalan, atau bukti sedikit.
+ * Kanal sendiri dan domain artikel sendiri bukan berita penguat.
  */
 
-export type SummaryVerdict = "hoax" | "not-hoax" | "uncertain" | "unscored" | "short";
+export type SummaryVerdict = "hoax" | "not-hoax" | "unscored";
 
 export const VERDICT_LINE: Record<SummaryVerdict, string> = {
   hoax: "Kemungkinan HOAKS",
   "not-hoax": "Kemungkinan FAKTA",
-  uncertain: "Belum bisa dipastikan",
   unscored: "Belum bisa dinilai",
-  short: SHORT_WORD_VERDICT,
 };
 
 export type RingkasanInput = {
@@ -47,20 +44,19 @@ export type RingkasanInput = {
   topicLabels: string[];
   matches: { verdict: string; similarity: number }[];
   externalCount: number;
-  /** Label pada cek fakta langsung, misalnya Salah atau Benar. */
   externalRatings?: string[];
-  /** Nama pemeriksaan fakta yang benar-benar menyebut hoaks. Kosong bila hanya angka sistem. */
   hoaxCheckers?: string[];
-  /** Teks dari media atau situs resmi yang memberitakan hal yang sama. */
-  credibleSource?: boolean;
-  /** Nama yang tampil, misalnya Kompas TV. */
-  credibleName?: string | null;
+  validCheckers?: string[];
+  /** Media lain, bukan asal teks. */
+  otherOutlets?: string[];
 };
 
 export type Ringkasan = {
   verdict: SummaryVerdict;
   headline: string;
   sentences: string[];
+  confidence: "Tinggi" | "Sedang" | "Rendah" | null;
+  confidenceReason: string | null;
 };
 
 function finite(value: number | null | undefined): number | null {
@@ -68,9 +64,9 @@ function finite(value: number | null | undefined): number | null {
   return value;
 }
 
-/** Skor saja, sebelum pagar teks pendek dan selisih mesin. */
-export function scoreVerdict(hoaxScore: number): SummaryVerdict {
-  if (!Number.isFinite(hoaxScore)) return "uncertain";
+/** Ambang angka saja: 0,5 ke atas hoaks. Bukan vonis akhir. */
+export function scoreVerdict(hoaxScore: number): "hoax" | "not-hoax" {
+  if (!Number.isFinite(hoaxScore)) return "not-hoax";
   return hoaxScore >= HOAX_CALL_MIN ? "hoax" : "not-hoax";
 }
 
@@ -79,78 +75,83 @@ function gap(left: number | null, right: number | null): number | null {
   return Math.abs(left - right);
 }
 
-function enginesDisagree(input: RingkasanInput): "linear" | "heuristic" | null {
+function enginesDisagree(input: RingkasanInput): boolean {
   const linearGap = gap(finite(input.indobert), finite(input.linear));
-  if (linearGap != null && linearGap >= ENGINE_DIVERGENCE) return "linear";
+  if (linearGap != null && linearGap >= ENGINE_DIVERGENCE) return true;
   const heuristicGap = gap(finite(input.indobert), finite(input.heuristic));
-  if (heuristicGap != null && heuristicGap >= ENGINE_DIVERGENCE) return "heuristic";
-  return null;
-}
-
-function stances(input: RingkasanInput): { hoax: boolean; valid: boolean } {
-  const labels = [
-    ...input.matches.map((match) => match.verdict),
-    ...(input.externalRatings ?? []),
-  ];
-  return {
-    hoax: labels.some((label) => evidenceStance(label) === "hoax"),
-    valid: labels.some((label) => evidenceStance(label) === "valid"),
-  };
+  return heuristicGap != null && heuristicGap >= ENGINE_DIVERGENCE;
 }
 
 /**
- * Vonis dari skor hoaks saja, lalu bukti.
- * Sensitivitas dan viralitas tidak dibaca di sini.
+ * Skor utama yang tersimpan. Itu sudah IndoBERT bila penilai itu yang dipakai,
+ * dan sudah diturunkan bila teksnya pendek.
  */
+export function verdictScore(input: RingkasanInput): number {
+  return Number.isFinite(input.hoaxScore) ? input.hoaxScore : 0;
+}
+
+function names(values: string[] | undefined): string[] {
+  return (values ?? []).map((name) => name.trim()).filter(Boolean);
+}
+
+function hasHoaxCheck(input: RingkasanInput): boolean {
+  if (names(input.hoaxCheckers).length > 0) return true;
+  return input.matches.some((match) => evidenceStance(match.verdict) === "hoax")
+    || (input.externalRatings ?? []).some((rating) => evidenceStance(rating) === "hoax");
+}
+
+function hasValidCheck(input: RingkasanInput): boolean {
+  if (names(input.validCheckers).length > 0) return true;
+  return input.matches.some((match) => evidenceStance(match.verdict) === "valid")
+    || (input.externalRatings ?? []).some((rating) => evidenceStance(rating) === "valid");
+}
+
+function otherOutlets(input: RingkasanInput): string[] {
+  return names(input.otherOutlets);
+}
+
 export function decideVerdict(input: RingkasanInput): SummaryVerdict {
   if (input.unscored) return "unscored";
-  if (input.shortWords) return "short";
-  if (input.shortText) return "uncertain";
-  if (!Number.isFinite(input.hoaxScore)) return "uncertain";
-  const evidence = stances(input);
-  const credible = Boolean(input.credibleSource);
-  const confidence = decideConfidence({
-    textChars: input.textChars,
-    shortText: input.shortText || input.shortWords,
-    shortKind: input.shortWords ? "words" : input.shortText ? "chars" : null,
-    indobert: input.indobert,
-    linear: input.linear,
-    matchCount: input.matches.length,
-    externalCount: input.externalCount,
-  });
-  if (evidence.hoax && (evidence.valid || credible)) return "uncertain";
-  if ((evidence.valid || credible) && !evidence.hoax) return "not-hoax";
-  if (confidence.level === "rendah" || enginesDisagree(input)) return "uncertain";
-  if (evidence.hoax && input.hoaxScore >= HOAX_CALL_MIN) return "hoax";
-  if (evidence.hoax) return "uncertain";
-  if (input.hoaxScore >= HOAX_ALONE_MIN) return "hoax";
-  return "uncertain";
+  if (hasHoaxCheck(input)) return "hoax";
+  if (hasValidCheck(input) || otherOutlets(input).length > 0) return "not-hoax";
+  if (input.opinion) return "not-hoax";
+  return scoreVerdict(verdictScore(input));
 }
 
 function analystLine(): string {
-  return "Ini rekomendasi sistem. Keputusan akhir ada pada analis.";
+  return "Keputusan akhir ada pada analis.";
 }
 
-function opinionLine(): string {
-  return OPINION_SENTENCE;
-}
-
-function outletName(input: RingkasanInput): string {
-  return input.credibleName?.trim() || "berita itu";
-}
-
-function checkers(input: RingkasanInput): string[] {
-  return (input.hoaxCheckers ?? []).map((name) => name.trim()).filter(Boolean);
-}
-
-function sourceLine(input: RingkasanInput): string {
-  if (input.credibleName) return `${input.credibleName} memberitakan hal yang sama.`;
-  if (stances(input).valid) return "Ada pemeriksaan fakta yang menyebut ini benar.";
-  return "Ada sumber tepercaya yang memberitakan hal yang sama.";
+function checkerLine(names: string[], kind: "hoax" | "valid"): string {
+  if (names.length === 0) {
+    return kind === "hoax"
+      ? "Pemeriksaan fakta menyebut ini hoaks."
+      : "Pemeriksaan fakta menyebut ini benar.";
+  }
+  return kind === "hoax"
+    ? `${names[0]} menyebut ini hoaks.`
+    : `${names[0]} menyebut ini benar.`;
 }
 
 export function buildRingkasan(input: RingkasanInput): Ringkasan {
   const verdict = decideVerdict(input);
+  const thin = !hasHoaxCheck(input) && !hasValidCheck(input) && otherOutlets(input).length === 0;
+  const confidence = input.unscored
+    ? null
+    : decideConfidence({
+      textChars: input.textChars,
+      shortText: input.shortText || input.shortWords,
+      shortKind: input.shortWords ? "words" : input.shortText ? "chars" : null,
+      indobert: input.indobert,
+      linear: input.linear,
+      matchCount: input.matches.length,
+      externalCount: input.externalCount,
+      thinEvidence: thin,
+      disagree: enginesDisagree(input),
+    });
+  const confidenceLabel = (confidence ? CONFIDENCE_LABEL[confidence.level] : null) as Ringkasan["confidence"];
+  const confidenceReason = confidence?.level === "rendah" ? confidence.because : null;
+
   if (verdict === "unscored") {
     return {
       verdict,
@@ -159,69 +160,51 @@ export function buildRingkasan(input: RingkasanInput): Ringkasan {
         input.unscoredReason || "Tidak ada teks yang bisa dinilai.",
         "Tempel keterangan gambar bila ingin dinilai.",
         analystLine(),
-      ].slice(0, 3),
-    };
-  }
-  if (verdict === "short") {
-    return {
-      verdict,
-      headline: VERDICT_LINE.short,
-      sentences: [
-        "Teksnya kurang dari 20 kata, jadi belum bisa dinilai.",
-        input.opinion ? opinionLine() : "Angka ini jangan dipakai untuk teks sependek itu.",
-        analystLine(),
       ],
+      confidence: null,
+      confidenceReason: null,
     };
   }
-  if (verdict === "uncertain") {
-    const disagree = enginesDisagree(input);
-    const evidence = stances(input);
-    const score = percent(Number.isFinite(input.hoaxScore) ? input.hoaxScore : 0);
-    const named = checkers(input);
-    const outlet = outletName(input);
-    const why = input.shortText
-      ? "Teksnya terlalu pendek, jadi belum bisa dipastikan."
-      : input.credibleSource && named.length > 0
-        ? `${named[0]} menyebut ini hoaks, tapi ${outlet} memberitakan hal yang sama, jadi belum bisa dipastikan.`
-        : input.credibleSource && input.hoaxScore >= HOAX_CALL_MIN
-          ? `Mesin menilai mirip hoaks, tapi ${outlet} memberitakan hal yang sama, jadi belum bisa dipastikan.`
-          : disagree
-            ? "Dua penilaian tidak sejalan, jadi belum bisa dipastikan."
-            : named.length > 0
-              ? `${named[0]} menyebut ini hoaks, tetapi angkanya rendah, jadi belum bisa dipastikan.`
-              : evidence.hoax
-                ? "Pemeriksaan fakta menyebut ini hoaks, tetapi angkanya rendah, jadi belum bisa dipastikan."
-                : input.hoaxScore >= HOAX_CALL_MIN && input.hoaxScore < HOAX_ALONE_MIN
-                  ? `Angka kemiripan hoaks ${score} belum cukup, dan belum ada bukti hoaks.`
-                  : "Belum ada sumber yang menguatkan atau menyanggah.";
-    return {
-      verdict,
-      headline: VERDICT_LINE.uncertain,
-      sentences: [
-        why,
-        input.opinion ? opinionLine() : "Jangan pakai angka ini sebagai putusan.",
-        analystLine(),
-      ],
-    };
-  }
+
+  const score = percent(verdictScore(input));
+  const outlets = otherOutlets(input);
+  let lead: string;
+  if (verdict === "hoax" && hasHoaxCheck(input)) lead = checkerLine(names(input.hoaxCheckers), "hoax");
+  else if (verdict === "not-hoax" && hasValidCheck(input)) lead = checkerLine(names(input.validCheckers), "valid");
+  else if (verdict === "not-hoax" && outlets.length > 0) lead = `${outlets[0]} memberitakan hal yang sama.`;
+  else if (verdict === "not-hoax" && input.opinion) lead = OPINION_SENTENCE;
+  else lead = `Angka kemiripan hoaks ${score}.`;
+
+  const reason = confidenceReason ? `Keyakinan rendah: ${confidenceReason}.` : null;
+  const sentences = [lead, reason, analystLine()].filter((sentence): sentence is string => Boolean(sentence));
   return {
     verdict,
     headline: VERDICT_LINE[verdict],
-    sentences: [
-      verdict === "not-hoax"
-        ? sourceLine(input)
-        : checkers(input).length > 0
-          ? `${checkers(input)[0]} menyebut ini hoaks.`
-          : stances(input).hoax
-            ? "Pemeriksaan fakta menyebut ini hoaks."
-            : "Angka kemiripan hoaks tinggi, dan belum ada sumber yang menyanggah.",
-      input.opinion ? opinionLine() : null,
-      analystLine(),
-    ].filter((sentence): sentence is string => Boolean(sentence)),
+    sentences: sentences.slice(0, 3),
+    confidence: confidenceLabel,
+    confidenceReason,
   };
 }
 
+function factName(source: string, publisher: string | null | undefined): string {
+  const pub = publisher?.trim();
+  if (source === "Cek Fakta" && pub && !/cek fakta/i.test(pub)) return `Cek Fakta ${pub}`;
+  return pub || source;
+}
+
 export function ringkasanFromCase(detail: CaseDetail): Ringkasan {
+  const hoaxCheckers = detail.external
+    .filter((item) => evidenceStance(item.rating) === "hoax")
+    .map((item) => factName(item.source, item.publisher));
+  const validCheckers = detail.external
+    .filter((item) => evidenceStance(item.rating) === "valid")
+    .map((item) => factName(item.source, item.publisher));
+  for (const match of detail.matches) {
+    const stance = evidenceStance(match.verdict);
+    const name = factName(match.source, null);
+    if (stance === "hoax" && !hoaxCheckers.includes(name)) hoaxCheckers.push(name);
+    if (stance === "valid" && !validCheckers.includes(name)) validCheckers.push(name);
+  }
   return buildRingkasan({
     hoaxScore: detail.hoaxScore,
     band: detail.band,
@@ -243,15 +226,8 @@ export function ringkasanFromCase(detail: CaseDetail): Ringkasan {
     matches: detail.matches.map((match) => ({ verdict: match.verdict, similarity: match.similarity })),
     externalCount: detail.external.length,
     externalRatings: detail.external.map((item) => item.rating ?? ""),
-    hoaxCheckers: detail.external
-      .filter((item) => evidenceStance(item.rating) === "hoax")
-      .map((item) => {
-        const publisher = item.publisher?.trim();
-        if (item.source === "Cek Fakta" && publisher && !/cek fakta/i.test(publisher)) return `Cek Fakta ${publisher}`;
-        return publisher || item.source;
-      })
-      .filter((name, index, all) => Boolean(name) && all.indexOf(name) === index),
-    credibleName: credibleLabel(detail.sourceUrl, detail.text),
-    credibleSource: credibleLabel(detail.sourceUrl, detail.text) != null,
+    hoaxCheckers,
+    validCheckers,
+    otherOutlets: independentReports(detail.sourceUrl, detail.text, detail.external).map((item) => item.name),
   });
 }

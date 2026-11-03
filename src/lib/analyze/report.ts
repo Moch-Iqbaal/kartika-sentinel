@@ -24,8 +24,7 @@ export type ScoreLines = {
   viralitasBand: PlainBand;
 };
 
-const ONLY_ONE = "Hanya satu sumber yang ketemu.";
-const NONE = "Belum ada sumber yang menguatkan atau menyanggah.";
+const NONE = "Belum ada sumber lain yang memberitakan.";
 
 export function scoreLines(hoax: number, sensitivity: number, virality: number): ScoreLines {
   const viralMeaning = virality <= 0 ? "belum ada data sebaran" : VIRALITY_MEANING;
@@ -95,19 +94,17 @@ export function buildEvidence(input: {
   hoaxScore: number;
   engine: string;
   live: ExternalFact[];
-  corroboration?: { name: string; href: string | null } | null;
+  corroboration?: { name: string; href: string | null }[];
 }): EvidenceBullet[] {
   if (input.unscored) {
     return [{ text: "Tidak ada teks yang bisa dinilai.", href: null }];
   }
-  const lead: EvidenceBullet[] = input.corroboration
-    ? [{ text: `${input.corroboration.name} memberitakan hal yang sama.`, href: input.corroboration.href }]
-    : [];
+  const lead: EvidenceBullet[] = (input.corroboration ?? []).map((item) => ({
+    text: `${item.name} memberitakan hal yang sama.`,
+    href: item.href,
+  }));
   const facts = pickSources(input.live).map(factBullet);
-  const combined = [...lead, ...facts].slice(0, 3);
-  if (combined.length === 0) return [{ text: NONE, href: null }];
-  if (combined.length === 1 && facts.length === 1 && lead.length === 0) {
-    return [combined[0], { text: ONLY_ONE, href: null }];
-  }
-  return combined;
+  const combined = [...lead, ...facts];
+  if (lead.length === 0) combined.push({ text: NONE, href: null });
+  return combined.slice(0, 3);
 }

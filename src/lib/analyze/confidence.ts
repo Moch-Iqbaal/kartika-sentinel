@@ -1,4 +1,4 @@
-import { MIN_RELIABLE_CHARS, MIN_RELIABLE_WORDS } from "../ingest/short-text";
+import { MIN_RELIABLE_CHARS } from "../ingest/short-text";
 import { ENGINE_DIVERGENCE } from "../model/divergence";
 
 /**
@@ -26,6 +26,10 @@ export type ConfidenceInput = {
   linear: number | null;
   matchCount: number;
   externalCount: number;
+  /** Tidak ada pemeriksaan fakta dan tidak ada media lain. */
+  thinEvidence?: boolean;
+  /** Dua penilaian berselisih, termasuk bila cadangan bukan angka linier. */
+  disagree?: boolean;
 };
 
 export type ConfidenceDecision = {
@@ -47,12 +51,15 @@ export function decideConfidence(input: ConfidenceInput): ConfidenceDecision {
   const evidence = input.matchCount + input.externalCount > 0;
   if (short) {
     if (input.shortKind === "words") {
-      return { level: "rendah", because: `teks yang dinilai kurang dari ${MIN_RELIABLE_WORDS} kata` };
+      return { level: "rendah", because: "teks pendek" };
     }
-    return { level: "rendah", because: `teks yang dinilai lebih pendek dari ${MIN_RELIABLE_CHARS} karakter` };
+    return { level: "rendah", because: "teks pendek" };
   }
-  if (gap != null && gap >= ENGINE_DIVERGENCE) {
-    return { level: "rendah", because: "IndoBERT dan model linier berselisih jauh" };
+  if (input.disagree || (gap != null && gap >= ENGINE_DIVERGENCE)) {
+    return { level: "rendah", because: "dua penilaian tidak sejalan" };
+  }
+  if (input.thinEvidence) {
+    return { level: "rendah", because: "bukti sedikit" };
   }
   if (gap != null && evidence) {
     return {

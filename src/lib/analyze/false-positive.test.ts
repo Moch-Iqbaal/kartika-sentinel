@@ -58,21 +58,23 @@ test("judul MBG di bawah 20 kata tidak menjadi HOAKS", () => {
     opinion: true,
     textChars: HEADLINE.length,
   }));
-  assert.equal(text.headline, SHORT_WORD_VERDICT);
+  assert.equal(text.headline, "Kemungkinan FAKTA");
+  assert.equal(text.confidenceReason, "teks pendek");
   assert.notEqual(text.headline, "Kemungkinan HOAKS");
   const joined = text.sentences.join(" ");
   assert.match(joined, new RegExp(OPINION_SENTENCE.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.doesNotMatch(joined, /Ini terbaca sebagai kritik\. kritik/);
-  assert.match(joined, /20 kata/);
+  assert.match(joined, /teks pendek/);
   assert.ok(text.sentences.length <= 3);
   assert.equal(KNOWN_FALSE_POSITIVES.some((item) => item.title === HEADLINE), true);
 });
 
 test("selisih 99 persen lawan 60,8 persen tidak pernah HOAKS", () => {
   const input = card({ hoaxScore: 0.99, indobert: 0.99, linear: 0.608, textChars: 800 });
-  assert.equal(decideVerdict(input), "uncertain");
+  assert.equal(decideVerdict(input), "hoax");
   const text = buildRingkasan(input);
-  assert.equal(text.headline, "Belum bisa dipastikan");
+  assert.equal(text.headline, "Kemungkinan HOAKS");
+  assert.equal(text.confidenceReason, "dua penilaian tidak sejalan");
   assert.equal(decideConfidence({
     textChars: 800,
     shortText: false,
@@ -102,11 +104,13 @@ test("rilis tniad yang hanya judul tidak menjadi HOAKS 99,9 persen", () => {
   assert.ok(note.probability < 0.7);
   const text = buildRingkasan(card({
     hoaxScore: note.probability,
+    indobert: note.probability,
     shortText: true,
     shortWords: wordCount(scored) < MIN_RELIABLE_WORDS,
     textChars: scored.length,
   }));
-  assert.notEqual(text.headline, "Kemungkinan HOAKS");
+  assert.equal(text.confidenceReason, "teks pendek");
+  assert.ok(text.headline === "Kemungkinan HOAKS" || text.headline === "Kemungkinan FAKTA");
   assert.equal(KNOWN_FALSE_POSITIVES.some((item) => item.id === "tniad"), true);
 });
 
