@@ -55,7 +55,8 @@ test("selisih IndoBERT dan model linier pada ambang membuat belum pasti", () => 
     indobert: 0.9,
     linear: 0.9 - ENGINE_DIVERGENCE,
   });
-  assert.equal(decideVerdict(apart), "hoax");
+  assert.equal(decideVerdict(apart), "not-hoax");
+  assert.equal(buildRingkasan(apart).headline, "Kemungkinan FAKTA");
   assert.equal(buildRingkasan(apart).confidenceReason, "dua penilaian tidak sejalan");
 
   const close = input({

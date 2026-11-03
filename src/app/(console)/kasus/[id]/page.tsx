@@ -123,7 +123,10 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
       <details className="rounded-xl border border-border bg-card p-4">
         <summary className="cursor-pointer text-xs text-info">Detail teknis</summary>
         <div className="mt-3 space-y-2 text-sm">
-          <p>Mesin: {unscored ? "tidak dijalankan" : engineLabel(detail.engine)} · versi {detail.modelVersion}</p>
+          <p>Penilai: {unscored ? "tidak dijalankan" : engineLabel(detail.engine)}</p>
+          {detail.modelVersion && detail.modelVersion !== "belum-dinilai" ? (
+            <p className="break-all text-muted">Nama model: {detail.modelVersion}</p>
+          ) : null}
           {detail.assessment.indobert ? (
             <p>IndoBERT: {percent(detail.assessment.indobert.probability)}</p>
           ) : (

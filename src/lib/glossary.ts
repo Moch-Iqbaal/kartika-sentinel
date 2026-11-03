@@ -230,7 +230,12 @@ export function glossaryGroups(): GlossaryGroup[] {
         ),
         term("analisis-tombol", "Analisis", "Tombol kirim. Saat menunggu, cold start model bisa sekitar satu menit, lalu cadangan dipakai."),
         term("rekomendasi-saja", "Sistem hanya merekomendasikan", "Kalimat tetap di beberapa halaman: putusan ada pada analis, skor bukan penetapan."),
-        term("kartu-model", "umn-cyber/indobert-hoax", "Nama model yang disebut di disclaimer. Akurasinya milik penulis model, bukan uji aplikasi ini."),
+        term(
+          "kartu-model",
+          "Model hoaks",
+          "Nama model di balik penilai utama. Akurasinya milik penulis model, bukan uji aplikasi ini.",
+          "umn-cyber/indobert-hoax",
+        ),
       ],
     },
     {
@@ -251,7 +256,7 @@ export function glossaryGroups(): GlossaryGroup[] {
           "vonis-laporan",
           "Kemungkinan HOAKS / Kemungkinan FAKTA",
           "Hanya dua pilihan: kemungkinan hoaks atau kemungkinan fakta. Angka tinggi sendirian tidak cukup bila penilaian lain tidak sejalan dan tidak ada yang menyebut hoaks.",
-          `Pemeriksaan fakta hoaks menang dulu. Berita dari media lain, atau pemeriksaan yang menyebut benar, menjadi fakta. Bila dua penilaian selisihnya besar, atau teksnya berita dari kanal berita yang dikenal tanpa ajakan sebar, hoaks hanya bila kedua angka ${percent(HOAX_CALL_MIN)} atau lebih. Kanal video sendiri tidak dihitung sebagai berita lain. Bukti berumur ${RECENCY_OLD_DAYS} hari atau lebih dibanding tanggal berita (atau dibanding hari ini bila berita tak bertanggal) hanya mengubah vonis bila kemiripan minimal ${decimal(NEAR_SAME_SIMILARITY)}. Selain itu tampil sebagai Artikel lama. Nama model tidak ditulis di ringkasan. Keyakinan rendah menjelaskan teks pendek, penilaian yang tidak sejalan, atau bukti sedikit.`,
+          `Pemeriksaan fakta hoaks menang dulu. Berita dari media lain, atau pemeriksaan yang menyebut benar, menjadi fakta. Bila kedua angka ada, hoaks hanya bila keduanya ${percent(HOAX_CALL_MIN)} atau lebih dan selisihnya tidak besar. Satu ambang yang lebih tinggi tidak menggantikan kesepakatan itu. Kanal video sendiri tidak dihitung sebagai berita lain. Bukti berumur ${RECENCY_OLD_DAYS} hari atau lebih dibanding tanggal berita (atau dibanding hari ini bila berita tak bertanggal) hanya mengubah vonis bila kemiripan minimal ${decimal(NEAR_SAME_SIMILARITY)}. Selain itu tampil sebagai Artikel lama. Nama model hanya di Detail teknis. Keyakinan rendah menjelaskan teks pendek, penilaian yang tidak sejalan, atau bukti sedikit.`,
           "Vonis hanya hoaks atau fakta. Keyakinan di sampingnya menunjukkan seberapa kuat dasar vonis itu.",
         ),
         term(

@@ -138,15 +138,13 @@ function backupScore(input: RingkasanInput): number | null {
   return finite(input.linear) ?? finite(input.heuristic);
 }
 
-/** Satu angka tinggi tidak boleh menjadi hoaks bila cadangan tidak ikut, atau teksnya berita biasa. */
-export function indoBertNeedsAgreement(input: RingkasanInput): boolean {
-  if (hasHoaxCheck(input)) return false;
-  if (finite(input.indobert) == null) return false;
-  if (backupScore(input) == null) return false;
-  return enginesDisagree(input) || plainNewsReport(input.text ?? "", input.sourceUrl);
+function bothModelsPresent(input: RingkasanInput): boolean {
+  return finite(input.indobert) != null && backupScore(input) != null;
 }
 
-function bothScoresCallHoax(input: RingkasanInput): boolean {
+/** Kedua angka ada, tidak berselisih jauh, dan masing-masing 0,5 atau lebih. */
+function agreedHoaxCall(input: RingkasanInput): boolean {
+  if (!bothModelsPresent(input) || enginesDisagree(input)) return false;
   const primary = finite(input.indobert);
   const backup = backupScore(input);
   if (primary == null || backup == null) return false;
@@ -158,7 +156,7 @@ export function decideVerdict(input: RingkasanInput): SummaryVerdict {
   if (hasHoaxCheck(input)) return "hoax";
   if (hasValidCheck(input) || otherOutlets(input).length > 0) return "not-hoax";
   if (input.opinion) return "not-hoax";
-  if (indoBertNeedsAgreement(input)) return bothScoresCallHoax(input) ? "hoax" : "not-hoax";
+  if (bothModelsPresent(input)) return agreedHoaxCall(input) ? "hoax" : "not-hoax";
   return scoreVerdict(verdictScore(input));
 }
 
@@ -218,10 +216,13 @@ export function buildRingkasan(input: RingkasanInput): Ringkasan {
   else if (verdict === "not-hoax" && hasValidCheck(input)) lead = checkerLine(names(input.validCheckers), "valid");
   else if (verdict === "not-hoax" && outlets.length > 0) lead = `${outlets[0]} memberitakan hal yang sama.`;
   else if (verdict === "not-hoax" && input.opinion) lead = OPINION_SENTENCE;
-  else if (verdict === "not-hoax" && indoBertNeedsAgreement(input)) {
-    lead = plainNewsReport(input.text ?? "", input.sourceUrl)
-      ? "Ini terbaca sebagai berita dari kanal berita, dan tidak ada pemeriksaan fakta yang menyebut hoaks."
-      : "Dua penilaian tidak sejalan, dan tidak ada pemeriksaan fakta yang menyebut hoaks.";
+  else if (verdict === "not-hoax" && bothModelsPresent(input) && !agreedHoaxCall(input)) {
+    if (enginesDisagree(input) && plainNewsReport(input.text ?? "", input.sourceUrl)) {
+      lead = "Dua penilaian tidak sejalan. Ini terbaca sebagai berita dari kanal berita, dan tidak ada pemeriksaan fakta yang menyebut hoaks.";
+    } else if (enginesDisagree(input)) lead = "Dua penilaian tidak sejalan, dan tidak ada pemeriksaan fakta yang menyebut hoaks.";
+    else if (plainNewsReport(input.text ?? "", input.sourceUrl)) {
+      lead = "Ini terbaca sebagai berita dari kanal berita, dan tidak ada pemeriksaan fakta yang menyebut hoaks.";
+    } else lead = "Tidak ada pemeriksaan fakta yang menyebut hoaks.";
   } else lead = `Angka kemiripan hoaks ${score}.`;
 
   const reason = confidenceReason ? `Keyakinan rendah: ${confidenceReason}.` : null;

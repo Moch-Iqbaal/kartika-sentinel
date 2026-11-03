@@ -71,10 +71,12 @@ test("judul MBG di bawah 20 kata tidak menjadi HOAKS", () => {
 
 test("selisih 99 persen lawan 60,8 persen tidak pernah HOAKS", () => {
   const input = card({ hoaxScore: 0.99, indobert: 0.99, linear: 0.608, textChars: 800 });
-  assert.equal(decideVerdict(input), "hoax");
+  assert.equal(decideVerdict(input), "not-hoax");
   const text = buildRingkasan(input);
-  assert.equal(text.headline, "Kemungkinan HOAKS");
+  assert.equal(text.headline, "Kemungkinan FAKTA");
   assert.equal(text.confidenceReason, "dua penilaian tidak sejalan");
+  assert.match(text.sentences[0], /tidak ada pemeriksaan fakta yang menyebut hoaks/);
+  assert.doesNotMatch(text.sentences.join(" "), /umn-cyber|IndoBERT/);
   assert.equal(decideConfidence({
     textChars: 800,
     shortText: false,

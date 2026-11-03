@@ -47,6 +47,8 @@ type SourceSpec = {
   url: (query: string) => string;
   accept: string;
   parse: (body: string, query: string) => ExternalFact[];
+  /** Tidak diunduh. Alasan jujur, bukan parser kosong. */
+  skip?: string;
 };
 
 const SOURCES: SourceSpec[] = [
@@ -88,21 +90,24 @@ const SOURCES: SourceSpec[] = [
   },
   {
     name: "Tempo",
-    url: (query) => `https://www.tempo.co/search?q=${encodeURIComponent(`cek fakta ${query}`)}`,
+    url: () => "",
     accept: "text/html",
     parse: () => [],
+    skip: "Tempo menolak akses otomatis. Tidak ada artikel yang bisa dibaca.",
   },
   {
     name: "Tirto",
-    url: (query) => `https://tirto.id/search?q=${encodeURIComponent(query)}`,
+    url: () => "",
     accept: "text/html",
     parse: () => [],
+    skip: "Tirto menolak akses otomatis. Tidak ada artikel yang bisa dibaca.",
   },
   {
     name: "Kumparan",
-    url: (query) => `https://kumparan.com/search/${encodeURIComponent(`cek fakta ${query}`)}`,
+    url: () => "",
     accept: "text/html",
     parse: () => [],
+    skip: "Kumparan tidak mengirim daftar artikel. Halaman pencariannya kosong untuk mesin.",
   },
   {
     name: "Komdigi",
@@ -113,6 +118,7 @@ const SOURCES: SourceSpec[] = [
 ];
 
 async function searchOne(spec: SourceSpec, queries: string[]): Promise<{ facts: ExternalFact[]; probe: SourceProbe }> {
+  if (spec.skip) return { facts: [], probe: { name: spec.name, state: "dilewati", detail: spec.skip } };
   let blocked: string | null = null;
   let sawBody = false;
   const found: ExternalFact[] = [];

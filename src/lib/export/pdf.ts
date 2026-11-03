@@ -94,7 +94,10 @@ export async function casePdf(detail: CaseDetail): Promise<Uint8Array> {
   draw(detail.analystNote?.trim() ? detail.analystNote : "Belum ada catatan.");
   y -= 6;
   draw("Detail teknis", { bold: true, size: 12 });
-  draw(`Penilai: ${engineLabel(detail.engine)}. Versi ${detail.modelVersion}.`, { size: 9 });
+  draw(`Penilai: ${engineLabel(detail.engine)}.`, { size: 9 });
+  if (detail.modelVersion && detail.modelVersion !== "belum-dinilai") {
+    draw(`Nama model: ${detail.modelVersion}.`, { size: 9 });
+  }
   if (detail.assessment.indobert) draw(`IndoBERT ${percent(detail.assessment.indobert.probability)}`, { size: 9 });
   if (detail.assessment.linear) draw(`Model linier ${percent(detail.assessment.linear.probability)}`, { size: 9 });
   draw(`Isyarat tulisan buatan: ${detail.ai.confidence} (${percent(detail.ai.score)}).`, { size: 9 });
