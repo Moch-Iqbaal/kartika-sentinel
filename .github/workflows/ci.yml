@@ -1,0 +1,38 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Jalur e2e pada server produksi lokal
+        env:
+          DEMO_MODE: "true"
+          DEMO_ANALYST_EMAIL: analis@kartika.local
+          DEMO_ANALYST_PASSWORD: demo-analis
+          DEMO_ADMIN_EMAIL: admin@kartika.local
+          DEMO_ADMIN_PASSWORD: demo-admin
+          SESSION_SECRET: ci-session-secret-kartika-sentinel-32
+          HANDLE_HASH_SALT: ci-handle-salt
+          COOKIE_SECURE: "false"
+          DATA_BACKEND: sqlite
+        run: |
+          npx next start --hostname 127.0.0.1 --port 43123 &
+          for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+            if curl -sf -o /dev/null http://127.0.0.1:43123/login; then
+              break
+            fi
+            sleep 1
+          done
+          npm run test:e2e

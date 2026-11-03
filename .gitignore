@@ -34,6 +34,9 @@ yarn-error.log*
 .env*
 !.env.example
 
+__pycache__/
+*.py[cod]
+
 # basis data lokal, cache unduhan, dan bobot model (besar, tanpa token)
 /data/runtime/
 /data/cache/

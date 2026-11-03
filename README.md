@@ -14,6 +14,8 @@ npm run dev
 
 Buka [http://127.0.0.1:43123](http://127.0.0.1:43123).
 
+Deploy gratis (Vercel, Supabase, Cloud Run CPU 2 GiB scale-to-zero) ada di [docs/DEPLOY.md](docs/DEPLOY.md). Tur kode ada di [docs/CODE_TOUR.md](docs/CODE_TOUR.md).
+
 Pada `npm run dev`, halaman masuk menampilkan dua akun latihan (bukan rahasia produksi):
 
 - analis: `analis@kartika.local` / `demo-analis`
