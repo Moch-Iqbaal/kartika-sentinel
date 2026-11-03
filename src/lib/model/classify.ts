@@ -49,6 +49,8 @@ export type HoaxAssessment = {
     checkedAt: string;
     sources?: { name: string; state: string; detail?: string }[];
   } | null;
+  /** Tanggal terbit isi yang dinilai, YYYY-MM-DD. Kosong bila sumber tidak menyebutnya. */
+  contentPublishedAt?: string | null;
 };
 
 /**

@@ -39,6 +39,7 @@ test("mengenali watch, youtu.be, dan shorts", () => {
 test("memilih transkrip Indonesia manual, lalu otomatis, lalu Inggris", () => {
   const details = parsePlayerResponse(PLAYER);
   assert.equal(details?.title, "Judul uji video");
+  assert.equal(details?.publishedAt, null);
   assert.equal(details?.description, "Deskripsi lengkap tentang isi video ini.");
   assert.equal(chooseCaptionTrack(details?.captions ?? [])?.languageCode, "id");
   assert.equal(chooseCaptionTrack(details?.captions ?? [])?.kind, undefined);
@@ -61,6 +62,14 @@ test("timedtext XML dan json3 menjadi teks biasa", () => {
 test("tautan takarir di luar YouTube ditolak", () => {
   assert.equal(captionRequestUrl("https://evil.example/timedtext"), null);
   assert.match(captionRequestUrl("https://www.youtube.com/api/timedtext?v=abc&lang=id") ?? "", /fmt=json3/);
+});
+
+test("tanggal terbit YouTube diambil dari microformat", () => {
+  const html = `<script>var ytInitialPlayerResponse = ${JSON.stringify({
+    videoDetails: { title: "Judul", author: "Kanal", shortDescription: "Isi." },
+    microformat: { playerMicroformatRenderer: { publishDate: "2026-10-31T10:00:00+07:00", uploadDate: "2026-10-30T10:00:00+07:00" } },
+  })};</script>`;
+  assert.equal(parsePlayerResponse(html)?.publishedAt, "2026-10-31");
 });
 
 test("deskripsi tetap terbaca bila videoDetails disembunyikan", () => {

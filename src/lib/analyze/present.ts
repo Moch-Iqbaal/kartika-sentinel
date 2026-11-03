@@ -15,10 +15,11 @@ export type PresentedReport = {
   topicLine: string;
 };
 
-export function presentCase(detail: CaseDetail): PresentedReport {
-  const ringkasan = ringkasanFromCase(detail);
+export function presentCase(detail: CaseDetail, now = new Date()): PresentedReport {
+  const ringkasan = ringkasanFromCase(detail, now);
   const unscored = Boolean(detail.assessment.unscored?.reason);
   const checkedAt = detail.assessment.factCheck?.checkedAt;
+  const contentPublishedAt = detail.assessment.contentPublishedAt ?? null;
   return {
     headline: ringkasan.headline,
     sentences: ringkasan.sentences,
@@ -30,7 +31,10 @@ export function presentCase(detail: CaseDetail): PresentedReport {
       hoaxScore: detail.hoaxScore,
       engine: detail.engine,
       live: detail.external,
-      corroboration: independentReports(detail.sourceUrl, detail.text, detail.external),
+      corroboration: independentReports(detail.sourceUrl, detail.text, detail.external, { contentPublishedAt, now }),
+      corpus: detail.matches,
+      contentPublishedAt,
+      now,
     }),
     scores: unscored ? null : scoreLines(detail.hoaxScore, detail.sensitivity, detail.virality),
     topicLine: plainTopicLine(detail.topics.map((topic) => topic.label)),

@@ -6,9 +6,10 @@ import {
   VIRALITY_MEANING,
   type PlainBand,
 } from "./bands";
-import { factDateLabel, sourceFamily } from "../factcheck/live-parse";
+import { sourceFamily } from "../factcheck/live-parse";
 import { hasHttpUrl } from "../factcheck/order";
-import type { ExternalFact } from "../factcheck/types";
+import { countsAsPrimary, isOldEvidence, plainWhen } from "../factcheck/recency";
+import type { ExternalFact, FactMatch } from "../factcheck/types";
 
 export type EvidenceBullet = {
   text: string;
@@ -62,12 +63,35 @@ function displaySource(item: ExternalFact): string {
   return item.publisher?.trim() || item.source.trim() || family;
 }
 
-function factBullet(item: ExternalFact): EvidenceBullet {
-  const date = factDateLabel(item.publishedAt);
+function whenLabel(
+  publishedAt: string | null | undefined,
+  contentPublishedAt: string | null | undefined,
+  now: Date,
+): string | null {
+  return plainWhen(publishedAt, contentPublishedAt, now);
+}
+
+function stale(item: { similarity?: number | null; publishedAt?: string | null }, contentPublishedAt: string | null | undefined, now: Date): boolean {
+  return isOldEvidence(item.publishedAt, contentPublishedAt, now)
+    && !countsAsPrimary(item.similarity ?? 0, item.publishedAt, contentPublishedAt, now);
+}
+
+function factBullet(item: ExternalFact, contentPublishedAt: string | null | undefined, now: Date): EvidenceBullet {
+  const when = whenLabel(item.publishedAt, contentPublishedAt, now);
   const name = displaySource(item);
-  const head = date ? `${name}, ${date}` : name;
+  const head = when ? `${name}, ${when}` : name;
+  const prefix = stale(item, contentPublishedAt, now) ? "Artikel lama. " : "";
   return {
-    text: `${head}: ${item.title}`,
+    text: `${prefix}${head}: ${item.title}`,
+    href: item.url && hasHttpUrl(item.url) ? item.url : null,
+  };
+}
+
+function corpusBullet(item: FactMatch, contentPublishedAt: string | null | undefined, now: Date): EvidenceBullet {
+  const when = whenLabel(item.publishedAt, contentPublishedAt, now);
+  const head = when ? `${item.source}, ${when}` : item.source;
+  return {
+    text: `Artikel lama. ${head}: ${item.title}`,
     href: item.url && hasHttpUrl(item.url) ? item.url : null,
   };
 }
@@ -94,17 +118,42 @@ export function buildEvidence(input: {
   hoaxScore: number;
   engine: string;
   live: ExternalFact[];
-  corroboration?: { name: string; href: string | null }[];
+  corroboration?: { name: string; href: string | null; primary?: boolean; publishedAt?: string | null; similarity?: number }[];
+  corpus?: FactMatch[];
+  contentPublishedAt?: string | null;
+  now?: Date;
 }): EvidenceBullet[] {
   if (input.unscored) {
     return [{ text: "Tidak ada teks yang bisa dinilai.", href: null }];
   }
-  const lead: EvidenceBullet[] = (input.corroboration ?? []).map((item) => ({
-    text: `${item.name} memberitakan hal yang sama.`,
-    href: item.href,
-  }));
-  const facts = pickSources(input.live).map(factBullet);
+  const now = input.now ?? new Date();
+  const contentPublishedAt = input.contentPublishedAt ?? null;
+  const corroboration = input.corroboration ?? [];
+  const lead: EvidenceBullet[] = corroboration
+    .filter((item) => item.primary !== false)
+    .map((item) => ({
+      text: `${item.name} memberitakan hal yang sama.`,
+      href: item.href,
+    }));
+  const facts = pickSources(input.live).map((item) => factBullet(item, contentPublishedAt, now));
+  const seen = new Set(
+    [...lead, ...facts].map((item) => item.href).filter((href): href is string => Boolean(href)),
+  );
+  const staleOutlets: EvidenceBullet[] = corroboration
+    .filter((item) => item.primary === false)
+    .filter((item) => !item.href || !seen.has(item.href))
+    .map((item) => {
+      const when = whenLabel(item.publishedAt, contentPublishedAt, now);
+      const head = when ? `${item.name}, ${when}` : item.name;
+      return { text: `Artikel lama. ${head}.`, href: item.href };
+    });
+  const oldCorpus = (input.corpus ?? [])
+    .filter((item) => stale(item, contentPublishedAt, now))
+    .filter((item) => !item.url || !seen.has(item.url))
+    .slice(0, 2)
+    .map((item) => corpusBullet(item, contentPublishedAt, now));
   const combined = [...lead, ...facts];
-  if (lead.length === 0) combined.push({ text: NONE, href: null });
+  if (lead.length === 0 && staleOutlets.length === 0) combined.push({ text: NONE, href: null });
+  combined.push(...staleOutlets, ...oldCorpus);
   return combined.slice(0, 3);
 }

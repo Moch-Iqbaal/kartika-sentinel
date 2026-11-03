@@ -35,7 +35,11 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       detail.assessment.caution?.bodyChars,
     );
     const found = await collectExternalFacts(detail.text);
-    card.assessment = { ...card.assessment, factCheck: { checkedAt: found.checkedAt, sources: found.sources } };
+    card.assessment = {
+      ...card.assessment,
+      factCheck: { checkedAt: found.checkedAt, sources: found.sources },
+      contentPublishedAt: detail.assessment.contentPublishedAt ?? null,
+    };
     await rescoreAlert(session, id, card, found.external);
     return NextResponse.json({ ok: true, engine: card.assessment.engine });
   } catch (error) {

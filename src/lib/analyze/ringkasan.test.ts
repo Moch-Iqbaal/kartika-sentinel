@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { HOAX_CALL_MIN } from "./bands.ts";
+import { NEAR_SAME_SIMILARITY } from "../factcheck/recency.ts";
 import { ENGINE_DIVERGENCE } from "../model/divergence.ts";
 import { buildRingkasan, decideVerdict, scoreVerdict, type RingkasanInput } from "./ringkasan.ts";
 
@@ -176,4 +177,36 @@ test("kritik kebijakan menurunkan vonis ke fakta", () => {
 test("hasil sama bila masukan sama", () => {
   const card = input({ hoaxScore: 0.66, linear: 0.66 });
   assert.deepEqual(buildRingkasan(card), buildRingkasan(card));
+});
+
+test("pemeriksaan lama tidak membalik berita baru, kecuali klaimnya hampir sama", () => {
+  const now = new Date("2026-11-03T12:00:00+07:00");
+  const old = input({
+    hoaxScore: 0.2,
+    linear: 0.2,
+    now,
+    contentPublishedAt: "2026-11-03",
+    matches: [{ verdict: "hoax", similarity: 0.5, publishedAt: "2024-01-01" }],
+  });
+  assert.equal(decideVerdict(old), "not-hoax");
+  assert.doesNotMatch(buildRingkasan(old).sentences.join(" "), /menyebut ini hoaks/);
+
+  const near = input({
+    hoaxScore: 0.2,
+    linear: 0.2,
+    now,
+    contentPublishedAt: "2026-11-03",
+    matches: [{ verdict: "hoax", similarity: NEAR_SAME_SIMILARITY, publishedAt: "2024-01-01" }],
+  });
+  assert.equal(decideVerdict(near), "hoax");
+  assert.match(buildRingkasan(near).sentences[0], /menyebut ini hoaks/);
+
+  const sameEra = input({
+    hoaxScore: 0.2,
+    linear: 0.2,
+    now,
+    contentPublishedAt: "2024-02-01",
+    matches: [{ verdict: "hoax", similarity: 0.5, publishedAt: "2024-01-15" }],
+  });
+  assert.equal(decideVerdict(sameEra), "hoax");
 });

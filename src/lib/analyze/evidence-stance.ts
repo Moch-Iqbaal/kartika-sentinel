@@ -2,7 +2,10 @@
  * Arah bukti untuk vonis. Bukan skor.
  * "Cek fakta" sebagai nama rubrik bukan label benar.
  * "Bukan hoaks" tidak dihitung sebagai bukti hoaks.
+ * Artikel lama tidak dihitung sebagai berita penguat, kecuali kemiripannya sangat tinggi.
  */
+
+import { countsAsPrimary } from "../factcheck/recency";
 
 export type EvidenceStance = "hoax" | "valid" | "none";
 
@@ -142,17 +145,38 @@ function factHostMarker(url: string | null | undefined): string | null {
   }
 }
 
+export type IndependentReport = {
+  name: string;
+  href: string | null;
+  /** Boleh mengubah vonis. Artikel lama yang tidak hampir sama tetap false. */
+  primary: boolean;
+  publishedAt: string | null;
+  similarity: number;
+};
+
 /**
  * Berita dari media lain, bukan kanal atau situs yang menjadi asal teks.
  * Pemeriksaan fakta yang berlabel hoaks tidak dihitung sebagai berita penguat.
+ * Artikel yang jauh lebih tua dari berita ini tidak menjadi penguat, kecuali klaimnya hampir sama.
  */
 export function independentReports(
   sourceUrl: string | null | undefined,
   text: string,
-  facts: { source: string; title: string; url: string | null; rating: string | null; publisher: string | null }[],
-): { name: string; href: string | null }[] {
+  facts: {
+    source: string;
+    title: string;
+    url: string | null;
+    rating: string | null;
+    publisher: string | null;
+    publishedAt?: string | null;
+    similarity?: number | null;
+  }[],
+  options?: { contentPublishedAt?: string | null; now?: Date },
+): IndependentReport[] {
   const origin = originMarker(sourceUrl, text);
-  const found: { name: string; href: string | null }[] = [];
+  const now = options?.now ?? new Date();
+  const contentPublishedAt = options?.contentPublishedAt ?? null;
+  const found: IndependentReport[] = [];
   for (const fact of facts) {
     if (evidenceStance(fact.rating) === "hoax") continue;
     const marker = factHostMarker(fact.url);
@@ -165,7 +189,15 @@ export function independentReports(
     }
     const name = labelFromHost(host);
     if (!name || found.some((item) => item.name === name)) continue;
-    found.push({ name, href: fact.url });
+    const similarity = fact.similarity ?? 0;
+    const publishedAt = fact.publishedAt ?? null;
+    found.push({
+      name,
+      href: fact.url,
+      publishedAt,
+      similarity,
+      primary: countsAsPrimary(similarity, publishedAt, contentPublishedAt, now),
+    });
   }
   return found;
 }

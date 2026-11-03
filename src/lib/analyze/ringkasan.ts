@@ -3,6 +3,7 @@ import { decideConfidence, CONFIDENCE_LABEL } from "./confidence";
 import { HOAX_CALL_MIN } from "./bands";
 import { evidenceStance, independentReports } from "./evidence-stance";
 import { percent } from "../format";
+import { countsAsPrimary } from "../factcheck/recency";
 import { OPINION_SENTENCE } from "./opinion";
 import { SHORT_WORD_VERDICT } from "../ingest/short-text";
 import { ENGINE_DIVERGENCE } from "../model/divergence";
@@ -14,6 +15,7 @@ import type { RiskBand } from "../scoring/risk";
  * Angka memakai IndoBERT bila ada, kalau tidak angka yang tersimpan.
  * Keyakinan rendah menjelaskan teks pendek, dua penilaian yang tidak sejalan, atau bukti sedikit.
  * Kanal sendiri dan domain artikel sendiri bukan berita penguat.
+ * Artikel lama tidak mengubah vonis, kecuali kemiripannya hampir sama.
  */
 
 export type SummaryVerdict = "hoax" | "not-hoax" | "unscored";
@@ -42,13 +44,17 @@ export type RingkasanInput = {
   unscored: boolean;
   unscoredReason: string;
   topicLabels: string[];
-  matches: { verdict: string; similarity: number }[];
+  matches: { verdict: string; similarity: number; publishedAt?: string | null }[];
   externalCount: number;
   externalRatings?: string[];
   hoaxCheckers?: string[];
   validCheckers?: string[];
   /** Media lain, bukan asal teks. */
   otherOutlets?: string[];
+  /** Tanggal terbit isi yang dinilai, bila ada. */
+  contentPublishedAt?: string | null;
+  /** Untuk uji. Kosong berarti hari ini. */
+  now?: Date;
 };
 
 export type Ringkasan = {
@@ -94,15 +100,26 @@ function names(values: string[] | undefined): string[] {
   return (values ?? []).map((name) => name.trim()).filter(Boolean);
 }
 
+function clock(input: RingkasanInput): Date {
+  return input.now ?? new Date();
+}
+
+function evidenceIsPrimary(
+  item: { similarity?: number | null; publishedAt?: string | null },
+  input: RingkasanInput,
+): boolean {
+  return countsAsPrimary(item.similarity ?? 0, item.publishedAt, input.contentPublishedAt, clock(input));
+}
+
 function hasHoaxCheck(input: RingkasanInput): boolean {
   if (names(input.hoaxCheckers).length > 0) return true;
-  return input.matches.some((match) => evidenceStance(match.verdict) === "hoax")
+  return input.matches.some((match) => evidenceStance(match.verdict) === "hoax" && evidenceIsPrimary(match, input))
     || (input.externalRatings ?? []).some((rating) => evidenceStance(rating) === "hoax");
 }
 
 function hasValidCheck(input: RingkasanInput): boolean {
   if (names(input.validCheckers).length > 0) return true;
-  return input.matches.some((match) => evidenceStance(match.verdict) === "valid")
+  return input.matches.some((match) => evidenceStance(match.verdict) === "valid" && evidenceIsPrimary(match, input))
     || (input.externalRatings ?? []).some((rating) => evidenceStance(rating) === "valid");
 }
 
@@ -192,14 +209,19 @@ function factName(source: string, publisher: string | null | undefined): string 
   return pub || source;
 }
 
-export function ringkasanFromCase(detail: CaseDetail): Ringkasan {
-  const hoaxCheckers = detail.external
+export function ringkasanFromCase(detail: CaseDetail, now = new Date()): Ringkasan {
+  const contentPublishedAt = detail.assessment.contentPublishedAt ?? null;
+  const primary = (item: { similarity?: number | null; publishedAt?: string | null }) =>
+    countsAsPrimary(item.similarity ?? 0, item.publishedAt, contentPublishedAt, now);
+  const external = detail.external.filter(primary);
+  const matches = detail.matches.filter(primary);
+  const hoaxCheckers = external
     .filter((item) => evidenceStance(item.rating) === "hoax")
     .map((item) => factName(item.source, item.publisher));
-  const validCheckers = detail.external
+  const validCheckers = external
     .filter((item) => evidenceStance(item.rating) === "valid")
     .map((item) => factName(item.source, item.publisher));
-  for (const match of detail.matches) {
+  for (const match of matches) {
     const stance = evidenceStance(match.verdict);
     const name = factName(match.source, null);
     if (stance === "hoax" && !hoaxCheckers.includes(name)) hoaxCheckers.push(name);
@@ -223,11 +245,15 @@ export function ringkasanFromCase(detail: CaseDetail): Ringkasan {
     unscored: Boolean(detail.assessment.unscored?.reason),
     unscoredReason: detail.assessment.unscored?.reason ?? "",
     topicLabels: detail.topics.map((topic) => topic.label),
-    matches: detail.matches.map((match) => ({ verdict: match.verdict, similarity: match.similarity })),
-    externalCount: detail.external.length,
-    externalRatings: detail.external.map((item) => item.rating ?? ""),
+    matches: matches.map((match) => ({ verdict: match.verdict, similarity: match.similarity, publishedAt: match.publishedAt })),
+    externalCount: external.length,
+    externalRatings: external.map((item) => item.rating ?? ""),
     hoaxCheckers,
     validCheckers,
-    otherOutlets: independentReports(detail.sourceUrl, detail.text, detail.external).map((item) => item.name),
+    otherOutlets: independentReports(detail.sourceUrl, detail.text, detail.external, { contentPublishedAt, now })
+      .filter((item) => item.primary)
+      .map((item) => item.name),
+    contentPublishedAt,
+    now,
   });
 }

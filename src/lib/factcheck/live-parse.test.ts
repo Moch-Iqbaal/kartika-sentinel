@@ -3,9 +3,11 @@ import test from "node:test";
 import {
   cekfaktaQuery,
   checkedAtLabel,
+  dedupeFacts,
   factDateLabel,
   claimQueries,
   factQuery,
+  keywordSimilarity,
   parseDetikSearch,
   parseKompasSearch,
   parseLiputanRss,
@@ -133,6 +135,48 @@ test("Komdigi yang menolak akses tidak mengarang artikel", () => {
   const rows = parseKomdigi(html, "hoaks tni gaza");
   assert.equal(rows.length, 1);
   assert.equal(rows[0].source, "Komdigi");
+});
+
+test("padanan yang sama diurutkan dari yang paling baru", () => {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const iso = (days: number) => formatter.format(new Date(Date.now() - days * 86_400_000));
+  const body = JSON.stringify({
+    data: [
+      {
+        id: "2",
+        slug: "-salah-klaim-lama-gaza",
+        title: "[SALAH] Klaim lama 20 ribu ke Gaza",
+        description: "Klaim 20 ribu prajurit ke Gaza.",
+        status: "Salah",
+        published_at: iso(400),
+      },
+      {
+        id: "3",
+        slug: "-salah-klaim-baru-gaza",
+        title: "[SALAH] Klaim baru 20 ribu ke Gaza",
+        description: "Klaim 20 ribu prajurit ke Gaza.",
+        status: "Salah",
+        published_at: iso(10),
+      },
+    ],
+  });
+  const query = factQuery("Sebarkan 20 ribu prajurit sudah diterbangkan ke Gaza");
+  const rows = parseTurnbackhoax(body, query);
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0].publishedAt, iso(10));
+  assert.ok((rows[0].similarity ?? 0) > 0);
+  assert.equal(keywordSimilarity(query, "20 ribu gaza"), 1);
+  const merged = dedupeFacts([
+    { source: "TurnBackHoax", title: "Sama", url: "https://turnbackhoax.id/articles/9-sama", rating: "Salah", publisher: null, publishedAt: iso(400), similarity: 1 },
+    { source: "TurnBackHoax", title: "Sama", url: "https://turnbackhoax.id/articles/9-sama", rating: "Salah", publisher: null, publishedAt: iso(10), similarity: 1 },
+  ]);
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0].publishedAt, iso(10));
 });
 
 test("tanggal dan waktu cek memakai WIB", () => {

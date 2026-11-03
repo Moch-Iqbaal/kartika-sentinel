@@ -1,4 +1,12 @@
 import { HOAX_CALL_MIN } from "@/lib/analyze/bands";
+import {
+  NEAR_SAME_SIMILARITY,
+  RECENCY_FRESH_DAYS,
+  RECENCY_FRESH_WEIGHT,
+  RECENCY_OLD_DAYS,
+  RECENCY_OLD_WEIGHT,
+  RECENCY_UNKNOWN_WEIGHT,
+} from "@/lib/factcheck/recency";
 import { MATCH_MIN_SIMILARITY } from "@/lib/factcheck/match";
 import { bandLabel, percent, recommendation } from "@/lib/format";
 import { MIN_RELIABLE_CHARS, MIN_RELIABLE_WORDS, SHORT_TEXT_KEEP, SHORT_TEXT_WARNING, SHORT_WORD_VERDICT } from "@/lib/ingest/short-text";
@@ -236,15 +244,15 @@ export function glossaryGroups(): GlossaryGroup[] {
         term(
           "bukti-utama",
           "Bukti utama",
-          "Paling banyak tiga butir: sinyal mesin, plus cek fakta dari sumber yang berbeda.",
-          "Nama sumber, tanggal, dan tautan. Bila hanya satu sumber, kalimatnya bilang begitu. Korpus lama tidak dipakai sendirian.",
+          "Paling banyak tiga butir. Artikel baru didahulukan. Artikel lama ditulis begitu, bukan sebagai bukti utama.",
+          `Urutan memakai kemiripan × bobot umur. Bobot 0–${RECENCY_FRESH_DAYS} hari = ${decimal(RECENCY_FRESH_WEIGHT)}. Lalu turun lurus sampai ${decimal(RECENCY_OLD_WEIGHT)} pada hari ke-${RECENCY_OLD_DAYS}, dan tetap ${decimal(RECENCY_OLD_WEIGHT)} sesudahnya. Tanpa tanggal = ${decimal(RECENCY_UNKNOWN_WEIGHT)}. Seri tanggal: yang lebih baru di depan.`,
           "Sumber yang menguatkan atau menyanggah. Bukan angka semata.",
         ),
         term(
           "vonis-laporan",
           "Kemungkinan HOAKS / Kemungkinan FAKTA",
-          "Hanya dua pilihan: kemungkinan hoaks atau kemungkinan fakta.",
-          `Pemeriksaan fakta hoaks menang dulu. Berita dari media lain, atau pemeriksaan yang menyebut benar, menjadi fakta. Selain itu angka ${percent(HOAX_CALL_MIN)} ke atas adalah hoaks. Kanal video sendiri tidak dihitung sebagai berita lain. Keyakinan rendah menjelaskan teks pendek, penilaian yang tidak sejalan, atau bukti sedikit.`,
+          "Hanya dua pilihan: kemungkinan hoaks atau kemungkinan fakta. Artikel lama tidak membalik berita baru, kecuali klaimnya hampir sama.",
+          `Pemeriksaan fakta hoaks menang dulu. Berita dari media lain, atau pemeriksaan yang menyebut benar, menjadi fakta. Selain itu angka ${percent(HOAX_CALL_MIN)} ke atas adalah hoaks. Kanal video sendiri tidak dihitung sebagai berita lain. Bukti berumur ${RECENCY_OLD_DAYS} hari atau lebih dibanding tanggal berita (atau dibanding hari ini bila berita tak bertanggal) hanya mengubah vonis bila kemiripan minimal ${decimal(NEAR_SAME_SIMILARITY)}. Selain itu tampil sebagai Artikel lama. Keyakinan rendah menjelaskan teks pendek, penilaian yang tidak sejalan, atau bukti sedikit.`,
           "Vonis hanya hoaks atau fakta. Keyakinan di sampingnya menunjukkan seberapa kuat dasar vonis itu.",
         ),
         term(

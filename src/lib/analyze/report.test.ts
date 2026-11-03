@@ -76,6 +76,41 @@ test("bukti paling banyak tiga butir dan tidak mengandalkan satu sumber", () => 
   assert.ok(none.length <= 3);
 });
 
+test("tanggal bukti disebut dalam bahasa biasa, artikel lama bukan bukti utama", () => {
+  const now = new Date("2026-11-03T12:00:00+07:00");
+  const fresh = buildEvidence({
+    unscored: false,
+    hoaxScore: 0.2,
+    engine: "linear-ngram",
+    now,
+    live: [fact({ publishedAt: "2026-10-31", similarity: 1, title: "Klaim segar" })],
+  });
+  assert.match(fresh[0].text, /3 hari lalu/);
+  assert.doesNotMatch(fresh[0].text, /Artikel lama/);
+
+  const compared = buildEvidence({
+    unscored: false,
+    hoaxScore: 0.2,
+    engine: "linear-ngram",
+    now,
+    contentPublishedAt: "2026-11-03",
+    live: [fact({ publishedAt: "2026-10-31", similarity: 1, title: "Klaim segar" })],
+  });
+  assert.match(compared[0].text, /3 hari lebih tua dari berita ini/);
+
+  const old = buildEvidence({
+    unscored: false,
+    hoaxScore: 0.8,
+    engine: "linear-ngram",
+    now,
+    contentPublishedAt: "2026-11-03",
+    live: [fact({ publishedAt: "2024-01-01", similarity: 0.5, title: "Klaim lama" })],
+  });
+  assert.match(old[0].text, /^Artikel lama\./);
+  assert.match(old[0].text, /lebih tua dari berita ini/);
+  assert.match(old.map((item) => item.text).join(" "), /Belum ada sumber lain/);
+});
+
 test("topik menampilkan nama biasa, paling banyak dua, tanpa slug", () => {
   assert.equal(
     plainTopicLine(["Misi luar negeri / Gaza", "TNI", "Kodam"]),

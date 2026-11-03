@@ -22,4 +22,6 @@ export type ExternalFact = {
   publisher: string | null;
   /** Tanggal terbit dari sumber, YYYY-MM-DD bila diketahui. Kosong bila sumber tidak menyebut tanggal. */
   publishedAt?: string | null;
+  /** Bagian kata klaim yang sama, 0 sampai 1. Kosong pada berkas lama. */
+  similarity?: number | null;
 };

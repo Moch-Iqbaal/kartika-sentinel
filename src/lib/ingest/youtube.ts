@@ -3,7 +3,10 @@
  * Judul dan kanal dari oEmbed atau videoDetails.
  * Deskripsi dari videoDetails.shortDescription di halaman tonton.
  * Transkrip dari captionTracks, bila ada.
+ * Tanggal terbit dari microformat, bila ada.
  */
+
+import { normalizeFactDate } from "../factcheck/dates";
 
 export type YoutubePart = "judul" | "deskripsi" | "transkrip";
 
@@ -18,6 +21,7 @@ export type YoutubeDetails = {
   channel: string | null;
   description: string | null;
   captions: YoutubeCaptionTrack[];
+  publishedAt: string | null;
 };
 
 export type YoutubeAssembly = {
@@ -121,11 +125,15 @@ export function parsePlayerResponse(html: string): YoutubeDetails | null {
     const kind = textField(row?.kind) ?? undefined;
     captionTracks.push({ baseUrl, languageCode, kind });
   }
+  const micro = asRecord(parsed?.microformat);
+  const microRenderer = asRecord(micro?.playerMicroformatRenderer);
+  const publishedAt = normalizeFactDate(textField(microRenderer?.publishDate) || textField(microRenderer?.uploadDate));
   return {
     title: textField(details.title),
     channel: textField(details.author),
     description: textField(details.shortDescription),
     captions: captionTracks,
+    publishedAt,
   };
 }
 

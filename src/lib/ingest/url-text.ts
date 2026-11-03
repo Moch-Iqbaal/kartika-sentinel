@@ -1,3 +1,4 @@
+import { parseContentDate } from "@/lib/factcheck/dates";
 import { extractArticle, scoredPageText } from "@/lib/ingest/article";
 import {
   assembleYoutube,
@@ -33,6 +34,8 @@ export type ExtractedPage = {
     parts: YoutubePart[];
     note: string;
   } | null;
+  /** Tanggal terbit isi, YYYY-MM-DD. Kosong bila halaman tidak menyebutnya. */
+  publishedAt?: string | null;
 };
 
 const YOUTUBE_BROWSER = "Mozilla/5.0 (compatible; KartikaSentinel/0.1; +https://kartika-sentinel.vercel.app)";
@@ -80,6 +83,7 @@ async function textFromYoutube(videoId: string): Promise<ExtractedPage> {
   let channel: string | null = null;
   let description: string | null = null;
   let transcript: string | null = null;
+  let publishedAt: string | null = null;
   if (oembedResult.status === "fulfilled") {
     try {
       const payload = JSON.parse(oembedResult.value.body) as { title?: string; author_name?: string };
@@ -95,6 +99,7 @@ async function textFromYoutube(videoId: string): Promise<ExtractedPage> {
       title = player.title || title;
       channel = player.channel || channel;
       description = player.description;
+      publishedAt = player.publishedAt;
       transcript = await readCaption(player.captions);
     }
     if (!description) description = parseAttributedDescription(pageResult.value.body);
@@ -108,6 +113,7 @@ async function textFromYoutube(videoId: string): Promise<ExtractedPage> {
   }
   const assembled = assembleYoutube({ title, channel, description, transcript });
   const text = sanitizeUntrusted(redactSensitive(assembled.text));
+  const pageHtml = pageResult.status === "fulfilled" ? pageResult.value.body : "";
   return {
     text,
     finalUrl: watch,
@@ -115,6 +121,7 @@ async function textFromYoutube(videoId: string): Promise<ExtractedPage> {
     title,
     bodyChars: assembled.bodyChars,
     youtube: { parts: assembled.parts, note: assembled.note },
+    publishedAt: publishedAt ?? parseContentDate(pageHtml),
   };
 }
 
@@ -142,5 +149,6 @@ export async function textFromUrl(input: string): Promise<ExtractedPage> {
     authorHandle: null,
     title: extracted.title,
     bodyChars: extracted.body.length,
+    publishedAt: parseContentDate(response.body),
   };
 }

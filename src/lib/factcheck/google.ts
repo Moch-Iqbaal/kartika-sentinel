@@ -1,3 +1,4 @@
+import { keywordSimilarity } from "@/lib/factcheck/live-parse";
 import type { ExternalFact } from "@/lib/factcheck/types";
 
 /**
@@ -31,13 +32,15 @@ export async function searchGoogleFactChecks(query: string): Promise<ExternalFac
     for (const claim of payload.claims ?? []) {
       const review = claim.claimReview?.[0];
       if (!review) continue;
+      const title = review.title || claim.text || "Klaim";
       rows.push({
         source: "Google Fact Check Tools",
-        title: review.title || claim.text || "Klaim",
+        title,
         url: review.url && /^https?:\/\//.test(review.url) ? review.url : null,
         rating: review.textualRating ?? null,
         publisher: review.publisher?.name ?? null,
         publishedAt: review.reviewDate ?? null,
+        similarity: keywordSimilarity(query, `${title} ${claim.text ?? ""}`),
       });
     }
     return rows.slice(0, 5);

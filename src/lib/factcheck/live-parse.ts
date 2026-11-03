@@ -1,6 +1,10 @@
+import { normalizeFactDate } from "./dates";
 import { hasHttpUrl } from "./order";
+import { compareByRecency } from "./recency";
 import { normalizeFactTitle } from "./turnbackhoax";
 import type { ExternalFact } from "./types";
+
+export { normalizeFactDate };
 
 const STOP = new Set([
   "yang", "dan", "di", "ke", "dari", "untuk", "ini", "itu", "dengan", "pada", "ada", "adalah",
@@ -9,21 +13,6 @@ const STOP = new Set([
   "serta", "bagi", "hanya", "masih", "lalu", "nya", "ya", "video", "klaim", "berita", "hoaks",
   "hoax", "salah", "benar", "cek", "fakta", "menurut", "bahwa", "tersebut",   "orang", "tahun", "bila", "sebarkan", "bagikan", "viralkan", "wajib",
 ]);
-
-const MONTHS: Record<string, string> = {
-  januari: "01",
-  februari: "02",
-  maret: "03",
-  april: "04",
-  mei: "05",
-  juni: "06",
-  juli: "07",
-  agustus: "08",
-  september: "09",
-  oktober: "10",
-  november: "11",
-  desember: "12",
-};
 
 export function contentTokens(value: string): string[] {
   return value
@@ -99,7 +88,7 @@ const OUTLET_WORDS = new Set([
 ]);
 
 export function relevantHit(query: string, haystack: string): boolean {
-  const queryWords = contentTokens(query).filter((word) => !OUTLET_WORDS.has(word));
+  const queryWords = claimWords(query);
   if (queryWords.length < 2) return false;
   const haystackWords = new Set(contentTokens(haystack).filter((word) => !OUTLET_WORDS.has(word)));
   const shared = [...new Set(queryWords.filter((word) => haystackWords.has(word)))];
@@ -107,17 +96,17 @@ export function relevantHit(query: string, haystack: string): boolean {
   return shared.length >= need;
 }
 
-export function normalizeFactDate(value: string | null | undefined): string | null {
-  if (!value) return null;
-  const trimmed = value.trim();
-  const iso = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
-  const written = trimmed.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$/);
-  if (!written) return null;
-  const month = MONTHS[written[2].toLowerCase()];
-  if (!month) return null;
-  const day = written[1].padStart(2, "0");
-  return `${written[3]}-${month}-${day}`;
+function claimWords(query: string): string[] {
+  return contentTokens(query).filter((word) => !OUTLET_WORDS.has(word));
+}
+
+/** Bagian kata klaim yang sama. 1 artinya seluruh frasa ada di artikel. */
+export function keywordSimilarity(query: string, haystack: string): number {
+  const queryWords = [...new Set(claimWords(query))];
+  if (queryWords.length === 0) return 0;
+  const haystackWords = new Set(contentTokens(haystack).filter((word) => !OUTLET_WORDS.has(word)));
+  const shared = queryWords.filter((word) => haystackWords.has(word)).length;
+  return Math.min(1, shared / queryWords.length);
 }
 
 export function factDateLabel(value: string | null | undefined): string | null {
@@ -161,17 +150,22 @@ export function cekfaktaArticleUrl(id: string): string | null {
   return `https://cekfakta.com/focus/${id}`;
 }
 
-type Ranked = ExternalFact & { hits: number };
+type Ranked = ExternalFact & { similarity: number };
 
-function rankFacts(query: string, items: Array<ExternalFact & { haystack: string }>): ExternalFact[] {
+function rankFacts(query: string, items: Array<ExternalFact & { haystack: string }>, now = new Date()): ExternalFact[] {
   const ranked: Ranked[] = [];
   for (const item of items) {
     if (!item.title.trim()) continue;
     if (!relevantHit(query, item.haystack)) continue;
     const url = item.url && hasHttpUrl(item.url) ? item.url : null;
-    ranked.push({ ...item, url, hits: tokenHits(query, item.haystack) });
+    ranked.push({
+      ...item,
+      url,
+      publishedAt: normalizeFactDate(item.publishedAt),
+      similarity: keywordSimilarity(query, item.haystack),
+    });
   }
-  ranked.sort((left, right) => right.hits - left.hits);
+  ranked.sort((left, right) => compareByRecency(left, right, now));
   const seen = new Set<string>();
   const out: ExternalFact[] = [];
   for (const item of ranked) {
@@ -184,7 +178,8 @@ function rankFacts(query: string, items: Array<ExternalFact & { haystack: string
       url: item.url,
       rating: item.rating,
       publisher: item.publisher,
-      publishedAt: normalizeFactDate(item.publishedAt),
+      publishedAt: item.publishedAt,
+      similarity: item.similarity,
     });
     if (out.length >= 3) break;
   }
@@ -389,16 +384,15 @@ export function parseKomdigi(body: string, query: string): ExternalFact[] {
   return rankFacts(query, items);
 }
 
-export function dedupeFacts(items: ExternalFact[]): ExternalFact[] {
-  const seen = new Set<string>();
-  const out: ExternalFact[] = [];
+export function dedupeFacts(items: ExternalFact[], now = new Date()): ExternalFact[] {
+  const best = new Map<string, ExternalFact>();
   for (const item of items) {
     const key = (item.url || normalizeFactTitle(item.title)).toLowerCase();
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
-    out.push(item);
+    if (!key) continue;
+    const existing = best.get(key);
+    if (!existing || compareByRecency(existing, item, now) > 0) best.set(key, item);
   }
-  return out;
+  return [...best.values()].sort((left, right) => compareByRecency(left, right, now));
 }
 
 export function sourceFamily(item: { source: string; url?: string | null; publisher?: string | null }): string {

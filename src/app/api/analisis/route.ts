@@ -44,6 +44,7 @@ export async function POST(request: Request) {
     let author: string | null = null;
     let bodyChars: number | null = null;
     let youtubeNote: { parts: string[]; note: string } | null = null;
+    let contentPublishedAt: string | null = null;
     let image: Awaited<ReturnType<typeof inspectImage>> | null = null;
     if (body.kind === "gambar") {
       const target = (body.url ?? "").trim();
@@ -88,6 +89,7 @@ export async function POST(request: Request) {
       author = extracted.authorHandle;
       bodyChars = extracted.bodyChars;
       youtubeNote = extracted.youtube ?? null;
+      contentPublishedAt = extracted.publishedAt ?? null;
     } else {
       raw = body.text ?? "";
       if (raw.trim().length < 12) return NextResponse.json({ error: "Teks terlalu pendek." }, { status: 400 });
@@ -98,6 +100,7 @@ export async function POST(request: Request) {
     const card = applyShortTextCaution(await scoreContent(raw, 0, corpus, true), bodyChars);
     card.assessment.ai = applyImageReport(card.assessment.ai, image);
     if (youtubeNote) card.assessment.youtube = youtubeNote;
+    if (contentPublishedAt) card.assessment.contentPublishedAt = contentPublishedAt;
     const found = await collectExternalFacts(card.clean);
     card.assessment = { ...card.assessment, factCheck: { checkedAt: found.checkedAt, sources: found.sources } };
     const external = found.external;
