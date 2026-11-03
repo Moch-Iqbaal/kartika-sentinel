@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { HOAX_ALONE_MIN } from "./bands.ts";
-import { credibleReporting, evidenceStance } from "./evidence-stance.ts";
+import { credibleLabel, credibleReporting, evidenceStance } from "./evidence-stance.ts";
 import { buildRingkasan, decideVerdict, scoreVerdict, type RingkasanInput } from "./ringkasan.ts";
 
 /**
@@ -54,15 +54,21 @@ test("video berita 62,4% tidak menjadi HOAKS hanya karena skornya", () => {
   assert.ok(REPORTED_INDOBERT < HOAX_ALONE_MIN);
   assert.equal(credibleReporting(VIDEO, TEXT), true);
   assert.equal(credibleReporting(VIDEO, "Kanal: akun pribadi"), false);
-  const reported = input({ credibleSource: credibleReporting(VIDEO, TEXT) });
-  assert.equal(decideVerdict(reported), "uncertain");
+  const name = credibleLabel(VIDEO, TEXT);
+  assert.equal(name, "Kompas TV");
+  const reported = input({
+    credibleSource: true,
+    credibleName: name,
+    linear: 0.198,
+  });
+  assert.equal(decideVerdict(reported), "not-hoax");
   const text = buildRingkasan(reported);
-  assert.equal(text.headline, "Belum bisa dipastikan");
+  assert.equal(text.headline, "Kemungkinan FAKTA");
   assert.notEqual(text.headline, "Kemungkinan HOAKS");
-  assert.match(text.sentences.join(" "), /62,4%/);
-  assert.match(text.sentences.join(" "), /media atau rilis resmi|belum cukup/);
+  assert.match(text.sentences.join(" "), /Kompas TV memberitakan hal yang sama/);
+  assert.doesNotMatch(text.sentences.join(" "), /IndoBERT|n-gram|model linier|probabilitas/);
 
-  const withoutOutlet = input({ credibleSource: false });
+  const withoutOutlet = input({ credibleSource: false, linear: REPORTED_INDOBERT });
   assert.equal(decideVerdict(withoutOutlet), "uncertain");
   assert.match(buildRingkasan(withoutOutlet).sentences[0], /belum cukup/);
 });
@@ -77,6 +83,7 @@ test("bukti hoaks pada skor yang sama tetap HOAKS, bukti benar menahannya", () =
     externalRatings: ["Benar"],
     credibleSource: false,
   });
-  assert.equal(decideVerdict(denied), "uncertain");
-  assert.match(buildRingkasan(denied).sentences[0], /bukan hoaks/);
+  assert.equal(decideVerdict(denied), "not-hoax");
+  assert.equal(buildRingkasan(denied).headline, "Kemungkinan FAKTA");
+  assert.match(buildRingkasan(denied).sentences[0], /menyebut ini benar/);
 });

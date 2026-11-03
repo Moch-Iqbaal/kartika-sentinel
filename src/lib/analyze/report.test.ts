@@ -23,12 +23,12 @@ test("pita angka mengikuti batas yang sama dengan nilainya", () => {
   assert.equal(plainBand(0.399), "rendah");
   assert.equal(plainBand(0), "rendah");
   const lines = scoreLines(0.62, 0.72, 0);
-  assert.equal(lines.utama, "Skor utama 62% = peluang ini hoaks menurut mesin");
+  assert.equal(lines.utama, "Skor utama 62% = seberapa mirip hoaks");
   assert.equal(lines.utamaBand, "sedang");
   assert.equal(lines.sensitivitasBand, "tinggi");
   assert.match(lines.sensitivitas, /72%/);
   assert.equal(lines.viralitasBand, "rendah");
-  assert.match(lines.viralitas, /tidak ada data sebaran/);
+  assert.match(lines.viralitas, /belum ada data sebaran/);
 });
 
 test("bukti paling banyak tiga butir dan tidak mengandalkan satu sumber", () => {
@@ -53,12 +53,12 @@ test("bukti paling banyak tiga butir dan tidak mengandalkan satu sumber", () => 
       }),
     ],
   });
-  assert.equal(two.length, 3);
-  assert.match(two[0].text, /peluang hoaks/);
-  assert.match(two[1].text, /TurnBackHoax/);
-  assert.match(two[1].text, /2025/);
-  assert.match(two[2].text, /Cek Fakta/);
-  assert.equal(two[2].href, "https://cekfakta.com/focus/30019");
+  assert.equal(two.length, 2);
+  assert.match(two[0].text, /TurnBackHoax/);
+  assert.match(two[0].text, /2025/);
+  assert.match(two[1].text, /Cek Fakta/);
+  assert.equal(two[1].href, "https://cekfakta.com/focus/30019");
+  assert.doesNotMatch(two.map((item) => item.text).join(" "), /n-gram|IndoBERT/);
   assert.doesNotMatch(two.map((item) => item.text).join(" "), /Hanya satu sumber/);
 
   const one = buildEvidence({
@@ -67,11 +67,11 @@ test("bukti paling banyak tiga butir dan tidak mengandalkan satu sumber", () => 
     engine: "linear-ngram",
     live: [fact({}), fact({ title: "Artikel kedua", url: "https://turnbackhoax.id/articles/2-lain" })],
   });
-  assert.equal(one.length, 3);
-  assert.match(one[2].text, /Hanya satu sumber cek fakta yang ketemu/);
+  assert.equal(one.length, 2);
+  assert.match(one[1].text, /Hanya satu sumber yang ketemu/);
 
   const none = buildEvidence({ unscored: false, hoaxScore: 0.2, engine: "linear-ngram", live: [] });
-  assert.match(none.map((item) => item.text).join(" "), /tidak ada padanan/i);
+  assert.match(none.map((item) => item.text).join(" "), /Belum ada sumber/i);
   assert.ok(none.length <= 3);
 });
 

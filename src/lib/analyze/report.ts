@@ -6,7 +6,6 @@ import {
   VIRALITY_MEANING,
   type PlainBand,
 } from "./bands";
-import { engineLabel, percent } from "../format";
 import { factDateLabel, sourceFamily } from "../factcheck/live-parse";
 import { hasHttpUrl } from "../factcheck/order";
 import type { ExternalFact } from "../factcheck/types";
@@ -25,11 +24,11 @@ export type ScoreLines = {
   viralitasBand: PlainBand;
 };
 
-const ONLY_ONE = "Hanya satu sumber cek fakta yang ketemu.";
-const NONE = "Tidak ada padanan cek fakta yang ketemu saat dicek langsung.";
+const ONLY_ONE = "Hanya satu sumber yang ketemu.";
+const NONE = "Belum ada sumber yang menguatkan atau menyanggah.";
 
 export function scoreLines(hoax: number, sensitivity: number, virality: number): ScoreLines {
-  const viralMeaning = virality <= 0 ? "tidak ada data sebaran yang tercatat" : VIRALITY_MEANING;
+  const viralMeaning = virality <= 0 ? "belum ada data sebaran" : VIRALITY_MEANING;
   return {
     utama: metricLine("Skor utama", hoax, SCORE_MEANING),
     utamaBand: plainBand(hoax),
@@ -88,25 +87,27 @@ function pickSources(items: ExternalFact[]): ExternalFact[] {
 }
 
 /**
- * Paling banyak tiga butir: sinyal mesin, lalu paling banyak dua sumber cek fakta.
- * Korpus tersimpan tidak dipakai di sini. Sumber hidup datang dari pencarian saat analisis.
+ * Paling banyak tiga butir. Sumber yang memberitakan hal yang sama didahulukan.
+ * Nama mesin tidak ditulis di sini.
  */
 export function buildEvidence(input: {
   unscored: boolean;
   hoaxScore: number;
   engine: string;
   live: ExternalFact[];
+  corroboration?: { name: string; href: string | null } | null;
 }): EvidenceBullet[] {
   if (input.unscored) {
-    return [{ text: "Tidak ada teks yang dinilai, jadi tidak ada bukti skor.", href: null }];
+    return [{ text: "Tidak ada teks yang bisa dinilai.", href: null }];
   }
-  const model: EvidenceBullet = {
-    text: `Mesin ${engineLabel(input.engine)}: peluang hoaks ${percent(input.hoaxScore)}.`,
-    href: null,
-  };
-  const sources = pickSources(input.live);
-  if (sources.length === 0) return [model, { text: NONE, href: null }];
-  const facts = sources.map(factBullet);
-  if (sources.length === 1) return [model, facts[0], { text: ONLY_ONE, href: null }];
-  return [model, facts[0], facts[1]];
+  const lead: EvidenceBullet[] = input.corroboration
+    ? [{ text: `${input.corroboration.name} memberitakan hal yang sama.`, href: input.corroboration.href }]
+    : [];
+  const facts = pickSources(input.live).map(factBullet);
+  const combined = [...lead, ...facts].slice(0, 3);
+  if (combined.length === 0) return [{ text: NONE, href: null }];
+  if (combined.length === 1 && facts.length === 1 && lead.length === 0) {
+    return [combined[0], { text: ONLY_ONE, href: null }];
+  }
+  return combined;
 }

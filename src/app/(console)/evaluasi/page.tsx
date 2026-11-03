@@ -81,7 +81,7 @@ export default function EvaluasiPage() {
           <TermTip {...glossaryTip("data-uji")} />
         </p>
         {report.indobert.ran ? null : (
-          <p className="text-sm text-muted">Angka di halaman ini dari model linier. IndoBERT belum diuji pada kumpulan yang sama.</p>
+          <p className="text-sm text-muted">Angka di halaman ini dari penilaian cadangan. Penilai utama belum diuji pada kumpulan yang sama.</p>
         )}
       </div>
       <div className="grid gap-3 md:grid-cols-3">

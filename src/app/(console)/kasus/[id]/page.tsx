@@ -5,12 +5,11 @@ import { CaseEvidence } from "@/components/case-evidence";
 import { TermTip } from "@/components/term-tip";
 import { glossaryTip } from "@/lib/glossary";
 import { presentCase } from "@/lib/analyze/present";
-import { Disclaimer } from "@/components/disclaimer";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { currentSession } from "@/lib/auth/session";
 import { getCase } from "@/lib/db";
-import { alertStatusLabel, bandLabel, caseStatusLabel, engineLabel, modelModeLabel, percent } from "@/lib/format";
+import { alertStatusLabel, caseStatusLabel, engineLabel, percent } from "@/lib/format";
 import { ENGINE_DIVERGENCE, ENGINE_DIVERGENCE_WARNING } from "@/lib/model/classify";
 import { hasHttpUrl } from "@/lib/factcheck/order";
 import { displayHandle } from "@/lib/security/redact";
@@ -41,10 +40,10 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
           </p>
         </div>
         <Badge className={!unscored && detail.band === "kritis" ? "border-danger text-danger" : ""}>
-          {unscored ? "Belum bisa dinilai" : `${bandLabel(detail.band)} · ${percent(detail.riskScore)}`}
+          {unscored ? "Belum bisa dinilai" : detail.band === "kritis" ? "Segera ditinjau" : detail.band === "prioritas" ? "Perlu ditinjau" : "Cukup dipantau"}
         </Badge>
       </div>
-      <Disclaimer mode={modelModeLabel(detail.modelStatus)} />
+      <p className="text-sm text-muted">Ini hanya saran. Keputusan tetap pada Anda. Angka bukan penetapan hoaks.</p>
       <CaseEvidence bullets={report.bullets} />
       <Card className="space-y-2 p-4">
         <h2 className="inline-flex items-center font-medium">
@@ -93,14 +92,8 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
       {detail.assessment.caution?.warning ? (
         <p className="text-sm text-warning">{detail.assessment.caution.warning}</p>
       ) : null}
-      {!unscored && (detail.modelStatus === "ringan" || detail.modelStatus === "dilewati") ? (
-        <p className="text-sm text-muted">Mode ringan. Skor dari model n-gram, tanpa IndoBERT.</p>
-      ) : null}
-      {detail.modelStatus === "bangun" ? (
-        <p className="text-sm text-warning">IndoBERT sedang bangun. Skor ini memakai model n-gram.</p>
-      ) : null}
-      {detail.modelStatus === "mati" || detail.modelStatus === "offline" ? (
-        <p className="text-sm text-muted">IndoBERT tidak menjawab. Skor memakai cadangan di server web.</p>
+      {!unscored && detail.modelStatus !== "siap" ? (
+        <p className="text-sm text-muted">Penilai utama belum tersambung. Angka ini dari cadangan.</p>
       ) : null}
       <Card className="space-y-3 p-4">
         <h2 className="font-medium">Teks yang dinilai</h2>
@@ -122,7 +115,7 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
         ) : null}
       </Card>
       <details className="rounded-xl border border-border bg-card p-4">
-        <summary className="cursor-pointer text-xs text-info">Detail skor</summary>
+        <summary className="cursor-pointer text-xs text-info">Detail teknis</summary>
         <div className="mt-3 space-y-2 text-sm">
           <p>Mesin: {unscored ? "tidak dijalankan" : engineLabel(detail.engine)} · versi {detail.modelVersion}</p>
           {detail.assessment.indobert ? (

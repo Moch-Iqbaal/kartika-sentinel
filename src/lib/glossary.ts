@@ -238,12 +238,12 @@ export function glossaryGroups(): GlossaryGroup[] {
           "Bukti utama",
           "Paling banyak tiga butir: sinyal mesin, plus cek fakta dari sumber yang berbeda.",
           "Nama sumber, tanggal, dan tautan. Bila hanya satu sumber, kalimatnya bilang begitu. Korpus lama tidak dipakai sendirian.",
-          "Bukti singkat dari mesin dan cek fakta langsung, bukan satu arsip saja.",
+          "Sumber yang menguatkan atau menyanggah. Bukan angka semata.",
         ),
         term(
           "vonis-laporan",
           "Kemungkinan HOAKS / Kemungkinan FAKTA",
-          "Vonis di bagian atas. FAKTA berarti peluang hoaks di bawah setengah.",
+          "Vonis di bagian atas. FAKTA bila ada berita atau pemeriksaan yang menguatkan.",
           `HOAKS bila ada bukti hoaks dan skor minimal ${percent(HOAX_CALL_MIN)}, atau skor minimal ${percent(HOAX_ALONE_MIN)} tanpa bukti yang menentang. Skor ${percent(HOAX_CALL_MIN)}–${percent(HOAX_ALONE_MIN)} tanpa bukti hoaks menjadi “Belum bisa dipastikan”. Sensitivitas dan viralitas tidak masuk ke vonis.`,
           "Vonis di atas: hoaks, fakta, atau belum bisa dipastikan.",
         ),
@@ -282,9 +282,9 @@ export function glossaryGroups(): GlossaryGroup[] {
         term(
           "skor-utama",
           "Skor utama",
-          "Contoh: Skor utama 62% = peluang ini hoaks menurut mesin. Pita mengikuti angkanya.",
+          "Contoh: Skor utama 62% = seberapa mirip hoaks. Makin tinggi, makin mirip.",
           `Rendah di bawah ${percent(BAND_PRIORITAS_MIN)}, sedang sampai di bawah ${percent(BAND_KRITIS_MIN)}, tinggi sejak ${percent(BAND_KRITIS_MIN)}. Vonis HOAKS mulai ${percent(HOAX_CALL_MIN)} bila keyakinan bukan Rendah. Di bawah ${MIN_RELIABLE_WORDS} kata: “${SHORT_WORD_VERDICT}”. Teks URL di bawah ${MIN_RELIABLE_CHARS} karakter: jarak ke 0,5 dikalikan ${decimal(SHORT_TEXT_KEEP)}.`,
-          "Peluang teks ini hoaks menurut mesin, dengan pita rendah, sedang, atau tinggi.",
+          "Seberapa mirip hoaks. Makin tinggi, makin mirip. Bukan putusan.",
         ),
         term(
           "sensitivitas",

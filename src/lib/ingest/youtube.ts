@@ -28,7 +28,7 @@ export type YoutubeAssembly = {
   bodyChars: number;
 };
 
-export const YOUTUBE_ONLY_TITLE_NOTE = "Video tanpa transkrip; hanya judul yang terbaca.";
+export const YOUTUBE_ONLY_TITLE_NOTE = "Hanya judul yang terbaca. Ucapan di video tidak ada.";
 
 const DESCRIPTION_CAP = 2_500;
 const TRANSCRIPT_CAP = 8_000;
@@ -296,9 +296,9 @@ export function assembleYoutube(input: {
   const hasDescription = parts.includes("deskripsi");
   const hasTranscript = parts.includes("transkrip");
   let note = YOUTUBE_ONLY_TITLE_NOTE;
-  if (hasDescription && hasTranscript) note = "Yang terbaca: judul, deskripsi, dan transkrip.";
-  else if (hasTranscript) note = "Yang terbaca: judul dan transkrip.";
-  else if (hasDescription) note = "Yang terbaca: judul dan deskripsi. Video tanpa transkrip.";
+  if (hasDescription && hasTranscript) note = "Yang terbaca: judul, keterangan, dan ucapan.";
+  else if (hasTranscript) note = "Yang terbaca: judul dan ucapan.";
+  else if (hasDescription) note = "Yang terbaca: judul dan keterangan. Ucapan di video tidak ada.";
   return {
     text: blocks.join("\n\n"),
     parts,

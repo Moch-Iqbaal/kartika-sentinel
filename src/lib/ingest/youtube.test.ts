@@ -82,5 +82,5 @@ test("hanya judul tetap jujur, gabungan menyebut bagian yang ada", () => {
   });
   assert.deepEqual(full.parts, ["judul", "deskripsi", "transkrip"]);
   assert.match(full.text, /Ada transkrip/);
-  assert.match(full.note, /judul, deskripsi, dan transkrip/);
+  assert.match(full.note, /judul, keterangan, dan ucapan/);
 });

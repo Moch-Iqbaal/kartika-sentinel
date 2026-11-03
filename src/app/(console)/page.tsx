@@ -9,7 +9,7 @@ import { displayHandle } from "@/lib/security/redact";
 import { listAlerts, topicCounts, velocitySeries } from "@/lib/db";
 import { localIndoBertHealth } from "@/lib/model/local-indobert";
 import { TOPICS } from "@/lib/ontology/topics";
-import { alertStatusLabel, bandLabel, modelModeLabel, percent } from "@/lib/format";
+import { alertStatusLabel, bandLabel, percent } from "@/lib/format";
 import { riskBand } from "@/lib/scoring/risk";
 
 export default async function DashboardPage({
@@ -44,26 +44,26 @@ export default async function DashboardPage({
       <div>
         <h1 className="text-2xl font-semibold">Dasbor peringatan</h1>
         <p className="mt-1 max-w-3xl text-sm text-muted">
-          Umpan di bawah ini data demo sintetis, bukan unggahan akun sungguhan. Pegangan akun disimpan sebagai hash.
-          Peringkat memakai hoaks × sensitivitas topik × viralitas efektif.
+          Daftar di bawah ini contoh latihan, bukan unggahan sungguhan.
+          Urutan mengikuti kemiripan hoaks, kerawanan topik, dan sebaran.
         </p>
       </div>
-      <Disclaimer mode={modelModeLabel(model)} />
+      <Disclaimer />
       {model === "ringan" ? (
         <Card className="p-4 text-sm">
-          <span className="font-medium">mode ringan.</span> LOCAL_HOAX_URL tidak diisi. Skor memakai model n-gram dan heuristik di server web.
+          Penilai utama belum disambungkan. Angka memakai cadangan.
         </Card>
       ) : null}
       {model === "bangun" ? (
         <Card className="border-warning/50 p-4 text-sm">
-          IndoBERT on-premise sedang bangun. Proses di Mac masih memuat bobot, atau tunnel baru tersambung. Skor sementara memakai model n-gram.
+          Penilai utama masih menyala. Angka sementara memakai cadangan.
         </Card>
       ) : null}
       {model === "siap" ? (
-        <Card className="border-ok/40 p-4 text-sm">IndoBERT on-premise tersambung.</Card>
+        <Card className="border-ok/40 p-4 text-sm">Penilai utama tersambung.</Card>
       ) : null}
       {model === "offline" || model === "mati" ? (
-        <Card className="p-4 text-sm text-muted">IndoBERT offline. Skor memakai model n-gram sampai Mac mengirim heartbeat lagi.</Card>
+        <Card className="p-4 text-sm text-muted">Penilai utama tidak menjawab. Angka memakai cadangan.</Card>
       ) : null}
       {loadError ? <Card className="border-danger/50 p-4 text-sm text-danger">{loadError}</Card> : null}
       <div className="grid gap-3 sm:grid-cols-3">
@@ -72,12 +72,12 @@ export default async function DashboardPage({
           <p className="mt-1 text-2xl font-semibold">{alerts.length}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs uppercase text-muted">Pita kritis</p>
+          <p className="text-xs uppercase text-muted">Segera ditinjau</p>
           <p className="mt-1 text-2xl font-semibold text-danger">{critical}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs uppercase text-muted">Mesin skor</p>
-          <p className="mt-1 text-lg font-semibold">{modelModeLabel(model)}</p>
+          <p className="text-xs uppercase text-muted">Penilai</p>
+          <p className="mt-1 text-lg font-semibold">{model === "siap" ? "Utama aktif" : model === "bangun" ? "Utama menyala" : model === "mati" || model === "offline" ? "Utama mati" : "Cadangan"}</p>
         </Card>
       </div>
       <Card className="p-4">

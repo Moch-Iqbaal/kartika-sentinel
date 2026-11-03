@@ -32,7 +32,7 @@ export const KNOWN_FALSE_POSITIVES: KnownCase[] = [
     title: "Video YouTube berita TNI/Polri soal MBG",
     detail: "https://www.youtube.com/watch?v=0uecxWhlS-w",
     before: "IndoBERT 62,4% pada berita ini, dan angka itu terbaca sebagai kemungkinan hoaks.",
-    now: "62,4% tetap peluang hoaks menurut mesin. Tanpa bukti hoaks, vonis Belum bisa dipastikan. Sensitivitas tidak menaikkan angka itu.",
+    now: "62,4% tetap angka kemiripan hoaks. Karena Kompas TV memberitakan hal yang sama, vonis Kemungkinan FAKTA.",
   },
   {
     id: "antara-mbg",

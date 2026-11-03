@@ -49,7 +49,7 @@ export async function casePdf(detail: CaseDetail): Promise<Uint8Array> {
   });
   y = 790;
   draw(report.headline, { bold: true, size: 16 });
-  draw("Rekomendasi saja. Bukan penetapan. Manusia yang memutuskan.", { size: 9, color: [0.35, 0.38, 0.42] });
+  draw("Ini hanya saran. Keputusan tetap pada Anda.", { size: 9, color: [0.35, 0.38, 0.42] });
   draw(report.checkedLabel, { size: 9 });
   y -= 6;
   draw("Bukti utama", { bold: true, size: 12 });
@@ -67,7 +67,6 @@ export async function casePdf(detail: CaseDetail): Promise<Uint8Array> {
     draw(`${report.scores.utama} (${report.scores.utamaBand})`);
     draw(`${report.scores.sensitivitas} (${report.scores.sensitivitasBand})`);
     draw(`${report.scores.viralitas} (${report.scores.viralitasBand})`);
-    draw(`Mesin ${engineLabel(detail.engine)}. Media AI ${detail.ai.confidence} (${percent(detail.ai.score)}).`, { size: 9 });
   }
   draw(report.topicLine);
   if (detail.assessment.caution?.warning) draw(detail.assessment.caution.warning, { size: 9 });
@@ -87,6 +86,12 @@ export async function casePdf(detail: CaseDetail): Promise<Uint8Array> {
   y -= 6;
   draw("Catatan analis", { bold: true, size: 12 });
   draw(detail.analystNote?.trim() ? detail.analystNote : "Belum ada catatan.");
+  y -= 6;
+  draw("Detail teknis", { bold: true, size: 12 });
+  draw(`Penilai: ${engineLabel(detail.engine)}. Versi ${detail.modelVersion}.`, { size: 9 });
+  if (detail.assessment.indobert) draw(`IndoBERT ${percent(detail.assessment.indobert.probability)}`, { size: 9 });
+  if (detail.assessment.linear) draw(`Model linier ${percent(detail.assessment.linear.probability)}`, { size: 9 });
+  draw(`Isyarat tulisan buatan: ${detail.ai.confidence} (${percent(detail.ai.score)}).`, { size: 9 });
   y -= 4;
   draw(`Diekspor ${formatWhen(new Date().toISOString())}`, { size: 8, color: [0.4, 0.42, 0.46] });
   return doc.save();

@@ -17,9 +17,9 @@ export const HOAX_CALL_MIN = 0.5;
  */
 export const HOAX_ALONE_MIN = 0.7;
 
-export const SCORE_MEANING = "peluang ini hoaks menurut mesin";
+export const SCORE_MEANING = "seberapa mirip hoaks";
 export const SENSITIVITY_MEANING = "seberapa rawan topiknya";
-export const VIRALITY_MEANING = "seberapa besar sebaran yang tercatat";
+export const VIRALITY_MEANING = "seberapa besar sebarannya";
 
 export function plainBand(value: number): PlainBand {
   if (!Number.isFinite(value)) return "rendah";

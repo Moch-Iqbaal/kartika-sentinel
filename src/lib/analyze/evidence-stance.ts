@@ -53,17 +53,55 @@ function hostMatches(hostname: string): boolean {
   return CREDIBLE_HOSTS.some((item) => host === item || host.endsWith(`.${item}`));
 }
 
-/** URL media/lembaga resmi, atau baris kanal video dari ruang redaksi yang dikenal. */
-export function credibleReporting(sourceUrl: string | null | undefined, text: string): boolean {
+function channelKey(text: string): string {
+  const channel = text.match(/(?:^|\n)Kanal:\s*(.+)/)?.[1] ?? "";
+  return channel.toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+function labelFromKey(key: string): string | null {
+  if (!key) return null;
+  if (key.includes("kompastv")) return "Kompas TV";
+  if (key.includes("kompas")) return "Kompas";
+  if (key.includes("detik")) return "Detik";
+  if (key.includes("tempo")) return "Tempo";
+  if (key.includes("liputan6")) return "Liputan6";
+  if (key.includes("cnnindonesia")) return "CNN Indonesia";
+  if (key.includes("metrotv")) return "Metro TV";
+  if (key.includes("tvone")) return "tvOne";
+  if (key.includes("tribun")) return "Tribun";
+  if (key.includes("republika")) return "Republika";
+  if (key.includes("antara")) return "Antara";
+  return null;
+}
+
+function labelFromHost(hostname: string): string | null {
+  const host = hostname.toLowerCase().replace(/\.$/, "");
+  if (host.endsWith(".polri.go.id") || host.includes("polri")) return "situs resmi Polri";
+  if (host.endsWith(".mil.id")) return "situs resmi TNI";
+  if (host.endsWith(".go.id")) return "situs resmi pemerintah";
+  return labelFromKey(host.replace(/[^a-z0-9]+/g, ""));
+}
+
+/** Nama media atau lembaga yang memberitakan teks ini. Kosong bila tidak dikenali. */
+export function credibleLabel(sourceUrl: string | null | undefined, text: string): string | null {
   if (sourceUrl) {
     try {
-      if (hostMatches(new URL(sourceUrl).hostname)) return true;
+      const host = new URL(sourceUrl).hostname;
+      if (hostMatches(host)) {
+        const named = labelFromHost(host);
+        if (named) return named;
+      }
     } catch {
       // URL rusak bukan bukti.
     }
   }
-  const channel = text.match(/(?:^|\n)Kanal:\s*(.+)/)?.[1] ?? "";
-  const normalized = channel.toLowerCase().replace(/[^a-z0-9]+/g, "");
-  if (!normalized) return false;
-  return NEWSROOM_MARKERS.some((marker) => normalized.includes(marker));
+  const fromChannel = labelFromKey(channelKey(text));
+  if (!fromChannel) return null;
+  if (!NEWSROOM_MARKERS.some((marker) => channelKey(text).includes(marker))) return null;
+  return fromChannel;
+}
+
+/** URL media/lembaga resmi, atau baris kanal video dari ruang redaksi yang dikenal. */
+export function credibleReporting(sourceUrl: string | null | undefined, text: string): boolean {
+  return credibleLabel(sourceUrl, text) != null;
 }

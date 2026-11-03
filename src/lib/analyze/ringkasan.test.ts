@@ -77,7 +77,8 @@ test("selisih IndoBERT dan heuristik juga menahan vonis", () => {
     heuristic: 0.2 + ENGINE_DIVERGENCE,
   });
   assert.equal(decideVerdict(card), "uncertain");
-  assert.match(buildRingkasan(card).sentences[0], /heuristik tidak sejalan/);
+  assert.match(buildRingkasan(card).sentences[0], /tidak sejalan/);
+  assert.doesNotMatch(buildRingkasan(card).sentences.join(" "), /IndoBERT|n-gram|model linier/);
 });
 
 test("bukti yang bertentangan menahan vonis", () => {
@@ -86,8 +87,8 @@ test("bukti yang bertentangan menahan vonis", () => {
     linear: 0.8,
     matches: [{ verdict: "true", similarity: 0.5 }],
   });
-  assert.equal(decideVerdict(hoaxButTrue), "uncertain");
-  assert.match(buildRingkasan(hoaxButTrue).sentences[0], /bukan hoaks/);
+  assert.equal(decideVerdict(hoaxButTrue), "not-hoax");
+  assert.match(buildRingkasan(hoaxButTrue).sentences[0], /menyebut ini benar/);
 
   const lowButHoax = input({
     hoaxScore: 0.1,
@@ -98,13 +99,13 @@ test("bukti yang bertentangan menahan vonis", () => {
   assert.equal(buildRingkasan(lowButHoax).headline, "Belum bisa dipastikan");
 });
 
-test("mode ringan tanpa IndoBERT memakai FAKTA bila skor di bawah 0,5", () => {
+test("skor rendah tanpa sumber tidak dipaksa menjadi fakta", () => {
   const card = input({ hoaxScore: 0.2, linear: 0.2, indobert: null });
   const text = buildRingkasan(card);
-  assert.equal(text.headline, "Kemungkinan FAKTA");
-  assert.match(text.sentences.join(" "), /fakta/);
-  assert.match(text.sentences.join(" "), /Belum ada padanan cek fakta/);
+  assert.equal(text.headline, "Belum bisa dipastikan");
+  assert.match(text.sentences.join(" "), /Belum ada sumber/);
   assert.match(text.sentences.join(" "), /Keputusan akhir ada pada analis/);
+  assert.doesNotMatch(text.sentences.join(" "), /IndoBERT|n-gram|model linier/);
   assert.ok(text.sentences.length <= 3);
 });
 
@@ -145,7 +146,7 @@ test("skor 50–70% tanpa bukti hoaks belum pasti, di bawah 50% fakta", () => {
   assert.equal(mid.headline, "Belum bisa dipastikan");
   assert.match(mid.sentences.join(" "), /belum cukup/);
   const fact = buildRingkasan(input({ hoaxScore: 0.45, linear: 0.45 }));
-  assert.equal(fact.headline, "Kemungkinan FAKTA");
+  assert.equal(fact.headline, "Belum bisa dipastikan");
   const strong = buildRingkasan(input({ hoaxScore: 0.85, linear: 0.85 }));
   assert.equal(strong.headline, "Kemungkinan HOAKS");
 });
