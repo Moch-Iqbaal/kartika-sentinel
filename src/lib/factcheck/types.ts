@@ -20,4 +20,6 @@ export type ExternalFact = {
   url: string | null;
   rating: string | null;
   publisher: string | null;
+  /** Tanggal terbit dari sumber, YYYY-MM-DD bila diketahui. Kosong bila sumber tidak menyebut tanggal. */
+  publishedAt?: string | null;
 };

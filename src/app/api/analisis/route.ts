@@ -5,7 +5,7 @@ import { scoreContent } from "@/lib/analyze/score";
 import { UNSCORED_IMAGE_REASON, UNSCORED_SHORT_CAPTION_REASON, unscoredImageCard } from "@/lib/analyze/unscored";
 import { isSession, requireSession } from "@/lib/auth/guard";
 import { corpusFromDb, ensureReady, saveScoredAlert } from "@/lib/db";
-import { searchGoogleFactChecks } from "@/lib/factcheck/google";
+import { collectExternalFacts } from "@/lib/factcheck/live";
 import { textFromUrl } from "@/lib/ingest/url-text";
 import { inspectImage } from "@/lib/media/metadata";
 import { applyImageReport } from "@/lib/model/ai-text";
@@ -98,7 +98,9 @@ export async function POST(request: Request) {
     const card = applyShortTextCaution(await scoreContent(raw, 0, corpus, true), bodyChars);
     card.assessment.ai = applyImageReport(card.assessment.ai, image);
     if (youtubeNote) card.assessment.youtube = youtubeNote;
-    const external = await searchGoogleFactChecks(card.clean);
+    const found = await collectExternalFacts(card.clean);
+    card.assessment = { ...card.assessment, factCheck: { checkedAt: found.checkedAt } };
+    const external = found.external;
     const id = await saveScoredAlert({
       platform: body.kind === "gambar" ? "gambar" : body.kind === "url" ? "url" : "masukan-analis",
       externalId: crypto.randomUUID(),

@@ -23,6 +23,7 @@ export async function searchGoogleFactChecks(query: string): Promise<ExternalFac
           url?: string;
           textualRating?: string;
           publisher?: { name?: string };
+          reviewDate?: string;
         }>;
       }>;
     };
@@ -36,6 +37,7 @@ export async function searchGoogleFactChecks(query: string): Promise<ExternalFac
         url: review.url && /^https?:\/\//.test(review.url) ? review.url : null,
         rating: review.textualRating ?? null,
         publisher: review.publisher?.name ?? null,
+        publishedAt: review.reviewDate ?? null,
       });
     }
     return rows.slice(0, 5);

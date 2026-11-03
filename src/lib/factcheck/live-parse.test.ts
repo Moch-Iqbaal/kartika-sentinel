@@ -1,0 +1,119 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import {
+  cekfaktaQuery,
+  checkedAtLabel,
+  factDateLabel,
+  factQuery,
+  normalizeFactDate,
+  parseAntara,
+  parseCekfakta,
+  parseKomdigi,
+  parseTurnbackhoax,
+  relevantHit,
+  sourceFamily,
+  turnbackhoaxArticleUrl,
+} from "./live-parse.ts";
+
+const TBH = JSON.stringify({
+  data: [
+    {
+      id: "30013",
+      slug: "-salah-wawancara-militer-israel-soal-militer-indonesia-ke-palestina",
+      title: "[SALAH] Wawancara Militer Israel soal Militer Indonesia ke Palestina",
+      description: "Klaim 20 ribu prajurit TNI ke Gaza.",
+      status: "Salah",
+      published_at: "2025-11-12",
+    },
+    {
+      id: "1",
+      slug: "-salah-cuaca-jakarta",
+      title: "[SALAH] Cuaca Jakarta",
+      description: "Hujan deras di ibu kota.",
+      status: "Salah",
+      published_at: "2024-01-01",
+    },
+  ],
+});
+
+const CEK = `const responseData = ${JSON.stringify([
+  {
+    id: "30019",
+    authors: "Tempo",
+    status: "Salah",
+    title: "Keliru: Video Israel soal 20 ribu tentara ke Gaza",
+    content: "Rencana kirim tentara.",
+    tanggal: "2025-11-12",
+  },
+  {
+    id: "9",
+    authors: "Liputan 6",
+    status: "Salah",
+    title: "Hoaks bonus polisi",
+    content: "Tilang.",
+    tanggal: "2024-02-02",
+  },
+])};`;
+
+const ANTARA = `
+<a href="https://www.antaranews.com/berita/4802945/hoaks-41-pasukan-khusus-tni-gugur-saat-melakukan-misi-kemanusiaan-di-gaza" title="Hoaks! 41 pasukan khusus TNI gugur di Gaza">
+<span class="text-dark text-capitalize">29 April 2025</span>
+</a>
+<a href="https://www.antaranews.com/berita/5826263/inflasi-jakarta" title="Inflasi tahunan Jakarta">
+<span class="text-dark text-capitalize">1 Mei 2026</span>
+</a>`;
+
+test("20.000 dibaca sebagai 20 ribu, bukan 000", () => {
+  assert.equal(
+    factQuery("Sebarkan! 20.000 prajurit TNI sudah diterbangkan ke Gaza sebagai pasukan perdamaian."),
+    "20 ribu gaza",
+  );
+  assert.equal(cekfaktaQuery("Sebarkan! 20.000 prajurit TNI ke Gaza."), "20 ribu");
+});
+
+test("tautan TurnBackHoax disusun dari id dan slug yang ada", () => {
+  assert.equal(
+    turnbackhoaxArticleUrl("30013", "-salah-wawancara-militer-israel"),
+    "https://turnbackhoax.id/articles/30013-salah-wawancara-militer-israel",
+  );
+  assert.equal(turnbackhoaxArticleUrl("abc", "-salah"), null);
+});
+
+test("parser menolak artikel yang tidak nyambung dan menyimpan tanggal", () => {
+  const query = factQuery("Sebarkan 20 ribu prajurit TNI sudah diterbangkan ke Gaza");
+  assert.equal(relevantHit(query, "cuaca jakarta hujan"), false);
+  const tbh = parseTurnbackhoax(TBH, query);
+  assert.equal(tbh.length, 1);
+  assert.equal(tbh[0].source, "TurnBackHoax");
+  assert.equal(tbh[0].publishedAt, "2025-11-12");
+  assert.match(tbh[0].url ?? "", /turnbackhoax\.id\/articles\/30013-/);
+  const cek = parseCekfakta(CEK, query);
+  assert.equal(cek.length, 1);
+  assert.equal(cek[0].publisher, "Tempo");
+  assert.equal(cek[0].url, "https://cekfakta.com/focus/30019");
+  const antara = parseAntara(ANTARA, "pasukan khusus TNI Gaza");
+  assert.equal(antara.length, 1);
+  assert.equal(antara[0].publishedAt, "2025-04-29");
+  assert.equal(sourceFamily(tbh[0]), "TurnBackHoax");
+  assert.equal(sourceFamily(cek[0]), "Cek Fakta");
+  assert.equal(sourceFamily(antara[0]), "Antara");
+});
+
+test("Komdigi yang menolak akses tidak mengarang artikel", () => {
+  assert.deepEqual(parseKomdigi("<HTML><TITLE>Access Denied</TITLE></HTML>", "hoaks tni"), []);
+  const html = `<a href="https://www.komdigi.go.id/berita/hoaks-tni-gaza">Klarifikasi hoaks TNI Gaza</a>
+    <a href="https://www.komdigi.go.id/berita/profil">Profil menteri</a>`;
+  const rows = parseKomdigi(html, "hoaks tni gaza");
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].source, "Komdigi");
+});
+
+test("tanggal dan waktu cek memakai WIB", () => {
+  assert.equal(normalizeFactDate("29 April 2025"), "2025-04-29");
+  assert.match(factDateLabel("2025-11-12") ?? "", /2025/);
+  assert.match(factDateLabel("2025-11-12") ?? "", /12/);
+  const label = checkedAtLabel("2026-11-03T07:46:00.000Z");
+  assert.match(label, /^dicek pada /);
+  assert.match(label, /WIB$/);
+  assert.match(label, /14[.:]46/);
+});

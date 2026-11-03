@@ -1,24 +1,24 @@
 import type { CaseDetail } from "../db/types";
-import { confidenceSentence, decideConfidence } from "./confidence";
-import { engineLabel, percent, recommendation, verdictLabel } from "../format";
+import { decideConfidence } from "./confidence";
+import { HOAX_CALL_MIN } from "./bands";
+import { percent } from "../format";
 import { OPINION_NOTE } from "./opinion";
-import { NO_STRONG_MATCH } from "../factcheck/threshold";
 import { SHORT_WORD_VERDICT } from "../ingest/short-text";
 import { ENGINE_DIVERGENCE } from "../model/divergence";
-import { BAND_KRITIS_MIN, BAND_PRIORITAS_MIN, type RiskBand } from "../scoring/risk";
+import type { RiskBand } from "../scoring/risk";
 
 /**
- * Ringkasan deterministik. Tidak memanggil model bahasa.
- * Ambang skor memakai pita yang sama dengan risiko:
- * tinggi = kritis (0,66), rendah = di bawah prioritas (0,40), sisanya belum pasti.
- * Selisih mesin memakai ENGINE_DIVERGENCE (0,35), ambang yang sudah dipakai berkas.
+ * Ringkasan pendek untuk orang awam. Tidak memanggil model bahasa.
+ * "Belum bisa dipastikan" hanya bila keyakinan Rendah, teks terlalu pendek,
+ * atau dua mesin berselisih pada ambang yang sudah dipakai berkas.
+ * Selain itu: HOAKS bila skor minimal 0,5, kalau tidak FAKTA.
  */
 
 export type SummaryVerdict = "hoax" | "not-hoax" | "uncertain" | "unscored" | "short";
 
 export const VERDICT_LINE: Record<SummaryVerdict, string> = {
   hoax: "Kemungkinan HOAKS",
-  "not-hoax": "Kemungkinan BUKAN hoaks",
+  "not-hoax": "Kemungkinan FAKTA",
   uncertain: "Belum bisa dipastikan",
   unscored: "Belum bisa dinilai",
   short: SHORT_WORD_VERDICT,
@@ -57,12 +57,10 @@ function finite(value: number | null | undefined): number | null {
   return value;
 }
 
-/** Skor utama saja, sebelum peringatan teks pendek dan selisih mesin. */
+/** Skor saja, sebelum pagar teks pendek dan selisih mesin. */
 export function scoreVerdict(hoaxScore: number): SummaryVerdict {
   if (!Number.isFinite(hoaxScore)) return "uncertain";
-  if (hoaxScore >= BAND_KRITIS_MIN) return "hoax";
-  if (hoaxScore < BAND_PRIORITAS_MIN) return "not-hoax";
-  return "uncertain";
+  return hoaxScore >= HOAX_CALL_MIN ? "hoax" : "not-hoax";
 }
 
 function gap(left: number | null, right: number | null): number | null {
@@ -70,86 +68,17 @@ function gap(left: number | null, right: number | null): number | null {
   return Math.abs(left - right);
 }
 
-function topMatch(matches: RingkasanInput["matches"]): { verdict: string; similarity: number } | null {
-  const ranked = matches.filter((match) => Number.isFinite(match.similarity));
-  if (ranked.length === 0) return null;
-  return [...ranked].sort((left, right) => right.similarity - left.similarity)[0];
+function enginesDisagree(input: RingkasanInput): "linear" | "heuristic" | null {
+  const linearGap = gap(finite(input.indobert), finite(input.linear));
+  if (linearGap != null && linearGap >= ENGINE_DIVERGENCE) return "linear";
+  const heuristicGap = gap(finite(input.indobert), finite(input.heuristic));
+  if (heuristicGap != null && heuristicGap >= ENGINE_DIVERGENCE) return "heuristic";
+  return null;
 }
 
-function contradicts(base: SummaryVerdict, verdict: string): boolean {
-  if (base === "uncertain") return false;
-  if (base === "hoax" && verdict === "true") return true;
-  if (base === "not-hoax" && (verdict === "hoax" || verdict === "misleading")) return true;
-  return false;
-}
-
-/**
- * Urutan: skor tidak valid, teks pendek, selisih mesin, padanan yang bertentangan, lalu ambang skor.
- */
 export function decideVerdict(input: RingkasanInput): SummaryVerdict {
   if (input.unscored) return "unscored";
   if (input.shortWords) return "short";
-  const base = scoreVerdict(input.hoaxScore);
-  if (base === "uncertain" && !Number.isFinite(input.hoaxScore)) return "uncertain";
-  if (input.shortText) return "uncertain";
-  const linearGap = gap(finite(input.indobert), finite(input.linear));
-  const heuristicGap = gap(finite(input.indobert), finite(input.heuristic));
-  if ((linearGap != null && linearGap >= ENGINE_DIVERGENCE) || (heuristicGap != null && heuristicGap >= ENGINE_DIVERGENCE)) {
-    return "uncertain";
-  }
-  if (input.opinion && base === "hoax") return "uncertain";
-  const best = topMatch(input.matches);
-  if (best && contradicts(base, best.verdict)) return "uncertain";
-  return base;
-}
-
-function engineSentence(input: RingkasanInput): string {
-  const score = percent(Number.isFinite(input.hoaxScore) ? input.hoaxScore : 0);
-  const engine = engineLabel(input.engine);
-  const linearGap = gap(finite(input.indobert), finite(input.linear));
-  const heuristicGap = gap(finite(input.indobert), finite(input.heuristic));
-  let compare = "IndoBERT tidak dipakai pada skor ini";
-  if (linearGap != null) {
-    compare = linearGap >= ENGINE_DIVERGENCE ? "IndoBERT dan model linier tidak sejalan" : "IndoBERT dan model linier sejalan";
-  } else if (heuristicGap != null) {
-    compare = heuristicGap >= ENGINE_DIVERGENCE ? "IndoBERT dan heuristik tidak sejalan" : "IndoBERT dan heuristik sejalan";
-  }
-  if (input.shortText) {
-    return `Skor utama ${score} dari ${engine}, tetapi teks sumber terlalu pendek jadi angka ini tidak andal.`;
-  }
-  return `Skor utama ${score} dari ${engine}, dan ${compare}.`;
-}
-
-function contextSentence(input: RingkasanInput): string {
-  const best = topMatch(input.matches);
-  const matchText = input.matches.length === 0
-    ? NO_STRONG_MATCH
-    : `Ada ${input.matches.length} padanan cek fakta, teratas berlabel ${verdictLabel(best?.verdict ?? "unverified")}`;
-  const external = input.externalCount > 0 ? `, plus ${input.externalCount} dari Fact Check Tools` : "";
-  const topic = input.topicLabels.length === 0
-    ? "tidak ada topik ontologi yang kuat"
-    : `topik ${input.topicLabels.join(", ")} ikut menaikkan peringkat`;
-  const spread = input.virality > 0 ? "ada data sebaran" : "tidak ada data sebaran";
-  const ai = input.aiFlagged || input.aiConfidence === "sedang" || input.aiConfidence === "tinggi"
-    ? "ada isyarat media AI"
-    : "isyarat media AI tidak menonjol";
-  return `${matchText}${external}, ${topic}, ${spread}, dan ${ai}.`;
-}
-
-export function buildRingkasan(input: RingkasanInput): Ringkasan {
-  const verdict = decideVerdict(input);
-  if (verdict === "unscored") {
-    return {
-      verdict,
-      headline: VERDICT_LINE.unscored,
-      sentences: [
-        input.unscoredReason || "Tidak ada teks isi yang bisa dinilai, jadi skor hoaks tidak dihitung.",
-        "Metadata dan teks sistem tidak dipakai sebagai klaim.",
-        "Tempel keterangan gambar bila ingin teks itu dinilai.",
-        "Ini rekomendasi sistem, keputusan akhir ada pada analis.",
-      ],
-    };
-  }
   const confidence = decideConfidence({
     textChars: input.textChars,
     shortText: input.shortText || input.shortWords,
@@ -159,16 +88,80 @@ export function buildRingkasan(input: RingkasanInput): Ringkasan {
     matchCount: input.matches.length,
     externalCount: input.externalCount,
   });
-  const opinionLine = input.opinion ? `Teks ini terbaca sebagai opini atau kritik. ${OPINION_NOTE}.` : null;
-  const sentences = [
-    engineSentence(input),
-    confidenceSentence(confidence),
-    opinionLine,
-    opinionLine ? null : contextSentence(input),
-    opinionLine ? contextSentence(input) : recommendation(input.band),
-    "Ini rekomendasi sistem, keputusan akhir ada pada analis.",
-  ].filter((sentence): sentence is string => Boolean(sentence));
-  return { verdict, headline: VERDICT_LINE[verdict], sentences: sentences.slice(0, 5) };
+  if (input.shortText || confidence.level === "rendah" || enginesDisagree(input)) return "uncertain";
+  return scoreVerdict(input.hoaxScore);
+}
+
+function analystLine(): string {
+  return "Ini rekomendasi sistem. Keputusan akhir ada pada analis.";
+}
+
+function opinionLine(): string {
+  return `Ini terbaca sebagai kritik. ${OPINION_NOTE}.`;
+}
+
+function callLine(input: RingkasanInput, verdict: SummaryVerdict): string {
+  const call = verdict === "hoax" ? "hoaks" : "fakta";
+  const score = percent(Number.isFinite(input.hoaxScore) ? input.hoaxScore : 0);
+  return `Mesin membaca ini sebagai ${call}. Peluang hoaks ${score}.`;
+}
+
+export function buildRingkasan(input: RingkasanInput): Ringkasan {
+  const verdict = decideVerdict(input);
+  if (verdict === "unscored") {
+    return {
+      verdict,
+      headline: VERDICT_LINE.unscored,
+      sentences: [
+        input.unscoredReason || "Tidak ada teks yang bisa dinilai.",
+        "Tempel keterangan gambar bila ingin dinilai.",
+        analystLine(),
+      ].slice(0, 3),
+    };
+  }
+  if (verdict === "short") {
+    return {
+      verdict,
+      headline: VERDICT_LINE.short,
+      sentences: [
+        "Teksnya kurang dari 20 kata, jadi belum bisa dinilai.",
+        input.opinion ? opinionLine() : "Angka mesin tidak andal untuk teks sependek ini.",
+        analystLine(),
+      ],
+    };
+  }
+  if (verdict === "uncertain") {
+    const disagree = enginesDisagree(input);
+    const why = input.shortText
+      ? "Teks sumber terlalu pendek, jadi belum bisa dipastikan."
+      : disagree === "heuristic"
+        ? "IndoBERT dan heuristik tidak sejalan, jadi belum bisa dipastikan."
+        : disagree === "linear"
+          ? "IndoBERT dan model linier tidak sejalan, jadi belum bisa dipastikan."
+          : "Keyakinan hasil rendah, jadi belum bisa dipastikan.";
+    return {
+      verdict,
+      headline: VERDICT_LINE.uncertain,
+      sentences: [
+        why,
+        input.opinion ? opinionLine() : "Jangan pakai angka ini sebagai putusan.",
+        analystLine(),
+      ],
+    };
+  }
+  return {
+    verdict,
+    headline: VERDICT_LINE[verdict],
+    sentences: [
+      callLine(input, verdict),
+      input.opinion
+        ? opinionLine()
+        : input.matches.length + input.externalCount > 0
+          ? "Bandingkan dengan bukti cek fakta di atas."
+          : "Belum ada padanan cek fakta yang ketemu.",
+      analystLine(),
+    ],
+  };
 }
 
 export function ringkasanFromCase(detail: CaseDetail): Ringkasan {

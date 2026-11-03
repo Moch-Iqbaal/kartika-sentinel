@@ -4,7 +4,7 @@ import { isNonContentText } from "@/lib/analyze/content-guard";
 import { scoreContent } from "@/lib/analyze/score";
 import { isSession, requireSession } from "@/lib/auth/guard";
 import { corpusFromDb, getCase, rescoreAlert } from "@/lib/db";
-import { searchGoogleFactChecks } from "@/lib/factcheck/google";
+import { collectExternalFacts } from "@/lib/factcheck/live";
 import { rateLimit } from "@/lib/security/rate-limit";
 import { assertSameOrigin } from "@/lib/security/untrusted";
 
@@ -34,8 +34,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       await scoreContent(detail.text, detail.virality, await corpusFromDb(), true),
       detail.assessment.caution?.bodyChars,
     );
-    const external = await searchGoogleFactChecks(detail.text);
-    await rescoreAlert(session, id, card, external);
+    const found = await collectExternalFacts(detail.text);
+    card.assessment = { ...card.assessment, factCheck: { checkedAt: found.checkedAt } };
+    await rescoreAlert(session, id, card, found.external);
     return NextResponse.json({ ok: true, engine: card.assessment.engine });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Skor ulang gagal.";

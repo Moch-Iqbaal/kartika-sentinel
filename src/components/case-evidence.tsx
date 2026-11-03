@@ -1,88 +1,31 @@
 import { TermTip } from "@/components/term-tip";
 import { glossaryTip } from "@/lib/glossary";
-import type { CaseDetail } from "@/lib/db/types";
-import { evidenceFirst, hasHttpUrl } from "@/lib/factcheck/order";
-import { NO_STRONG_MATCH } from "@/lib/factcheck/threshold";
-import { isMafindoSource, mafindoBadge, turnbackhoaxSearchUrl } from "@/lib/factcheck/turnbackhoax";
-import { percent, verdictLabel } from "@/lib/format";
+import type { EvidenceBullet } from "@/lib/analyze/report";
+import { hasHttpUrl } from "@/lib/factcheck/order";
 
 function SafeLink({ href, children }: { href: string; children: string }) {
   if (!hasHttpUrl(href)) return <span>{children}</span>;
   return (
-    <a href={href} target="_blank" rel="noreferrer noopener" className="font-medium text-info underline-offset-2 hover:underline">
+    <a href={href} target="_blank" rel="noreferrer noopener" className="text-info underline-offset-2 hover:underline">
       {children}
     </a>
   );
 }
 
-export function CaseEvidence({ detail }: { detail: CaseDetail }) {
-  const matches = evidenceFirst(detail.matches);
-  const linked = matches.filter((match) => hasHttpUrl(match.url)).length;
+export function CaseEvidence({ bullets }: { bullets: EvidenceBullet[] }) {
   return (
-    <section className="space-y-3 rounded-xl border border-gold/40 bg-card p-4">
-      <div>
-        <h2 className="inline-flex items-center text-base font-semibold">
-          Bukti utama
-          <TermTip {...glossaryTip("bukti-utama")} />
-        </h2>
-        <p className="mt-1 text-sm text-muted">
-          Padanan cek fakta dan tautan sumber. Ini yang dibaca lebih dulu. Skor bukan bukti.
-        </p>
-      </div>
-      {detail.platform === "gambar" && !detail.assessment.unscored?.reason ? (
-        <p className="text-sm">Padanan di bawah dibandingkan dengan keterangan yang ditempel, bukan dengan piksel gambar.</p>
-      ) : null}
-      {matches.length === 0 ? (
-        <p className="text-sm text-muted">{NO_STRONG_MATCH}</p>
-      ) : (
-        <p className="text-xs text-muted">{linked} dari {matches.length} padanan punya tautan artikel.</p>
-      )}
-      {matches.map((match) => {
-        const article = match.url && hasHttpUrl(match.url) ? match.url : null;
-        const mafindo = isMafindoSource(match.source);
-        return (
-          <article key={match.id} className="border-t border-border pt-3">
-            <p className="text-sm font-medium">
-              {article ? <SafeLink href={article}>{match.title}</SafeLink> : match.title}
-              <TermTip {...glossaryTip("padanan")} />
-            </p>
-            <p className="mt-1 text-xs text-muted">
-              {verdictLabel(match.verdict)} · kemiripan {percent(match.similarity)} · {match.source} · {match.license}
-            </p>
-            {mafindo ? (
-              <p className="mt-2 inline-flex items-center rounded-full border border-border px-2 py-0.5 text-xs">
-                {mafindoBadge(match.verdict)}
-                <TermTip {...glossaryTip("sumber-mafindo")} />
-              </p>
-            ) : (
-              <p className="mt-1 text-sm leading-6">{match.summary}</p>
-            )}
-            {article ? <p className="mt-1 text-xs"><SafeLink href={article}>{article}</SafeLink></p> : mafindo ? (
-              <p className="mt-1 text-xs">
-                <SafeLink href={turnbackhoaxSearchUrl(match.title)}>Cari di TurnBackHoax</SafeLink>
-              </p>
-            ) : (
-              <p className="mt-1 text-xs text-muted">Tautan sumber tidak ada di korpus ini.</p>
-            )}
-          </article>
-        );
-      })}
-      {detail.external.length > 0 ? (
-        <div className="border-t border-border pt-3">
-          <p className="inline-flex items-center text-sm font-medium">
-            Fact Check Tools
-            <TermTip {...glossaryTip("fact-check-tools")} />
-          </p>
-          {detail.external.map((item) => (
-            <p key={`${item.url}-${item.title}`} className="mt-2 text-sm">
-              {item.publisher ? `${item.publisher}: ` : ""}
-              {item.url && hasHttpUrl(item.url) ? <SafeLink href={item.url}>{item.title}</SafeLink> : item.title}
-              {item.rating ? ` (${item.rating})` : ""}
-              {item.url && hasHttpUrl(item.url) ? <span className="mt-1 block text-xs"><SafeLink href={item.url}>{item.url}</SafeLink></span> : null}
-            </p>
-          ))}
-        </div>
-      ) : null}
+    <section className="space-y-2 rounded-xl border border-gold/40 bg-card p-4">
+      <h2 className="inline-flex items-center text-base font-semibold">
+        Bukti utama
+        <TermTip {...glossaryTip("bukti-utama")} />
+      </h2>
+      <ul className="space-y-2 text-sm leading-6">
+        {bullets.map((bullet) => (
+          <li key={bullet.text} className="border-l border-gold/40 pl-3">
+            {bullet.href ? <SafeLink href={bullet.href}>{bullet.text}</SafeLink> : bullet.text}
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

@@ -62,8 +62,8 @@ test("judul MBG di bawah 20 kata tidak menjadi HOAKS", () => {
   assert.notEqual(text.headline, "Kemungkinan HOAKS");
   const joined = text.sentences.join(" ");
   assert.match(joined, new RegExp(OPINION_NOTE));
-  assert.match(joined, /Keyakinan hasil Rendah/);
   assert.match(joined, /20 kata/);
+  assert.ok(text.sentences.length <= 3);
   assert.equal(KNOWN_FALSE_POSITIVES.some((item) => item.title === HEADLINE), true);
 });
 

@@ -1,3 +1,4 @@
+import { HOAX_CALL_MIN } from "@/lib/analyze/bands";
 import { MATCH_MIN_SIMILARITY } from "@/lib/factcheck/match";
 import { bandLabel, percent, recommendation } from "@/lib/format";
 import { MIN_RELIABLE_CHARS, MIN_RELIABLE_WORDS, SHORT_TEXT_KEEP, SHORT_TEXT_WARNING, SHORT_WORD_VERDICT } from "@/lib/ingest/short-text";
@@ -235,7 +236,35 @@ export function glossaryGroups(): GlossaryGroup[] {
         term(
           "bukti-utama",
           "Bukti utama",
-          "Padanan cek fakta dan tautan sumber. Ini yang dibaca lebih dulu, skor bukan bukti.",
+          "Paling banyak tiga butir: sinyal mesin, plus cek fakta dari sumber yang berbeda.",
+          "Nama sumber, tanggal, dan tautan. Bila hanya satu sumber, kalimatnya bilang begitu. Korpus lama tidak dipakai sendirian.",
+          "Bukti singkat dari mesin dan cek fakta langsung, bukan satu arsip saja.",
+        ),
+        term(
+          "vonis-laporan",
+          "Kemungkinan HOAKS / Kemungkinan FAKTA",
+          "Vonis di bagian atas. FAKTA berarti peluang hoaks di bawah setengah.",
+          `HOAKS bila skor minimal ${percent(HOAX_CALL_MIN)} dan keyakinan bukan Rendah. “Belum bisa dipastikan” hanya bila keyakinan Rendah, teks terlalu pendek, atau dua mesin berselisih.`,
+          "Vonis di atas: hoaks, fakta, atau belum bisa dipastikan.",
+        ),
+        term(
+          "dicek-pada",
+          "dicek pada",
+          "Waktu pencarian cek fakta saat analisis, dalam waktu Indonesia Barat.",
+          "Pencarian langsung dibatasi beberapa detik dan diingat sebentar. Bukan tanggal korpus lama.",
+          "Kapan cek fakta langsung dijalankan.",
+        ),
+        term(
+          "ringkasan-laporan",
+          "Ringkasan",
+          "Paling banyak tiga kalimat biasa. Bukan rumus, dan keputusan tetap di analis.",
+        ),
+        term(
+          "pita-angka",
+          "rendah / sedang / tinggi",
+          `Rendah di bawah ${percent(BAND_PRIORITAS_MIN)}, sedang sampai di bawah ${percent(BAND_KRITIS_MIN)}, tinggi sejak angka itu.`,
+          "Batas yang sama untuk skor utama, sensitivitas, dan viralitas.",
+          "Pita angka mengikuti batas yang sama dengan persentasenya.",
         ),
         term(
           "belum-dinilai",
@@ -253,23 +282,23 @@ export function glossaryGroups(): GlossaryGroup[] {
         term(
           "skor-utama",
           "Skor utama",
-          "Perkiraan peluang hoaks dari satu mesin. Makin tinggi, makin mirip hoaks, dan bukan penetapan.",
-          `Di bawah ${MIN_RELIABLE_WORDS} kata pada semua masukan: “${SHORT_WORD_VERDICT}”. Teks URL di bawah ${MIN_RELIABLE_CHARS} karakter: jarak ke 0,5 dikalikan ${decimal(SHORT_TEXT_KEEP)}.`,
-          "Perkiraan peluang hoaks: makin tinggi, makin mirip hoaks, bukan penetapan.",
+          "Contoh: Skor utama 62% = peluang ini hoaks menurut mesin. Pita mengikuti angkanya.",
+          `Rendah di bawah ${percent(BAND_PRIORITAS_MIN)}, sedang sampai di bawah ${percent(BAND_KRITIS_MIN)}, tinggi sejak ${percent(BAND_KRITIS_MIN)}. Vonis HOAKS mulai ${percent(HOAX_CALL_MIN)} bila keyakinan bukan Rendah. Di bawah ${MIN_RELIABLE_WORDS} kata: “${SHORT_WORD_VERDICT}”. Teks URL di bawah ${MIN_RELIABLE_CHARS} karakter: jarak ke 0,5 dikalikan ${decimal(SHORT_TEXT_KEEP)}.`,
+          "Peluang teks ini hoaks menurut mesin, dengan pita rendah, sedang, atau tinggi.",
         ),
         term(
           "sensitivitas",
           "Sensitivitas",
-          "Seberapa peka topiknya bagi peringkat TNI. Tinggi berarti topik rawan, rendah berarti netral.",
-          `Tanpa topik, lantai ${percent(NO_TOPIC_SENSITIVITY)}. Bukan statistik operasi.`,
-          "Seberapa peka topiknya: tinggi berarti rawan, rendah berarti netral.",
+          "Seberapa rawan topiknya. Rendah berarti netral, tinggi berarti rawan.",
+          `Pita sama dengan skor: rendah di bawah ${percent(BAND_PRIORITAS_MIN)}, tinggi sejak ${percent(BAND_KRITIS_MIN)}. Tanpa topik, lantai ${percent(NO_TOPIC_SENSITIVITY)}.`,
+          "Seberapa rawan topiknya: rendah netral, tinggi rawan.",
         ),
         term(
           "viralitas",
           "Viralitas",
-          "Seberapa cepat konten menyebar dari data suka dan sebar. 0% berarti data itu tidak ada.",
-          `Viralitas efektif = ${decimal(EFFECTIVE_VIRALITY_FLOOR)} + ${decimal(EFFECTIVE_VIRALITY_SPAN)} × viralitas. Engagement = sebar + ${decimal(VIRALITY_LIKE_WEIGHT)} × suka + ${decimal(VIRALITY_COMMENT_WEIGHT)} × komentar. Langit ${count(VIRALITY_ENGAGEMENT_CEILING)} dan ${count(VIRALITY_VELOCITY_CEILING)}, bobot ${decimal(VIRALITY_ENGAGEMENT_WEIGHT)} dan ${decimal(VIRALITY_VELOCITY_WEIGHT)}, jarak minimal ${decimal(VIRALITY_MIN_HOURS)} jam.`,
-          "Kecepatan sebar: 0% berarti tidak ada data engagement, bukan bukti tidak viral.",
+          "Seberapa besar sebaran yang tercatat. 0% (rendah) berarti data itu tidak ada.",
+          `Pita sama dengan skor. Viralitas efektif = ${decimal(EFFECTIVE_VIRALITY_FLOOR)} + ${decimal(EFFECTIVE_VIRALITY_SPAN)} × viralitas. Engagement = sebar + ${decimal(VIRALITY_LIKE_WEIGHT)} × suka + ${decimal(VIRALITY_COMMENT_WEIGHT)} × komentar. Langit ${count(VIRALITY_ENGAGEMENT_CEILING)} dan ${count(VIRALITY_VELOCITY_CEILING)}, bobot ${decimal(VIRALITY_ENGAGEMENT_WEIGHT)} dan ${decimal(VIRALITY_VELOCITY_WEIGHT)}, jarak minimal ${decimal(VIRALITY_MIN_HOURS)} jam.`,
+          "Sebaran yang tercatat. 0% berarti tidak ada datanya.",
         ),
         term(
           "viralitas-efektif",
@@ -320,8 +349,9 @@ export function glossaryGroups(): GlossaryGroup[] {
         term(
           "topik-berkas",
           "Topik",
-          "Topik yang kena pada teks ini, beserta kata yang cocok.",
-          `Tanpa kata kunci, kemiripan minimal ${percent(TOPIC_SIMILARITY_MIN)}.`,
+          "Satu topik utama, plus satu topik lain bila ada. Namanya bahasa biasa, bukan kode.",
+          `Tanpa kata kunci, kemiripan minimal ${percent(TOPIC_SIMILARITY_MIN)}. Kode seperti misi-luar-negeri tidak ditampilkan.`,
+          "Nama topik utama, paling banyak satu topik tambahan.",
         ),
         term(
           "padanan",

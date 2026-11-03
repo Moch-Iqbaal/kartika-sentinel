@@ -44,6 +44,10 @@ export type HoaxAssessment = {
     parts: string[];
     note: string;
   } | null;
+  /** Waktu pencarian cek fakta langsung, saat analisis. */
+  factCheck?: {
+    checkedAt: string;
+  } | null;
 };
 
 /**

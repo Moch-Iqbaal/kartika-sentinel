@@ -4,9 +4,7 @@ import { CaseActions } from "@/components/case-actions";
 import { CaseEvidence } from "@/components/case-evidence";
 import { TermTip } from "@/components/term-tip";
 import { glossaryTip } from "@/lib/glossary";
-import { confidenceSentence, CONFIDENCE_LABEL, decideConfidence } from "@/lib/analyze/confidence";
-import { ringkasanFromCase } from "@/lib/analyze/ringkasan";
-import { MIN_RELIABLE_CHARS, MIN_RELIABLE_WORDS, SHORT_WORD_VERDICT } from "@/lib/ingest/short-text";
+import { presentCase } from "@/lib/analyze/present";
 import { Disclaimer } from "@/components/disclaimer";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -23,17 +21,8 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
   if (!detail) notFound();
   const session = await currentSession();
   const canEdit = Boolean(session && (session.role === "admin" || session.sub === detail.assignedTo));
-  const ringkasan = ringkasanFromCase(detail);
+  const report = presentCase(detail);
   const unscored = Boolean(detail.assessment.unscored?.reason);
-  const confidence = unscored ? null : decideConfidence({
-    textChars: detail.assessment.caution?.bodyChars ?? detail.text.trim().length,
-    shortText: Boolean(detail.assessment.caution?.warning),
-    shortKind: detail.assessment.caution?.words != null ? "words" : detail.assessment.caution?.warning ? "chars" : null,
-    indobert: detail.assessment.indobert?.probability ?? null,
-    linear: detail.assessment.linear?.probability ?? null,
-    matchCount: detail.matches.length,
-    externalCount: detail.external.length,
-  });
   const gap = detail.assessment.indobert
     && Math.abs(detail.assessment.indobert.probability - detail.assessment.heuristic.probability) >= ENGINE_DIVERGENCE;
   return (
@@ -42,69 +31,77 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-wide text-muted">{detail.demo ? "Data demo" : "Masukan analis"}</p>
-          <h1 className="mt-1 text-2xl font-semibold">Berkas peringatan</h1>
+          <h1 className="mt-1 inline-flex items-center text-2xl font-semibold">
+            {report.headline}
+            <TermTip {...glossaryTip("vonis-laporan")} />
+          </h1>
+          <p className="mt-1 inline-flex items-center text-sm text-muted">
+            {report.checkedLabel}
+            <TermTip {...glossaryTip("dicek-pada")} />
+          </p>
         </div>
         <Badge className={!unscored && detail.band === "kritis" ? "border-danger text-danger" : ""}>
           {unscored ? "Belum bisa dinilai" : `${bandLabel(detail.band)} · ${percent(detail.riskScore)}`}
         </Badge>
       </div>
       <Disclaimer mode={modelModeLabel(detail.modelStatus)} />
-      {unscored ? (
+      <CaseEvidence bullets={report.bullets} />
+      <Card className="space-y-2 p-4">
+        <h2 className="inline-flex items-center font-medium">
+          Ringkasan
+          <TermTip {...glossaryTip("ringkasan-laporan")} />
+        </h2>
+        {report.sentences.map((sentence) => (
+          <p key={sentence} className="text-sm leading-6">{sentence}</p>
+        ))}
+      </Card>
+      {report.scores ? (
+        <div className="grid gap-3 md:grid-cols-3">
+          <Card className="p-4">
+            <p className="flex items-center text-xs text-muted">
+              Skor utama · {report.scores.utamaBand}
+              <TermTip {...glossaryTip("skor-utama")} />
+            </p>
+            <p className="mt-1 text-sm leading-6">{report.scores.utama}</p>
+          </Card>
+          <Card className="p-4">
+            <p className="flex items-center text-xs text-muted">
+              Sensitivitas · {report.scores.sensitivitasBand}
+              <TermTip {...glossaryTip("sensitivitas")} />
+            </p>
+            <p className="mt-1 text-sm leading-6">{report.scores.sensitivitas}</p>
+          </Card>
+          <Card className="p-4">
+            <p className="flex items-center text-xs text-muted">
+              Viralitas · {report.scores.viralitasBand}
+              <TermTip {...glossaryTip("viralitas")} />
+            </p>
+            <p className="mt-1 text-sm leading-6">{report.scores.viralitas}</p>
+          </Card>
+        </div>
+      ) : (
         <Card className="border-warning/50 p-4 text-sm">
           <p className="font-medium">Belum bisa dinilai</p>
           <p className="mt-1">{detail.assessment.unscored?.reason}</p>
           <p className="mt-1 text-muted">{detail.assessment.unscored?.nextStep}</p>
         </Card>
-      ) : null}
+      )}
+      <p className="inline-flex items-center text-sm">
+        {report.topicLine}
+        <TermTip {...glossaryTip("topik-berkas")} />
+      </p>
       {detail.assessment.caution?.warning ? (
-        <Card className="border-warning/50 p-4 text-sm">
-          <p className="font-medium text-warning">{detail.assessment.caution.warning}</p>
-          <p className="mt-1">
-            {detail.assessment.caution.warning === SHORT_WORD_VERDICT
-              ? `Teks ${detail.assessment.caution.words ?? 0} kata, di bawah ambang ${MIN_RELIABLE_WORDS}. Skor utama ditarik mendekati 50% dari keluaran mentah ${percent(detail.assessment.caution.rawProbability)}.`
-              : `Tubuh artikel yang terbaca ${detail.assessment.caution.bodyChars} karakter, di bawah ambang ${MIN_RELIABLE_CHARS}. Skor utama ditarik mendekati 50% dari keluaran mentah ${percent(detail.assessment.caution.rawProbability)} karena teks sependek itu tidak cukup untuk menilai hoaks.`}
-          </p>
-        </Card>
+        <p className="text-sm text-warning">{detail.assessment.caution.warning}</p>
       ) : null}
       {!unscored && (detail.modelStatus === "ringan" || detail.modelStatus === "dilewati") ? (
-        <Card className="p-4 text-sm">mode ringan. Skor ini dari model n-gram dan heuristik, tanpa panggilan IndoBERT.</Card>
+        <p className="text-sm text-muted">Mode ringan. Skor dari model n-gram, tanpa IndoBERT.</p>
       ) : null}
       {detail.modelStatus === "bangun" ? (
-        <Card className="border-warning/50 p-4 text-sm">IndoBERT on-premise sedang bangun. Skor tersimpan memakai model n-gram. Skor ulang setelah tunnel dan proses di Mac siap.</Card>
+        <p className="text-sm text-warning">IndoBERT sedang bangun. Skor ini memakai model n-gram.</p>
       ) : null}
-      {detail.modelStatus === "mati" ? (
-        <Card className="p-4 text-sm text-muted">IndoBERT on-premise tidak menjawab. Skor memakai model n-gram atau heuristik di server web.</Card>
+      {detail.modelStatus === "mati" || detail.modelStatus === "offline" ? (
+        <p className="text-sm text-muted">IndoBERT tidak menjawab. Skor memakai cadangan di server web.</p>
       ) : null}
-      <CaseEvidence detail={detail} />
-      {confidence ? (
-        <Card className="flex flex-wrap items-center justify-between gap-3 border-gold/40 p-4">
-          <div>
-            <p className="flex items-center text-xs uppercase text-muted">Keyakinan hasil <TermTip {...glossaryTip("keyakinan-hasil")} /></p>
-            <p className="text-3xl font-semibold">{CONFIDENCE_LABEL[confidence.level]}</p>
-          </div>
-          <p className="max-w-xl text-sm leading-6">{confidenceSentence(confidence)}</p>
-        </Card>
-      ) : null}
-      <div className="grid gap-3 md:grid-cols-4">
-        <Card className="p-4">
-          <p className="flex items-center text-xs text-muted">Skor utama <TermTip {...glossaryTip("skor-utama")} /></p>
-          <p className="text-xl font-semibold">{unscored ? "—" : percent(detail.hoaxScore)}</p>
-          <p className="text-xs text-muted">{unscored ? "Tidak dihitung" : engineLabel(detail.engine)}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="flex items-center text-xs text-muted">Sensitivitas <TermTip {...glossaryTip("sensitivitas")} /></p>
-          <p className="text-xl font-semibold">{unscored ? "—" : percent(detail.sensitivity)}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="flex items-center text-xs text-muted">Viralitas <TermTip {...glossaryTip("viralitas")} /></p>
-          <p className="text-xl font-semibold">{unscored ? "—" : percent(detail.virality)}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="flex items-center text-xs text-muted">Media AI <TermTip {...glossaryTip("media-ai")} /></p>
-          <p className="text-xl font-semibold">{detail.ai.flagged ? "Indikasi" : "Tidak menonjol"}</p>
-          <p className="text-xs text-muted">{percent(detail.ai.score)}</p>
-        </Card>
-      </div>
       <Card className="space-y-3 p-4">
         <h2 className="font-medium">Teks yang dinilai</h2>
         {detail.assessment.youtube?.note ? (
@@ -114,7 +111,7 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
           </p>
         ) : null}
         {detail.platform === "gambar" && !unscored ? (
-          <p className="text-sm text-muted">Yang dinilai adalah keterangan yang ditempel analis, bukan piksel atau metadata gambar.</p>
+          <p className="text-sm text-muted">Yang dinilai adalah keterangan yang ditempel analis, bukan piksel gambar.</p>
         ) : null}
         <p className="whitespace-pre-wrap text-sm leading-6">{detail.text}</p>
         <p className="text-xs text-muted">Pegangan: {displayHandle(detail.authorHash)} · {detail.platform}</p>
@@ -124,35 +121,24 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
           </a>
         ) : null}
       </Card>
-      <Card className="space-y-2 p-4">
-        <h2 className="font-medium">Mesin skor</h2>
-        {unscored ? <p className="text-sm">Tidak ada skor. Mesin tidak dijalankan pada metadata gambar.</p> : (
-          <>
-            <p className="text-sm">Versi: {detail.modelVersion}</p>
-            {detail.assessment.indobert ? <p className="text-sm">{detail.assessment.caution ? "IndoBERT on-premise mentah" : "IndoBERT on-premise"} ({detail.assessment.indobert.label}): {percent(detail.assessment.indobert.probability)}</p> : <p className="text-sm text-muted">IndoBERT on-premise tidak dipakai pada skor ini. Dalam mode ringan tombol skor ulang tetap memakai n-gram sampai LOCAL_HOAX_URL diisi.</p>}
-            {detail.assessment.linear ? <p className="text-sm">{detail.assessment.caution ? "Model linier mentah" : "Model linier"}: {percent(detail.assessment.linear.probability)}</p> : null}
-          </>
-        )}
-        <ul className="list-disc pl-5 text-sm text-muted">
-          {(detail.assessment.heuristic?.reasons ?? []).map((reason: string) => <li key={reason}>{reason}</li>)}
-        </ul>
-        {gap ? <p className="text-sm text-warning">{ENGINE_DIVERGENCE_WARNING}</p> : null}
-        <p className="text-sm">Keyakinan indikasi AI: {detail.ai.confidence ?? "rendah"} · {percent(detail.ai.score)}</p>
-        <p className="text-sm text-muted">{detail.ai.disclaimer}</p>
-        <ul className="list-disc pl-5 text-sm text-muted">
-          {(detail.ai.reasons ?? []).map((reason) => <li key={reason}>{reason}</li>)}
-        </ul>
-      </Card>
-      <Card className="space-y-3 p-4">
-        <h2 className="font-medium">Topik</h2>
-        {detail.topics.length === 0 ? <p className="text-sm text-muted">Tidak ada topik ontologi yang cukup kuat.</p> : (
-          <ul className="space-y-1 text-sm">
-            {detail.topics.map((topic) => (
-              <li key={topic.id}>{topic.label} · kemiripan {percent(topic.score)} · kata: {topic.keywordsHit.join(", ") || "—"}</li>
-            ))}
+      <details className="rounded-xl border border-border bg-card p-4">
+        <summary className="cursor-pointer text-xs text-info">Detail skor</summary>
+        <div className="mt-3 space-y-2 text-sm">
+          <p>Mesin: {unscored ? "tidak dijalankan" : engineLabel(detail.engine)} · versi {detail.modelVersion}</p>
+          {detail.assessment.indobert ? (
+            <p>IndoBERT: {percent(detail.assessment.indobert.probability)}</p>
+          ) : (
+            <p className="text-muted">IndoBERT tidak dipakai pada skor ini.</p>
+          )}
+          {detail.assessment.linear ? <p>Model linier: {percent(detail.assessment.linear.probability)}</p> : null}
+          {gap ? <p className="text-warning">{ENGINE_DIVERGENCE_WARNING}</p> : null}
+          <p>Media AI: {detail.ai.flagged ? "Indikasi" : "Tidak menonjol"} · {detail.ai.confidence} · {percent(detail.ai.score)}</p>
+          <p className="text-muted">{detail.ai.disclaimer}</p>
+          <ul className="list-disc pl-5 text-muted">
+            {(detail.assessment.heuristic?.reasons ?? []).map((reason: string) => <li key={reason}>{reason}</li>)}
           </ul>
-        )}
-      </Card>
+        </div>
+      </details>
       <Card className="space-y-3 p-4">
         <h2 className="font-medium">Tindakan analis</h2>
         <p className="text-sm">{detail.recommendation}</p>
@@ -193,13 +179,6 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
             ))}
           </ol>
         )}
-      </Card>
-      <Card className="space-y-2 p-4">
-        <h2 className="font-medium">Ringkasan</h2>
-        <p className="text-lg font-semibold">{ringkasan.headline}</p>
-        {ringkasan.sentences.map((sentence) => (
-          <p key={sentence} className="text-sm leading-6">{sentence}</p>
-        ))}
       </Card>
     </div>
   );
