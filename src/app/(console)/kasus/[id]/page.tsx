@@ -5,6 +5,7 @@ import { CaseEvidence } from "@/components/case-evidence";
 import { TermTip } from "@/components/term-tip";
 import { confidenceSentence, CONFIDENCE_LABEL, decideConfidence } from "@/lib/analyze/confidence";
 import { ringkasanFromCase } from "@/lib/analyze/ringkasan";
+import { MIN_RELIABLE_CHARS, MIN_RELIABLE_WORDS, SHORT_WORD_VERDICT } from "@/lib/ingest/short-text";
 import { glossaryTip } from "@/lib/glossary";
 import { Disclaimer } from "@/components/disclaimer";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +28,7 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
   const confidence = unscored ? null : decideConfidence({
     textChars: detail.assessment.caution?.bodyChars ?? detail.text.trim().length,
     shortText: Boolean(detail.assessment.caution?.warning),
+    shortKind: detail.assessment.caution?.words != null ? "words" : detail.assessment.caution?.warning ? "chars" : null,
     indobert: detail.assessment.indobert?.probability ?? null,
     linear: detail.assessment.linear?.probability ?? null,
     matchCount: detail.matches.length,
@@ -58,8 +60,9 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
         <Card className="border-warning/50 p-4 text-sm">
           <p className="font-medium text-warning">{detail.assessment.caution.warning}</p>
           <p className="mt-1">
-            Tubuh artikel yang terbaca {detail.assessment.caution.bodyChars} karakter, di bawah ambang 200.
-            Skor utama ditarik mendekati 50% dari keluaran mentah {percent(detail.assessment.caution.rawProbability)} karena teks sependek itu tidak cukup untuk menilai hoaks.
+            {detail.assessment.caution.warning === SHORT_WORD_VERDICT
+              ? `Teks ${detail.assessment.caution.words ?? 0} kata, di bawah ambang ${MIN_RELIABLE_WORDS}. Skor utama ditarik mendekati 50% dari keluaran mentah ${percent(detail.assessment.caution.rawProbability)}.`
+              : `Tubuh artikel yang terbaca ${detail.assessment.caution.bodyChars} karakter, di bawah ambang ${MIN_RELIABLE_CHARS}. Skor utama ditarik mendekati 50% dari keluaran mentah ${percent(detail.assessment.caution.rawProbability)} karena teks sependek itu tidak cukup untuk menilai hoaks.`}
           </p>
         </Card>
       ) : null}

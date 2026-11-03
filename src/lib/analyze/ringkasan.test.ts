@@ -17,6 +17,8 @@ function input(patch: Partial<RingkasanInput> = {}): RingkasanInput {
     aiFlagged: false,
     aiConfidence: "rendah",
     shortText: false,
+    shortWords: false,
+    opinion: false,
     textChars: 400,
     unscored: false,
     unscoredReason: "",

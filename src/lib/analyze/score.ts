@@ -1,5 +1,6 @@
 import "server-only";
 import { assertScorableText } from "@/lib/analyze/content-guard";
+import { detectOpinion } from "@/lib/analyze/opinion";
 import { embedText } from "@/lib/embed/hashing";
 import { matchFactChecks, strongMatches } from "@/lib/factcheck/match";
 import type { FactCheck, FactMatch } from "@/lib/factcheck/types";
@@ -55,6 +56,8 @@ export function scoreContentSync(raw: string, virality: number, corpus: FactChec
 }
 
 function finish(clean: string, assessment: HoaxAssessment, virality: number, corpus: FactCheck[]): ScoreCard {
+  const opinion = detectOpinion(clean);
+  if (opinion) assessment = { ...assessment, opinion };
   const topics = matchTopics(clean);
   const sensitivity = topicSensitivity(topics);
   const risk = computeRisk(assessment.probability, sensitivity, virality);

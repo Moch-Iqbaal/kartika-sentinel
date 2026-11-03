@@ -1,6 +1,7 @@
 import { TermTip } from "@/components/term-tip";
 import { Card } from "@/components/ui/card";
 import { glossaryTip } from "@/lib/glossary";
+import { KNOWN_FALSE_POSITIVES } from "@/lib/evaluate/known-cases";
 import { loadEvaluation, metricsFromCounts, type Confusion } from "@/lib/evaluate/report";
 
 function decimal(value: number): string {
@@ -109,6 +110,20 @@ export default function EvaluasiPage() {
             ))}
           </ul>
         )}
+      </Card>
+      <Card className="space-y-3 p-4">
+        <h2 className="inline-flex items-center font-medium">Kasus yang pernah salah <TermTip {...glossaryTip("kasus-salah")} /></h2>
+        <p className="text-sm text-muted">Angka di kolom sebelumnya adalah laporan pemilik, bukan pengukuran ulang IndoBERT.</p>
+        <ul className="space-y-3 text-sm">
+          {KNOWN_FALSE_POSITIVES.map((item) => (
+            <li key={item.id} className="rounded-lg border border-border p-3">
+              <p className="font-medium">{item.title}</p>
+              <p className="mt-1 text-muted">{item.detail}</p>
+              <p className="mt-2">Sebelumnya: {item.before}</p>
+              <p>Sekarang: {item.now}</p>
+            </li>
+          ))}
+        </ul>
       </Card>
       <Card className="space-y-3 p-4">
         <h2 className="font-medium">IndoBERT</h2>

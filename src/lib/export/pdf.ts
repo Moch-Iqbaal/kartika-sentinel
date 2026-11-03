@@ -83,6 +83,7 @@ export async function casePdf(detail: CaseDetail): Promise<Uint8Array> {
     const confidence = decideConfidence({
       textChars: detail.assessment.caution?.bodyChars ?? detail.text.trim().length,
       shortText: Boolean(detail.assessment.caution?.warning),
+      shortKind: detail.assessment.caution?.words != null ? "words" : detail.assessment.caution?.warning ? "chars" : null,
       indobert: detail.assessment.indobert?.probability ?? null,
       linear: detail.assessment.linear?.probability ?? null,
       matchCount: detail.matches.length,
@@ -95,7 +96,9 @@ export async function casePdf(detail: CaseDetail): Promise<Uint8Array> {
   if (detail.assessment.caution?.warning) {
     draw(detail.assessment.caution.warning, { bold: true, color: [0.55, 0.32, 0.05] });
     draw(
-      `Tubuh artikel ${detail.assessment.caution.bodyChars} karakter. Keluaran mentah ${percent(detail.assessment.caution.rawProbability)} diturunkan.`,
+      detail.assessment.caution.words != null
+        ? `Teks ${detail.assessment.caution.words} kata. Keluaran mentah ${percent(detail.assessment.caution.rawProbability)} diturunkan.`
+        : `Tubuh artikel ${detail.assessment.caution.bodyChars} karakter. Keluaran mentah ${percent(detail.assessment.caution.rawProbability)} diturunkan.`,
       { size: 9 },
     );
   }

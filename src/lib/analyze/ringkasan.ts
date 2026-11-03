@@ -1,7 +1,9 @@
 import type { CaseDetail } from "../db/types";
 import { confidenceSentence, decideConfidence } from "./confidence";
 import { engineLabel, percent, recommendation, verdictLabel } from "../format";
+import { OPINION_NOTE } from "./opinion";
 import { NO_STRONG_MATCH } from "../factcheck/threshold";
+import { SHORT_WORD_VERDICT } from "../ingest/short-text";
 import { ENGINE_DIVERGENCE } from "../model/divergence";
 import { BAND_KRITIS_MIN, BAND_PRIORITAS_MIN, type RiskBand } from "../scoring/risk";
 
@@ -12,13 +14,14 @@ import { BAND_KRITIS_MIN, BAND_PRIORITAS_MIN, type RiskBand } from "../scoring/r
  * Selisih mesin memakai ENGINE_DIVERGENCE (0,35), ambang yang sudah dipakai berkas.
  */
 
-export type SummaryVerdict = "hoax" | "not-hoax" | "uncertain" | "unscored";
+export type SummaryVerdict = "hoax" | "not-hoax" | "uncertain" | "unscored" | "short";
 
 export const VERDICT_LINE: Record<SummaryVerdict, string> = {
   hoax: "Kemungkinan HOAKS",
   "not-hoax": "Kemungkinan BUKAN hoaks",
   uncertain: "Belum bisa dipastikan",
   unscored: "Belum bisa dinilai",
+  short: SHORT_WORD_VERDICT,
 };
 
 export type RingkasanInput = {
@@ -33,6 +36,8 @@ export type RingkasanInput = {
   aiFlagged: boolean;
   aiConfidence: string;
   shortText: boolean;
+  shortWords: boolean;
+  opinion: boolean;
   textChars: number;
   unscored: boolean;
   unscoredReason: string;
@@ -83,6 +88,7 @@ function contradicts(base: SummaryVerdict, verdict: string): boolean {
  */
 export function decideVerdict(input: RingkasanInput): SummaryVerdict {
   if (input.unscored) return "unscored";
+  if (input.shortWords) return "short";
   const base = scoreVerdict(input.hoaxScore);
   if (base === "uncertain" && !Number.isFinite(input.hoaxScore)) return "uncertain";
   if (input.shortText) return "uncertain";
@@ -91,6 +97,7 @@ export function decideVerdict(input: RingkasanInput): SummaryVerdict {
   if ((linearGap != null && linearGap >= ENGINE_DIVERGENCE) || (heuristicGap != null && heuristicGap >= ENGINE_DIVERGENCE)) {
     return "uncertain";
   }
+  if (input.opinion && base === "hoax") return "uncertain";
   const best = topMatch(input.matches);
   if (best && contradicts(base, best.verdict)) return "uncertain";
   return base;
@@ -145,20 +152,23 @@ export function buildRingkasan(input: RingkasanInput): Ringkasan {
   }
   const confidence = decideConfidence({
     textChars: input.textChars,
-    shortText: input.shortText,
+    shortText: input.shortText || input.shortWords,
+    shortKind: input.shortWords ? "words" : input.shortText ? "chars" : null,
     indobert: input.indobert,
     linear: input.linear,
     matchCount: input.matches.length,
     externalCount: input.externalCount,
   });
+  const opinionLine = input.opinion ? `Teks ini terbaca sebagai opini atau kritik. ${OPINION_NOTE}.` : null;
   const sentences = [
     engineSentence(input),
     confidenceSentence(confidence),
-    contextSentence(input),
-    recommendation(input.band),
+    opinionLine,
+    opinionLine ? null : contextSentence(input),
+    opinionLine ? contextSentence(input) : recommendation(input.band),
     "Ini rekomendasi sistem, keputusan akhir ada pada analis.",
-  ];
-  return { verdict, headline: VERDICT_LINE[verdict], sentences };
+  ].filter((sentence): sentence is string => Boolean(sentence));
+  return { verdict, headline: VERDICT_LINE[verdict], sentences: sentences.slice(0, 5) };
 }
 
 export function ringkasanFromCase(detail: CaseDetail): Ringkasan {
@@ -174,6 +184,8 @@ export function ringkasanFromCase(detail: CaseDetail): Ringkasan {
     aiFlagged: detail.ai.flagged,
     aiConfidence: detail.ai.confidence,
     shortText: Boolean(detail.assessment.caution?.warning),
+    shortWords: detail.assessment.caution?.warning === SHORT_WORD_VERDICT,
+    opinion: Boolean(detail.assessment.opinion?.note),
     textChars: detail.assessment.caution?.bodyChars ?? detail.text.trim().length,
     unscored: Boolean(detail.assessment.unscored?.reason),
     unscoredReason: detail.assessment.unscored?.reason ?? "",

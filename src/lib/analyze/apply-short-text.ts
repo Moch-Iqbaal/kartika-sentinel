@@ -1,5 +1,5 @@
 import type { ScoreCard } from "@/lib/analyze/score";
-import { shortTextCaution } from "@/lib/ingest/short-text";
+import { shortTextCaution, shortWordCaution } from "@/lib/ingest/short-text";
 import { computeRisk, riskBand } from "@/lib/scoring/risk";
 
 /**
@@ -9,8 +9,11 @@ import { computeRisk, riskBand } from "@/lib/scoring/risk";
  * `bodyChars` kosong berarti masukan ini bukan ekstraksi URL yang perlu diukur.
  */
 export function applyShortTextCaution(card: ScoreCard, bodyChars: number | null | undefined): ScoreCard {
-  if (bodyChars == null) return card;
-  const note = shortTextCaution(bodyChars, card.assessment.probability);
+  const wordNote = shortWordCaution(card.clean, card.assessment.probability);
+  const charNote = wordNote || bodyChars == null
+    ? null
+    : shortTextCaution(bodyChars, card.assessment.probability);
+  const note = wordNote ?? charNote;
   if (!note) return card;
   const risk = computeRisk(note.probability, card.sensitivity, card.virality);
   const reasons = card.assessment.heuristic.reasons.filter((reason) => reason !== note.warning);
@@ -25,6 +28,7 @@ export function applyShortTextCaution(card: ScoreCard, bodyChars: number | null 
         warning: note.warning,
         bodyChars: note.bodyChars,
         rawProbability: note.rawProbability,
+        words: note.words,
       },
       heuristic: {
         ...card.assessment.heuristic,

@@ -1,4 +1,4 @@
-import { MIN_RELIABLE_CHARS } from "../ingest/short-text";
+import { MIN_RELIABLE_CHARS, MIN_RELIABLE_WORDS } from "../ingest/short-text";
 import { ENGINE_DIVERGENCE } from "../model/divergence";
 
 /**
@@ -20,6 +20,8 @@ export const CONFIDENCE_LABEL: Record<ResultConfidence, string> = {
 export type ConfidenceInput = {
   textChars: number;
   shortText: boolean;
+  /** "words" bila pemicunya kurang dari 20 kata. */
+  shortKind?: "words" | "chars" | null;
   indobert: number | null;
   linear: number | null;
   matchCount: number;
@@ -44,7 +46,10 @@ export function decideConfidence(input: ConfidenceInput): ConfidenceDecision {
   const gap = left == null || right == null ? null : Math.abs(left - right);
   const evidence = input.matchCount + input.externalCount > 0;
   if (short) {
-    return { level: "rendah", because: "teks yang dinilai lebih pendek dari 200 karakter" };
+    if (input.shortKind === "words") {
+      return { level: "rendah", because: `teks yang dinilai kurang dari ${MIN_RELIABLE_WORDS} kata` };
+    }
+    return { level: "rendah", because: `teks yang dinilai lebih pendek dari ${MIN_RELIABLE_CHARS} karakter` };
   }
   if (gap != null && gap >= ENGINE_DIVERGENCE) {
     return { level: "rendah", because: "IndoBERT dan model linier berselisih jauh" };

@@ -13,7 +13,9 @@
  */
 
 export const MIN_RELIABLE_CHARS = 200;
+export const MIN_RELIABLE_WORDS = 20;
 export const SHORT_TEXT_WARNING = "Teks terlalu pendek, skor tidak andal.";
+export const SHORT_WORD_VERDICT = "Teks terlalu pendek, belum bisa dinilai";
 
 /** Sisa keyakinan yang dipertahankan bila tubuh artikel di bawah ambang. */
 export const SHORT_TEXT_KEEP = 0.25;
@@ -23,7 +25,15 @@ export type ShortTextNote = {
   bodyChars: number;
   rawProbability: number;
   probability: number;
+  /** Terisi bila pemicu utamanya jumlah kata, bukan panjang tubuh URL. */
+  words?: number;
 };
+
+export function wordCount(text: string): number {
+  const trimmed = text.trim();
+  if (!trimmed) return 0;
+  return trimmed.split(/\s+/).length;
+}
 
 function clamp01(value: number): number {
   if (!Number.isFinite(value)) return 0;
@@ -40,6 +50,20 @@ export function dampenShortTextProbability(probability: number): number {
  * Judul yang panjang tidak boleh menyembunyikan tubuh yang gagal diekstrak.
  * Mengembalikan null bila teks cukup panjang sehingga skor tidak diubah.
  */
+/** Semua masukan: di bawah 20 kata, skor ditarik ke 50%. */
+export function shortWordCaution(text: string, probability: number): ShortTextNote | null {
+  const words = wordCount(text);
+  if (words >= MIN_RELIABLE_WORDS) return null;
+  const raw = clamp01(probability);
+  return {
+    warning: SHORT_WORD_VERDICT,
+    bodyChars: text.trim().length,
+    words,
+    rawProbability: raw,
+    probability: dampenShortTextProbability(raw),
+  };
+}
+
 export function shortTextCaution(bodyChars: number, probability: number): ShortTextNote | null {
   if (!Number.isFinite(bodyChars) || bodyChars >= MIN_RELIABLE_CHARS) return null;
   const raw = clamp01(probability);

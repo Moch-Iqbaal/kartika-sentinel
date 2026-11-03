@@ -1,6 +1,6 @@
 import { MATCH_MIN_SIMILARITY } from "@/lib/factcheck/match";
 import { bandLabel, percent, recommendation } from "@/lib/format";
-import { MIN_RELIABLE_CHARS, SHORT_TEXT_KEEP, SHORT_TEXT_WARNING } from "@/lib/ingest/short-text";
+import { MIN_RELIABLE_CHARS, MIN_RELIABLE_WORDS, SHORT_TEXT_KEEP, SHORT_TEXT_WARNING, SHORT_WORD_VERDICT } from "@/lib/ingest/short-text";
 import { AUDIT_LIST_LIMIT, DEMO_RETENTION_DAYS } from "@/lib/limits";
 import { IMAGE_METADATA_DISCLAIMER } from "@/lib/media/metadata";
 import {
@@ -243,7 +243,7 @@ export function glossaryGroups(): GlossaryGroup[] {
           "skor-utama",
           "Skor utama",
           "Perkiraan peluang hoaks dari satu mesin. Makin tinggi, makin mirip hoaks, dan bukan penetapan.",
-          `Teks URL di bawah ${MIN_RELIABLE_CHARS} karakter: jarak ke 0,5 dikalikan ${decimal(SHORT_TEXT_KEEP)}. Peringatan: “${SHORT_TEXT_WARNING}”.`,
+          `Di bawah ${MIN_RELIABLE_WORDS} kata pada semua masukan: “${SHORT_WORD_VERDICT}”. Teks URL di bawah ${MIN_RELIABLE_CHARS} karakter: jarak ke 0,5 dikalikan ${decimal(SHORT_TEXT_KEEP)}.`,
           "Perkiraan peluang hoaks: makin tinggi, makin mirip hoaks, bukan penetapan.",
         ),
         term(
@@ -353,7 +353,7 @@ export function glossaryGroups(): GlossaryGroup[] {
           "teks-pendek",
           SHORT_TEXT_WARNING,
           "Tubuh artikel terlalu pendek, jadi skornya jangan dipercaya mentah-mentah.",
-          `Di bawah ${MIN_RELIABLE_CHARS} karakter. Jarak skor ke 0,5 dikalikan ${decimal(SHORT_TEXT_KEEP)}.`,
+          `Di bawah ${MIN_RELIABLE_WORDS} kata, atau tubuh URL di bawah ${MIN_RELIABLE_CHARS} karakter. Jarak skor ke 0,5 dikalikan ${decimal(SHORT_TEXT_KEEP)}.`,
         ),
       ],
     },
@@ -368,6 +368,7 @@ export function glossaryGroups(): GlossaryGroup[] {
         term("f1-hoaks", "F1 hoaks", "Gabungan presisi dan recall untuk kelas hoaks."),
         term("matriks-kekeliruan", "Matriks kekeliruan", "Empat hitungan: benar hoaks, salah hoaks, terlewat, dan benar valid."),
         term("positif-palsu", "Contoh positif palsu", "Teks berlabel valid yang mesin sebut hoaks. Kutipannya dari korpus, bukan karangan."),
+        term("kasus-salah", "Kasus yang pernah salah", "Tiga masukan yang dulu tampak hoaks. Angka lamanya laporan pemilik, bukan uji baru."),
       ],
     },
     {

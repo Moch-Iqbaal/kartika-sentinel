@@ -24,6 +24,7 @@ export type HoaxAssessment = {
     warning: string;
     bodyChars: number;
     rawProbability: number;
+    words?: number;
   } | null;
   /**
    * Terisi bila tidak ada teks isi yang boleh dinilai.
@@ -32,6 +33,11 @@ export type HoaxAssessment = {
   unscored?: {
     reason: string;
     nextStep: string;
+  } | null;
+  /** Isyarat opini/kritik. Tidak mengubah angka mesin. */
+  opinion?: {
+    cues: string[];
+    note: string;
   } | null;
 };
 
