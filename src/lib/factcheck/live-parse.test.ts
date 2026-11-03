@@ -6,6 +6,8 @@ import {
   dedupeFacts,
   factDateLabel,
   claimQueries,
+  urlFirstQueries,
+  parseGoogleNewsRss,
   factQuery,
   keywordSimilarity,
   parseDetikSearch,
@@ -188,3 +190,28 @@ test("tanggal dan waktu cek memakai WIB", () => {
   assert.match(label, /WIB$/);
   assert.match(label, /14[.:]46/);
 });
+
+test("URL artikel masuk kueri sebelum frasa klaim", () => {
+  const queries = urlFirstQueries(
+    "450 Prajurit TNI AD Yonif 143 Kembali ke Lampung\nKapenrem 043 Gatam di Pelabuhan Panjang",
+    "https://www.tribunnews.com/regional/2025/yonif-143",
+  );
+  assert.equal(queries[0], "https://www.tribunnews.com/regional/2025/yonif-143");
+  assert.ok(queries.some((item) => /tribunnews/.test(item)));
+});
+
+test("Google News RSS memakai nama outlet sebagai penerbit", () => {
+  const body = `<?xml version="1.0"?><rss><channel>
+    <item>
+      <title>Yonif 143 kembali ke Lampung</title>
+      <link>https://news.google.com/rss/articles/abc</link>
+      <source url="https://www.antaranews.com/">Antara</source>
+      <pubDate>Mon, 03 Nov 2025 10:00:00 GMT</pubDate>
+    </item>
+  </channel></rss>`;
+  const facts = parseGoogleNewsRss(body, "Yonif Lampung prajurit");
+  assert.ok(facts.length >= 1);
+  assert.equal(facts[0].publisher, "Antara");
+  assert.match(facts[0].url ?? "", /antaranews\.com/);
+});
+

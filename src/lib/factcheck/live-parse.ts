@@ -36,6 +36,26 @@ const BROAD = new Set([
  * Dua atau tiga frasa klaim. Bukan hanya judul.
  * Frasa pertama tetap yang paling khas. Berikutnya entitas atau sisa kata.
  */
+
+/** URL artikel dulu, lalu judul baris pertama, baru frasa klaim. */
+export function urlFirstQueries(text: string, sourceUrl?: string | null): string[] {
+  const out: string[] = [];
+  const url = (sourceUrl ?? "").trim();
+  if (/^https?:\/\//i.test(url)) {
+    out.push(url);
+    try {
+      const parsed = new URL(url);
+      if (parsed.hostname && !/youtube|youtu\.be|google\./i.test(parsed.hostname)) {
+        out.push(parsed.hostname.replace(/^www\./, ""));
+      }
+    } catch { /* ignore */ }
+  }
+  const firstLine = text.split(/\n/).map((line) => line.trim()).find((line) => line.length >= 12 && !/^Kanal:/i.test(line));
+  if (firstLine) out.push(firstLine.slice(0, 120));
+  out.push(...claimQueries(text));
+  return [...new Set(out.map((item) => item.trim()).filter(Boolean))].slice(0, 5);
+}
+
 export function claimQueries(text: string): string[] {
   const stripped = text.replace(/(?:^|\n)\s*Kanal:\s*.+/g, " ");
   const primary = factQuery(stripped);
@@ -382,6 +402,85 @@ export function parseKomdigi(body: string, query: string): ExternalFact[] {
     });
   }
   return rankFacts(query, items);
+}
+
+
+/** RSS generik: Tempo, Tirto, Kumparan, Google News. */
+export function parseGenericNewsRss(
+  body: string,
+  query: string,
+  source: string,
+  publisher: string,
+  options?: { requireFactCue?: boolean },
+): ExternalFact[] {
+  const requireFactCue = options?.requireFactCue ?? false;
+  const itemPattern = /<item\b[\s\S]*?<\/item>/gi;
+  const items: Array<ExternalFact & { haystack: string }> = [];
+  for (const raw of body.matchAll(itemPattern)) {
+    const chunk = raw[0];
+    const title = plainText(chunk.match(/<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i)?.[1] ?? "");
+    const link = (chunk.match(/<link>([^<]+)<\/link>/i)?.[1]
+      ?? chunk.match(/<link[^>]+href="([^"]+)"/i)?.[1]
+      ?? "").trim();
+    const pub = plainText(chunk.match(/<pubDate>([^<]+)<\/pubDate>/i)?.[1] ?? "");
+    const sourceTag = chunk.match(/<source[^>]*url="([^"]+)"[^>]*>([\s\S]*?)<\/source>/i);
+    const outletUrl = sourceTag?.[1]?.trim() ?? "";
+    const outletName = plainText(sourceTag?.[2] ?? "") || publisher;
+    if (!title || title.length < 8) continue;
+    if (requireFactCue && !/hoaks|hoax|cek fakta|klarifikasi|salah|keliru/i.test(title)) continue;
+    const url = (/^https?:\/\//.test(link) ? link : outletUrl).split("?")[0] || null;
+    if (!url) continue;
+    items.push({
+      source,
+      title,
+      url,
+      rating: /hoaks|hoax|salah|keliru/i.test(title) ? "Hoaks" : "Berita",
+      publisher: outletName,
+      publishedAt: pub || null,
+      haystack: title,
+    });
+  }
+  return rankFacts(query, items);
+}
+
+export function parseGoogleNewsRss(body: string, query: string): ExternalFact[] {
+  const itemPattern = /<item\b[\s\S]*?<\/item>/gi;
+  const items: Array<ExternalFact & { haystack: string }> = [];
+  for (const raw of body.matchAll(itemPattern)) {
+    const chunk = raw[0];
+    const title = plainText(chunk.match(/<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i)?.[1] ?? "");
+    const link = (chunk.match(/<link>([^<]+)<\/link>/i)?.[1] ?? "").trim();
+    const pub = plainText(chunk.match(/<pubDate>([^<]+)<\/pubDate>/i)?.[1] ?? "");
+    const sourceTag = chunk.match(/<source[^>]*url="([^"]+)"[^>]*>([\s\S]*?)<\/source>/i);
+    const outletUrl = (sourceTag?.[1] ?? "").trim();
+    const outletName = plainText(sourceTag?.[2] ?? "") || "Google News";
+    if (!title || title.length < 8) continue;
+    // Prefer outlet root for host matching; keep Google link as fallback.
+    const url = (/^https?:\/\//.test(outletUrl) ? outletUrl : link).split("?")[0] || null;
+    if (!url) continue;
+    items.push({
+      source: "Google News",
+      title,
+      url,
+      rating: "Berita",
+      publisher: outletName,
+      publishedAt: pub || null,
+      haystack: title,
+    });
+  }
+  return rankFacts(query, items);
+}
+
+export function parseTempoRss(body: string, query: string): ExternalFact[] {
+  return parseGenericNewsRss(body, query, "Tempo", "Tempo", { requireFactCue: false });
+}
+
+export function parseTirtoRss(body: string, query: string): ExternalFact[] {
+  return parseGenericNewsRss(body, query, "Tirto", "Tirto", { requireFactCue: false });
+}
+
+export function parseKumparanRss(body: string, query: string): ExternalFact[] {
+  return parseGenericNewsRss(body, query, "Kumparan", "Kumparan", { requireFactCue: false });
 }
 
 export function dedupeFacts(items: ExternalFact[], now = new Date()): ExternalFact[] {

@@ -101,7 +101,7 @@ export async function POST(request: Request) {
     card.assessment.ai = applyImageReport(card.assessment.ai, image);
     if (youtubeNote) card.assessment.youtube = youtubeNote;
     if (contentPublishedAt) card.assessment.contentPublishedAt = contentPublishedAt;
-    const found = await collectExternalFacts(card.clean);
+    const found = await collectExternalFacts(card.clean, url);
     card.assessment = { ...card.assessment, factCheck: { checkedAt: found.checkedAt, sources: found.sources } };
     const external = found.external;
     const id = await saveScoredAlert({

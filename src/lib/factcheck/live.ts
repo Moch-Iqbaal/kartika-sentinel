@@ -5,10 +5,15 @@ import {
   parseAntara,
   parseCekfakta,
   parseDetikSearch,
+  parseGoogleNewsRss,
   parseKomdigi,
   parseKompasSearch,
+  parseKumparanRss,
   parseLiputanRss,
+  parseTempoRss,
+  parseTirtoRss,
   parseTurnbackhoax,
+  urlFirstQueries,
 } from "@/lib/factcheck/live-parse";
 import type { ExternalFact } from "@/lib/factcheck/types";
 import { safeFetchText } from "@/lib/security/ssrf";
@@ -47,6 +52,8 @@ type SourceSpec = {
   url: (query: string) => string;
   accept: string;
   parse: (body: string, query: string) => ExternalFact[];
+  /** Satu unduhan untuk semua kueri (RSS). */
+  once?: boolean;
   /** Tidak diunduh. Alasan jujur, bukan parser kosong. */
   skip?: string;
 };
@@ -87,33 +94,40 @@ const SOURCES: SourceSpec[] = [
     url: () => "https://feed.liputan6.com/rss/cek-fakta",
     accept: "application/rss+xml, application/xml, text/xml",
     parse: parseLiputanRss,
+    once: true,
   },
   {
     name: "Tempo",
-    url: () => "",
-    accept: "text/html",
-    parse: () => [],
-    skip: "Tempo menolak akses otomatis. Tidak ada artikel yang bisa dibaca.",
+    url: () => "https://www.tempo.co/rss",
+    accept: "application/rss+xml, application/xml, text/xml, text/html",
+    parse: parseTempoRss,
+    once: true,
   },
   {
     name: "Tirto",
-    url: () => "",
-    accept: "text/html",
-    parse: () => [],
-    skip: "Tirto menolak akses otomatis. Tidak ada artikel yang bisa dibaca.",
+    url: () => "https://tirto.id/rss",
+    accept: "application/rss+xml, application/xml, text/xml, text/html",
+    parse: parseTirtoRss,
+    once: true,
   },
   {
     name: "Kumparan",
-    url: () => "",
-    accept: "text/html",
-    parse: () => [],
-    skip: "Kumparan tidak mengirim daftar artikel. Halaman pencariannya kosong untuk mesin.",
+    url: () => "https://lapi.kumparan.com/v2.0/rss/",
+    accept: "application/rss+xml, application/xml, text/xml, text/html",
+    parse: parseKumparanRss,
+    once: true,
   },
   {
     name: "Komdigi",
     url: (query) => `https://www.komdigi.go.id/berita?search=${encodeURIComponent(query)}`,
     accept: "text/html",
     parse: parseKomdigi,
+  },
+  {
+    name: "Google News",
+    url: (query) => `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=id&gl=ID&ceid=ID:id`,
+    accept: "application/rss+xml, application/xml, text/xml",
+    parse: parseGoogleNewsRss,
   },
 ];
 
@@ -122,7 +136,7 @@ async function searchOne(spec: SourceSpec, queries: string[]): Promise<{ facts: 
   let blocked: string | null = null;
   let sawBody = false;
   const found: ExternalFact[] = [];
-  const jobs = spec.name === "Liputan6 Cek Fakta" ? [queries[0]] : queries;
+  const jobs = spec.once ? [queries[0]] : queries;
   const pages = await Promise.all(jobs.map(async (query) => {
     const loaded = await grab(spec.url(query), spec.accept);
     return { query, ...loaded };
@@ -134,7 +148,12 @@ async function searchOne(spec: SourceSpec, queries: string[]): Promise<{ facts: 
     }
     if (!page.body) continue;
     sawBody = true;
-    found.push(...spec.parse(page.body, page.query));
+    // Untuk sumber once (RSS), cocokkan setiap frasa klaim ke feed yang sama.
+    if (spec.once) {
+      for (const query of queries) found.push(...spec.parse(page.body, query));
+    } else {
+      found.push(...spec.parse(page.body, page.query));
+    }
   }
   const facts = dedupeFacts(found);
   if (facts.length > 0) return { facts, probe: { name: spec.name, state: "hasil", detail: String(facts.length) } };
@@ -148,12 +167,18 @@ async function searchOne(spec: SourceSpec, queries: string[]): Promise<{ facts: 
 
 /**
  * Cek fakta saat analisis. Semua sumber dicoba bersamaan.
- * Frasa klaim lebih dari satu. Sumber yang menolak tidak menggagalkan yang lain.
+ * URL artikel dicari dulu, lalu judul, lalu frasa klaim.
+ * Sumber yang menolak tidak menggagalkan yang lain.
  */
-export async function searchLiveFactChecksDetailed(text: string): Promise<{ facts: ExternalFact[]; sources: SourceProbe[] }> {
-  const queries = claimQueries(text);
-  if (queries.length === 0 || queries[0].trim().length < 3) return { facts: [], sources: [] };
-  const key = queries.join("|").toLowerCase();
+export async function searchLiveFactChecksDetailed(
+  text: string,
+  sourceUrl?: string | null,
+): Promise<{ facts: ExternalFact[]; sources: SourceProbe[] }> {
+  const queries = urlFirstQueries(text, sourceUrl);
+  if (queries.length === 0 || queries.every((query) => query.trim().length < 3)) {
+    return { facts: [], sources: [] };
+  }
+  const key = `${(sourceUrl ?? "").toLowerCase()}|${queries.join("|").toLowerCase()}`;
   const cached = cache.get(key);
   if (cached && Date.now() - cached.at < LIVE_FACT_CACHE_MS) {
     return { facts: cached.facts, sources: cached.sources };
@@ -169,12 +194,12 @@ export async function searchLiveFactChecksDetailed(text: string): Promise<{ fact
   return { facts, sources };
 }
 
-export async function searchLiveFactChecks(text: string): Promise<ExternalFact[]> {
-  const found = await searchLiveFactChecksDetailed(text);
+export async function searchLiveFactChecks(text: string, sourceUrl?: string | null): Promise<ExternalFact[]> {
+  const found = await searchLiveFactChecksDetailed(text, sourceUrl);
   return found.facts;
 }
 
-export async function collectExternalFacts(text: string): Promise<{
+export async function collectExternalFacts(text: string, sourceUrl?: string | null): Promise<{
   external: ExternalFact[];
   checkedAt: string;
   sources: SourceProbe[];
@@ -182,8 +207,8 @@ export async function collectExternalFacts(text: string): Promise<{
   const checkedAt = new Date().toISOString();
   const key = process.env.GOOGLE_FACTCHECK_API_KEY?.trim();
   const [live, google] = await Promise.all([
-    searchLiveFactChecksDetailed(text),
-    key ? searchGoogleFactChecks(claimQueries(text).join(" ")).catch(() => [] as ExternalFact[]) : Promise.resolve([] as ExternalFact[]),
+    searchLiveFactChecksDetailed(text, sourceUrl),
+    key ? searchGoogleFactChecks(claimQueries(text).join(" ") || text.slice(0, 80)).catch(() => [] as ExternalFact[]) : Promise.resolve([] as ExternalFact[]),
   ]);
   const sources = [
     ...live.sources,

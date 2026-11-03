@@ -34,7 +34,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       await scoreContent(detail.text, detail.virality, await corpusFromDb(), true),
       detail.assessment.caution?.bodyChars,
     );
-    const found = await collectExternalFacts(detail.text);
+    const found = await collectExternalFacts(detail.text, detail.sourceUrl);
     card.assessment = {
       ...card.assessment,
       factCheck: { checkedAt: found.checkedAt, sources: found.sources },

@@ -133,6 +133,12 @@ export function originMarker(sourceUrl: string | null | undefined, text: string)
   }
 }
 
+
+function publisherMarker(publisher: string | null | undefined, source: string | null | undefined): string | null {
+  const blob = `${publisher ?? ""} ${source ?? ""}`.toLowerCase().replace(/[^a-z0-9]+/g, "");
+  return markerFromKey(blob);
+}
+
 function factHostMarker(url: string | null | undefined): string | null {
   if (!url) return null;
   try {
@@ -179,7 +185,7 @@ export function independentReports(
   const found: IndependentReport[] = [];
   for (const fact of facts) {
     if (evidenceStance(fact.rating) === "hoax") continue;
-    const marker = factHostMarker(fact.url);
+    const marker = factHostMarker(fact.url) ?? publisherMarker(fact.publisher, fact.source);
     if (!marker || marker === origin) continue;
     let host = "";
     try {
