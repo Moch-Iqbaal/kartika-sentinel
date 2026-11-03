@@ -232,9 +232,9 @@ export function glossaryGroups(): GlossaryGroup[] {
         term("rekomendasi-saja", "Sistem hanya merekomendasikan", "Kalimat tetap di beberapa halaman: putusan ada pada analis, skor bukan penetapan."),
         term(
           "kartu-model",
-          "Model hoaks",
-          "Nama model di balik penilai utama. Akurasinya milik penulis model, bukan uji aplikasi ini.",
-          "umn-cyber/indobert-hoax",
+          "Penilaian otomatis",
+          "Mesin skor di balik penilai utama. Angkanya bantuan untuk analis, bukan putusan akhir.",
+          "penilaian otomatis",
         ),
       ],
     },
@@ -373,8 +373,8 @@ export function glossaryGroups(): GlossaryGroup[] {
         ),
         term(
           "sumber-mafindo",
-          "Sumber: Mafindo (label hoaks dari Mafindo)",
-          "Label dari korpus Mafindo, bukan putusan baru Kartika Sentinel.",
+          "Sumber: arsip pemeriksaan fakta",
+          "Label dari arsip pemeriksaan fakta lokal, bukan putusan baru Kartika Sentinel.",
           "Judul menjadi tautan hanya bila pencarian TurnBackHoax menemukan judul yang sama. Kalau tidak, yang tampil adalah tautan cari.",
         ),
         term(

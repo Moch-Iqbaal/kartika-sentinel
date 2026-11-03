@@ -1,7 +1,7 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { presentCase } from "@/lib/analyze/present";
 import type { CaseDetail } from "@/lib/db/types";
-import { alertStatusLabel, caseStatusLabel, engineLabel, formatWhen, percent } from "@/lib/format";
+import { alertStatusLabel, caseStatusLabel, formatWhen, percent } from "@/lib/format";
 
 function winAnsi(value: string): string {
   return value.replace(/[^\n\r\t\u0020-\u00ff]/g, "?");
@@ -94,12 +94,9 @@ export async function casePdf(detail: CaseDetail): Promise<Uint8Array> {
   draw(detail.analystNote?.trim() ? detail.analystNote : "Belum ada catatan.");
   y -= 6;
   draw("Detail teknis", { bold: true, size: 12 });
-  draw(`Penilai: ${engineLabel(detail.engine)}.`, { size: 9 });
-  if (detail.modelVersion && detail.modelVersion !== "belum-dinilai") {
-    draw(`Nama model: ${detail.modelVersion}.`, { size: 9 });
-  }
-  if (detail.assessment.indobert) draw(`IndoBERT ${percent(detail.assessment.indobert.probability)}`, { size: 9 });
-  if (detail.assessment.linear) draw(`Model linier ${percent(detail.assessment.linear.probability)}`, { size: 9 });
+  draw("Penilai: penilaian otomatis.", { size: 9 });
+  if (detail.assessment.indobert) draw(`Penilai utama ${percent(detail.assessment.indobert.probability)}`, { size: 9 });
+  if (detail.assessment.linear) draw(`Penilai cadangan ${percent(detail.assessment.linear.probability)}`, { size: 9 });
   draw(`Isyarat tulisan buatan: ${detail.ai.confidence} (${percent(detail.ai.score)}).`, { size: 9 });
   y -= 4;
   draw(`Diekspor ${formatWhen(new Date().toISOString())}`, { size: 8, color: [0.4, 0.42, 0.46] });

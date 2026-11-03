@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { currentSession } from "@/lib/auth/session";
 import { getCase } from "@/lib/db";
-import { alertStatusLabel, caseStatusLabel, engineLabel, percent } from "@/lib/format";
+import { alertStatusLabel, caseStatusLabel, percent } from "@/lib/format";
 import { ENGINE_DIVERGENCE, ENGINE_DIVERGENCE_WARNING } from "@/lib/model/classify";
 import { hasHttpUrl } from "@/lib/factcheck/order";
 import { displayHandle } from "@/lib/security/redact";
@@ -123,16 +123,13 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
       <details className="rounded-xl border border-border bg-card p-4">
         <summary className="cursor-pointer text-xs text-info">Detail teknis</summary>
         <div className="mt-3 space-y-2 text-sm">
-          <p>Penilai: {unscored ? "tidak dijalankan" : engineLabel(detail.engine)}</p>
-          {detail.modelVersion && detail.modelVersion !== "belum-dinilai" ? (
-            <p className="break-all text-muted">Nama model: {detail.modelVersion}</p>
-          ) : null}
+          <p>Penilai: {unscored ? "tidak dijalankan" : "penilaian otomatis"}</p>
           {detail.assessment.indobert ? (
-            <p>IndoBERT: {percent(detail.assessment.indobert.probability)}</p>
+            <p>Penilai utama: {percent(detail.assessment.indobert.probability)}</p>
           ) : (
-            <p className="text-muted">IndoBERT tidak dipakai pada skor ini.</p>
+            <p className="text-muted">Penilai utama tidak dipakai pada skor ini.</p>
           )}
-          {detail.assessment.linear ? <p>Model linier: {percent(detail.assessment.linear.probability)}</p> : null}
+          {detail.assessment.linear ? <p>Penilai cadangan: {percent(detail.assessment.linear.probability)}</p> : null}
           {gap ? <p className="text-warning">{ENGINE_DIVERGENCE_WARNING}</p> : null}
           <p>Media AI: {detail.ai.flagged ? "Indikasi" : "Tidak menonjol"} · {detail.ai.confidence} · {percent(detail.ai.score)}</p>
           <p className="text-muted">{detail.ai.disclaimer}</p>
