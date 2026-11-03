@@ -88,7 +88,7 @@ test("bukti yang bertentangan menahan vonis", () => {
   const hoaxButTrue = input({
     hoaxScore: 0.8,
     linear: 0.8,
-    matches: [{ verdict: "true", similarity: 0.5 }],
+    matches: [{ verdict: "true", similarity: 0.9 }],
   });
   assert.equal(decideVerdict(hoaxButTrue), "not-hoax");
   assert.match(buildRingkasan(hoaxButTrue).sentences[0], /menyebut ini benar/);

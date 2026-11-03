@@ -3,7 +3,7 @@ import { decideConfidence, CONFIDENCE_LABEL } from "./confidence";
 import { HOAX_CALL_MIN } from "./bands";
 import { evidenceStance, independentReports } from "./evidence-stance";
 import { percent } from "../format";
-import { countsAsPrimary } from "../factcheck/recency";
+import { countsAsPrimary, NEAR_SAME_SIMILARITY } from "../factcheck/recency";
 import { publicSourceName } from "../factcheck/public-name";
 import { plainNewsReport } from "./news-prior";
 import { OPINION_SENTENCE } from "./opinion";
@@ -118,15 +118,28 @@ function evidenceIsPrimary(
   return countsAsPrimary(item.similarity ?? 0, item.publishedAt, input.contentPublishedAt, clock(input));
 }
 
+/**
+ * Tanpa tanggal, hanya kemiripan hampir sama yang dihitung.
+ * Kemiripan sedang pada judul yang tidak terkait tidak membalik vonis.
+ */
+function matchCanFlip(
+  match: { similarity: number; publishedAt?: string | null },
+  input: RingkasanInput,
+): boolean {
+  if (!evidenceIsPrimary(match, input)) return false;
+  if (match.similarity >= NEAR_SAME_SIMILARITY) return true;
+  return Boolean(match.publishedAt);
+}
+
 function hasHoaxCheck(input: RingkasanInput): boolean {
   if (names(input.hoaxCheckers).length > 0) return true;
-  return input.matches.some((match) => evidenceStance(match.verdict) === "hoax" && evidenceIsPrimary(match, input))
+  return input.matches.some((match) => evidenceStance(match.verdict) === "hoax" && matchCanFlip(match, input))
     || (input.externalRatings ?? []).some((rating) => evidenceStance(rating) === "hoax");
 }
 
 function hasValidCheck(input: RingkasanInput): boolean {
   if (names(input.validCheckers).length > 0) return true;
-  return input.matches.some((match) => evidenceStance(match.verdict) === "valid" && evidenceIsPrimary(match, input))
+  return input.matches.some((match) => evidenceStance(match.verdict) === "valid" && matchCanFlip(match, input))
     || (input.externalRatings ?? []).some((rating) => evidenceStance(rating) === "valid");
 }
 
@@ -253,6 +266,7 @@ export function ringkasanFromCase(detail: CaseDetail, now = new Date()): Ringkas
     .filter((item) => evidenceStance(item.rating) === "valid")
     .map((item) => factName(item.source, item.publisher));
   for (const match of matches) {
+    if (!match.publishedAt && match.similarity < NEAR_SAME_SIMILARITY) continue;
     const stance = evidenceStance(match.verdict);
     const name = factName(match.source, null);
     if (stance === "hoax" && !hoaxCheckers.includes(name)) hoaxCheckers.push(name);

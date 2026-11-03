@@ -130,6 +130,16 @@ test("berita Tribun kepulangan Yonif 143 tidak menjadi hoaks dari angka tinggi s
   assert.equal(text.headline, "Kemungkinan FAKTA");
   assert.equal(text.confidenceReason, "dua penilaian tidak sejalan");
   assert.match(text.sentences[0], /berita dari kanal berita/);
+  const unrelated = input({
+    hoaxScore: 0.2806,
+    indobert: null,
+    linear: 0.2806,
+    heuristic: 0.22,
+    engine: "linear-ngram",
+    matches: [{ verdict: "hoax", similarity: 0.6711 }],
+  });
+  assert.equal(decideVerdict(unrelated), "not-hoax");
+  assert.doesNotMatch(buildRingkasan(unrelated).sentences.join(" "), /menyebut ini hoaks/);
   assert.doesNotMatch(text.sentences.join(" "), /memberitakan hal yang sama|umn-cyber|IndoBERT|n-gram/);
   const named = buildRingkasan(input({
     hoaxScore: 0.2,
