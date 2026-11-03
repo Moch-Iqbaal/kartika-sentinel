@@ -1,17 +1,31 @@
 {
-  "name": "tmp-scaffold",
+  "name": "kartika-sentinel",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --hostname 0.0.0.0 --port 43123",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "start": "next start --hostname 0.0.0.0 --port 43123",
+    "lint": "eslint",
+    "test": "node --experimental-strip-types --test src/lib/security/redact.test.ts src/lib/security/ssrf.test.ts src/lib/embed/hashing.test.ts src/lib/scoring/risk.test.ts src/lib/model/heuristic.test.ts",
+    "model": "python3 services/hoax/server.py",
+    "model:fetch": "python3 scripts/fetch_indobert.py",
+    "seed:build": "python3 scripts/build_seed.py && npx tsx scripts/train-linear.ts"
   },
   "dependencies": {
+    "@radix-ui/react-slot": "^1.5.0",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.118.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.66.0",
     "next": "16.4.4",
+    "pdf-lib": "^1.17.1",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "recharts": "^3.10.1",
+    "server-only": "^0.0.1",
+    "tailwind-merge": "^3.7.0"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
