@@ -1,5 +1,7 @@
+import { TermTip } from "@/components/term-tip";
 import { Card } from "@/components/ui/card";
 import { topicCounts } from "@/lib/db";
+import { glossaryTip } from "@/lib/glossary";
 import { TOPICS } from "@/lib/ontology/topics";
 
 export default async function OntologyPage() {
@@ -15,11 +17,17 @@ export default async function OntologyPage() {
           <Card key={topic.id} className="p-4">
             <div className="flex items-baseline justify-between gap-3">
               <h2 className="font-medium">{topic.label}</h2>
-              <span className="font-mono text-sm text-gold">{topic.sensitivity.toLocaleString("id-ID")}</span>
+              <span className="inline-flex items-center font-mono text-sm text-gold">
+                {topic.sensitivity.toLocaleString("id-ID")}
+                <TermTip {...glossaryTip("bobot-topik")} />
+              </span>
             </div>
             <p className="mt-2 text-sm text-muted">{topic.prototype}</p>
             <p className="mt-2 text-xs text-muted">Kata kunci: {topic.keywords.join(", ")}</p>
-            <p className="mt-2 text-xs">Peringatan pada dasbor: {counts[topic.id] ?? 0}</p>
+            <p className="mt-2 inline-flex items-center text-xs">
+              Peringatan pada dasbor: {counts[topic.id] ?? 0}
+              <TermTip {...glossaryTip("peringatan-dasbor")} />
+            </p>
           </Card>
         ))}
       </div>

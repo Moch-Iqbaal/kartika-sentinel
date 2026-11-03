@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Disclaimer } from "@/components/disclaimer";
+import { TermTip } from "@/components/term-tip";
 import { ViralityChart } from "@/components/virality-chart";
+import { glossaryTip } from "@/lib/glossary";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { displayHandle } from "@/lib/security/redact";
@@ -81,15 +83,30 @@ export default async function DashboardPage({
         <ViralityChart series={series} />
       </Card>
       <div className="flex flex-wrap gap-2 text-sm">
-        <Link className="rounded-full border border-border px-3 py-1" href="/">Semua</Link>
+        <span className="inline-flex items-center rounded-full border border-border pl-3">
+          <Link className="py-1" href="/">Semua</Link>
+          <span className="pr-2"><TermTip {...glossaryTip("semua")} /></span>
+        </span>
         {TOPICS.map((topic) => (
-          <Link key={topic.id} className="rounded-full border border-border px-3 py-1" href={`/?topik=${topic.id}`}>
-            {topic.label} ({counts[topic.id] ?? 0})
-          </Link>
+          <span key={topic.id} className="inline-flex items-center rounded-full border border-border pl-3">
+            <Link className="py-1" href={`/?topik=${topic.id}`}>
+              {topic.label} ({counts[topic.id] ?? 0})
+            </Link>
+            <span className="pr-2"><TermTip {...glossaryTip(`topik-${topic.id}`)} /></span>
+          </span>
         ))}
-        <Link className="rounded-full border border-border px-3 py-1" href="/?pita=kritis">Kritis</Link>
-        <Link className="rounded-full border border-border px-3 py-1" href="/?pita=prioritas">Prioritas</Link>
-        <Link className="rounded-full border border-border px-3 py-1" href="/?pita=pantau">Pantau</Link>
+        <span className="inline-flex items-center rounded-full border border-border pl-3">
+          <Link className="py-1" href="/?pita=kritis">Kritis</Link>
+          <span className="pr-2"><TermTip {...glossaryTip("kritis")} /></span>
+        </span>
+        <span className="inline-flex items-center rounded-full border border-border pl-3">
+          <Link className="py-1" href="/?pita=prioritas">Prioritas</Link>
+          <span className="pr-2"><TermTip {...glossaryTip("prioritas")} /></span>
+        </span>
+        <span className="inline-flex items-center rounded-full border border-border pl-3">
+          <Link className="py-1" href="/?pita=pantau">Pantau</Link>
+          <span className="pr-2"><TermTip {...glossaryTip("pantau")} /></span>
+        </span>
       </div>
       {filtered.length === 0 && !loadError ? (
         <Card className="p-6 text-sm text-muted">
@@ -114,12 +131,12 @@ export default async function DashboardPage({
         <table className="min-w-full text-left text-sm">
           <thead className="bg-slate-950/50 text-xs uppercase text-muted">
             <tr>
-              <th className="px-3 py-2">Risiko</th>
-              <th className="px-3 py-2">Pita</th>
-              <th className="px-3 py-2">Narasi</th>
-              <th className="px-3 py-2">Topik</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Pegangan</th>
+              <th className="px-3 py-2"><span className="inline-flex items-center">Risiko <TermTip {...glossaryTip("risiko-kolom")} /></span></th>
+              <th className="px-3 py-2"><span className="inline-flex items-center">Pita <TermTip {...glossaryTip("pita")} /></span></th>
+              <th className="px-3 py-2"><span className="inline-flex items-center">Narasi <TermTip {...glossaryTip("narasi")} /></span></th>
+              <th className="px-3 py-2"><span className="inline-flex items-center">Topik <TermTip {...glossaryTip("topik-kolom")} /></span></th>
+              <th className="px-3 py-2"><span className="inline-flex items-center">Status <TermTip {...glossaryTip("status-kolom")} /></span></th>
+              <th className="px-3 py-2"><span className="inline-flex items-center">Pegangan <TermTip {...glossaryTip("pegangan")} /></span></th>
             </tr>
           </thead>
           <tbody>

@@ -1,6 +1,6 @@
 import "server-only";
 import { embedText } from "@/lib/embed/hashing";
-import { matchFactChecks } from "@/lib/factcheck/match";
+import { MATCH_MIN_SIMILARITY, matchFactChecks } from "@/lib/factcheck/match";
 import type { FactCheck, FactMatch } from "@/lib/factcheck/types";
 import { detectAiText } from "@/lib/model/ai-text";
 import { heuristicHoax } from "@/lib/model/heuristic";
@@ -56,7 +56,7 @@ function finish(clean: string, assessment: HoaxAssessment, virality: number, cor
   const topics = matchTopics(clean);
   const sensitivity = topicSensitivity(topics);
   const risk = computeRisk(assessment.probability, sensitivity, virality);
-  const matches = matchFactChecks(clean, corpus, 5).filter((item) => item.similarity >= 0.18);
+  const matches = matchFactChecks(clean, corpus, 5).filter((item) => item.similarity >= MATCH_MIN_SIMILARITY);
   return {
     clean,
     assessment,

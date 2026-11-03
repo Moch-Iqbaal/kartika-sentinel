@@ -1,6 +1,9 @@
 import { cosine, embedText } from "@/lib/embed/hashing";
 import type { FactCheck, FactMatch } from "@/lib/factcheck/types";
 
+/** Kemiripan di bawah angka ini tidak masuk berkas. */
+export const MATCH_MIN_SIMILARITY = 0.18;
+
 export function matchFactChecks(text: string, corpus: FactCheck[], limit = 5): FactMatch[] {
   const query = embedText(text);
   return corpus

@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CaseActions } from "@/components/case-actions";
+import { TermTip } from "@/components/term-tip";
+import { glossaryTip } from "@/lib/glossary";
 import { Disclaimer } from "@/components/disclaimer";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { currentSession } from "@/lib/auth/session";
 import { getCase } from "@/lib/db";
-import { TermTip } from "@/components/term-tip";
 import { alertStatusLabel, bandLabel, caseStatusLabel, engineLabel, modelModeLabel, percent, verdictLabel } from "@/lib/format";
-import { glossaryTip } from "@/lib/glossary";
 import { ENGINE_DIVERGENCE, ENGINE_DIVERGENCE_WARNING } from "@/lib/model/classify";
 import { displayHandle } from "@/lib/security/redact";
 
@@ -126,7 +126,10 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
         <h2 className="font-medium">Padanan cek fakta</h2>
         {detail.matches.length === 0 ? <p className="text-sm text-muted">Tidak ada padanan di atas ambang kemiripan.</p> : detail.matches.map((match) => (
           <article key={match.id} className="border-t border-border pt-3 first:border-t-0 first:pt-0">
-            <p className="text-sm font-medium">{match.title}</p>
+            <p className="inline-flex items-center text-sm font-medium">
+              {match.title}
+              <TermTip {...glossaryTip("padanan")} />
+            </p>
             <p className="text-xs text-muted">{verdictLabel(match.verdict)} · {percent(match.similarity)} · {match.source} · {match.license}</p>
             <p className="mt-1 text-sm leading-6">{match.summary}</p>
             {match.url ? <SafeLink href={match.url}>{match.url}</SafeLink> : null}
@@ -134,7 +137,10 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
         ))}
         {detail.external.length > 0 ? (
           <div className="border-t border-border pt-3">
-            <p className="text-sm font-medium">Fact Check Tools</p>
+            <p className="inline-flex items-center text-sm font-medium">
+              Fact Check Tools
+              <TermTip {...glossaryTip("fact-check-tools")} />
+            </p>
             {detail.external.map((item) => (
               <p key={`${item.url}-${item.title}`} className="mt-1 text-sm">
                 {item.publisher ? `${item.publisher}: ` : ""}{item.title}
@@ -158,10 +164,23 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
           caseStatus={detail.caseStatus}
           canEdit={canEdit}
           initialNote={detail.analystNote ?? ""}
+          tips={{
+            baru: glossaryTip("baru"),
+            "triase-tombol": glossaryTip("triase-tombol"),
+            "eskalasi-tombol": glossaryTip("eskalasi-tombol"),
+            "tutup-peringatan": glossaryTip("tutup-peringatan"),
+            "buka-kasus": glossaryTip("buka-kasus"),
+            "kasus-terbuka": glossaryTip("kasus-terbuka"),
+            diselidiki: glossaryTip("diselidiki"),
+            "tutup-kasus": glossaryTip("tutup-kasus"),
+            "skor-ulang": glossaryTip("skor-ulang"),
+            "unduh-pdf": glossaryTip("unduh-pdf"),
+            catatan: glossaryTip("catatan"),
+          }}
         />
       </Card>
       <Card className="space-y-2 p-4">
-        <h2 className="font-medium">Linimasa</h2>
+        <h2 className="inline-flex items-center font-medium">Linimasa <TermTip {...glossaryTip("linimasa")} /></h2>
         {detail.timeline.length === 0 ? <p className="text-sm text-muted">Belum ada jejak waktu.</p> : (
           <ol className="space-y-2 text-sm">
             {detail.timeline.map((event) => (

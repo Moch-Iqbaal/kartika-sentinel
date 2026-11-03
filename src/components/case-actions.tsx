@@ -2,9 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { TermTip } from "@/components/term-tip";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { AlertStatus, CaseStatus } from "@/lib/db/types";
+
+type Tip = { href: string; label: string; tip: string };
 
 async function postJson(url: string, body: unknown): Promise<string | null> {
   const response = await fetch(url, {
@@ -23,12 +26,14 @@ export function CaseActions({
   caseStatus,
   canEdit,
   initialNote,
+  tips,
 }: {
   alertId: string;
   alertStatus: AlertStatus;
   caseStatus: CaseStatus | null;
   canEdit: boolean;
   initialNote: string;
+  tips: Record<string, Tip>;
 }) {
   const router = useRouter();
   const [error, setError] = useState("");
@@ -51,43 +56,56 @@ export function CaseActions({
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
         {(["triaged", "escalated", "dismissed", "new"] as AlertStatus[]).map((status) => (
-          <Button
-            key={status}
-            type="button"
-            size="sm"
-            variant={status === alertStatus ? "default" : "outline"}
-            disabled={pending}
-            onClick={() => run(() => postJson(`/api/kasus/${alertId}`, { action: "alert", status }))}
-          >
-            {status === "new" ? "Baru" : status === "triaged" ? "Triase" : status === "escalated" ? "Eskalasi" : "Tutup peringatan"}
-          </Button>
+          <span key={status} className="inline-flex items-center">
+            <Button
+              type="button"
+              size="sm"
+              variant={status === alertStatus ? "default" : "outline"}
+              disabled={pending}
+              onClick={() => run(() => postJson(`/api/kasus/${alertId}`, { action: "alert", status }))}
+            >
+              {status === "new" ? "Baru" : status === "triaged" ? "Triase" : status === "escalated" ? "Eskalasi" : "Tutup peringatan"}
+            </Button>
+            <TermTip {...tips[status === "new" ? "baru" : status === "triaged" ? "triase-tombol" : status === "escalated" ? "eskalasi-tombol" : "tutup-peringatan"]} />
+          </span>
         ))}
       </div>
       <div className="flex flex-wrap gap-2">
         {caseStatus ? (
           (["open", "investigating", "closed"] as CaseStatus[]).map((status) => (
-            <Button
-              key={status}
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={pending}
-              onClick={() => run(() => postJson(`/api/kasus/${alertId}`, { action: "case", status }))}
-            >
-              {status === "open" ? "Kasus terbuka" : status === "investigating" ? "Diselidiki" : "Tutup kasus"}
-            </Button>
+            <span key={status} className="inline-flex items-center">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={pending}
+                onClick={() => run(() => postJson(`/api/kasus/${alertId}`, { action: "case", status }))}
+              >
+                {status === "open" ? "Kasus terbuka" : status === "investigating" ? "Diselidiki" : "Tutup kasus"}
+              </Button>
+              <TermTip {...tips[status === "open" ? "kasus-terbuka" : status === "investigating" ? "diselidiki" : "tutup-kasus"]} />
+            </span>
           ))
         ) : (
-          <Button type="button" size="sm" disabled={pending} onClick={() => run(() => postJson(`/api/kasus/${alertId}`, { action: "open" }))}>
-            Buka kasus
-          </Button>
+          <span className="inline-flex items-center">
+            <Button type="button" size="sm" disabled={pending} onClick={() => run(() => postJson(`/api/kasus/${alertId}`, { action: "open" }))}>
+              Buka kasus
+            </Button>
+            <TermTip {...tips["buka-kasus"]} />
+          </span>
         )}
-        <Button type="button" size="sm" variant="outline" disabled={pending} onClick={() => run(() => postJson(`/api/kasus/${alertId}/reskor`, {}))}>
-          Skor ulang
-        </Button>
-        <Button type="button" size="sm" variant="ghost" asChild>
-          <a href={`/api/kasus/${alertId}/pdf`}>Unduh PDF</a>
-        </Button>
+        <span className="inline-flex items-center">
+          <Button type="button" size="sm" variant="outline" disabled={pending} onClick={() => run(() => postJson(`/api/kasus/${alertId}/reskor`, {}))}>
+            Skor ulang
+          </Button>
+          <TermTip {...tips["skor-ulang"]} />
+        </span>
+        <span className="inline-flex items-center">
+          <Button type="button" size="sm" variant="ghost" asChild>
+            <a href={`/api/kasus/${alertId}/pdf`}>Unduh PDF</a>
+          </Button>
+          <TermTip {...tips["unduh-pdf"]} />
+        </span>
       </div>
       <form
         className="space-y-2"
@@ -98,7 +116,7 @@ export function CaseActions({
         }}
       >
         <label className="block text-sm">
-          Catatan analis
+          <span className="inline-flex items-center">Catatan analis <TermTip {...tips.catatan} /></span>
           <Textarea name="note" defaultValue={initialNote} maxLength={2000} className="mt-1" placeholder="Temuan, sumber yang sudah dicek, atau alasan eskalasi." />
         </label>
         <Button type="submit" size="sm" variant="outline" disabled={pending}>Simpan catatan</Button>
