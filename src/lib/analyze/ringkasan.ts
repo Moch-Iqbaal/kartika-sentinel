@@ -1,6 +1,7 @@
 import type { CaseDetail } from "../db/types";
 import { confidenceSentence, decideConfidence } from "./confidence";
 import { engineLabel, percent, recommendation, verdictLabel } from "../format";
+import { NO_STRONG_MATCH } from "../factcheck/threshold";
 import { ENGINE_DIVERGENCE } from "../model/divergence";
 import { BAND_KRITIS_MIN, BAND_PRIORITAS_MIN, type RiskBand } from "../scoring/risk";
 
@@ -115,7 +116,7 @@ function engineSentence(input: RingkasanInput): string {
 function contextSentence(input: RingkasanInput): string {
   const best = topMatch(input.matches);
   const matchText = input.matches.length === 0
-    ? "Tidak ada padanan cek fakta di atas ambang"
+    ? NO_STRONG_MATCH
     : `Ada ${input.matches.length} padanan cek fakta, teratas berlabel ${verdictLabel(best?.verdict ?? "unverified")}`;
   const external = input.externalCount > 0 ? `, plus ${input.externalCount} dari Fact Check Tools` : "";
   const topic = input.topicLabels.length === 0

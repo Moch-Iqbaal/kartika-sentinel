@@ -6,6 +6,8 @@ import type { Session } from "@/lib/auth/token";
 import { embedText } from "@/lib/embed/hashing";
 import type { ExternalFact, FactCheck } from "@/lib/factcheck/types";
 import { assessmentIsUnscored } from "@/lib/analyze/unscored";
+import { articleUrlFor } from "@/lib/factcheck/turnbackhoax";
+import { strongMatches } from "@/lib/factcheck/threshold";
 import { cardRecommendation, recommendation } from "@/lib/format";
 import { AUDIT_LIST_LIMIT, DEMO_RETENTION_DAYS } from "@/lib/limits";
 import { hashHandle } from "@/lib/security/redact";
@@ -223,22 +225,24 @@ export async function getCase(alertId: string): Promise<CaseDetail | null> {
       disclaimer: String(ai.disclaimer ?? ""),
     },
     assessment: rationale.assessment as CaseDetail["assessment"],
-    matches: matchRows.map((match) => {
+    matches: strongMatches(matchRows.map((match) => {
       const item = asRecord(match);
       const fact = first(item.fact_checks);
+      const source = String(fact.source ?? "");
+      const title = String(fact.title ?? "");
       return {
         id: String(fact.id ?? ""),
-        source: String(fact.source ?? ""),
-        title: String(fact.title ?? ""),
+        source,
+        title,
         claim: String(fact.claim ?? ""),
         verdict: String(fact.verdict ?? "unverified") as FactCheck["verdict"],
-        url: fact.url ? String(fact.url) : null,
+        url: articleUrlFor(source, title, fact.url ? String(fact.url) : null),
         publishedAt: fact.published_at ? String(fact.published_at) : null,
         summary: String(fact.summary ?? ""),
         license: String(fact.license ?? ""),
         similarity: Number(item.similarity ?? 0),
       };
-    }),
+    })),
     external: Array.isArray(rationale.external) ? rationale.external as ExternalFact[] : [],
     metrics,
     platform: String(post.platform ?? ""),

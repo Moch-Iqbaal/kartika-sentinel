@@ -2,6 +2,8 @@ import { TermTip } from "@/components/term-tip";
 import { glossaryTip } from "@/lib/glossary";
 import type { CaseDetail } from "@/lib/db/types";
 import { evidenceFirst, hasHttpUrl } from "@/lib/factcheck/order";
+import { NO_STRONG_MATCH } from "@/lib/factcheck/threshold";
+import { isMafindoSource, mafindoBadge, turnbackhoaxSearchUrl } from "@/lib/factcheck/turnbackhoax";
 import { percent, verdictLabel } from "@/lib/format";
 
 function SafeLink({ href, children }: { href: string; children: string }) {
@@ -30,27 +32,41 @@ export function CaseEvidence({ detail }: { detail: CaseDetail }) {
       {detail.platform === "gambar" && !detail.assessment.unscored?.reason ? (
         <p className="text-sm">Padanan di bawah dibandingkan dengan keterangan yang ditempel, bukan dengan piksel gambar.</p>
       ) : null}
-      {matches.length === 0 && detail.external.length === 0 ? (
-        <p className="text-sm text-muted">Tidak ada padanan cek fakta di atas ambang, dan tidak ada tautan sumber.</p>
-      ) : null}
-      {matches.length > 0 ? (
-        <p className="text-xs text-muted">{linked} dari {matches.length} padanan punya tautan sumber.</p>
-      ) : null}
-      {matches.map((match) => (
-        <article key={match.id} className="border-t border-border pt-3">
-          <p className="text-sm font-medium">
-            {match.url && hasHttpUrl(match.url) ? <SafeLink href={match.url}>{match.title}</SafeLink> : match.title}
-            <TermTip {...glossaryTip("padanan")} />
-          </p>
-          <p className="text-xs text-muted">
-            {verdictLabel(match.verdict)} · kemiripan {percent(match.similarity)} · {match.source} · {match.license}
-          </p>
-          <p className="mt-1 text-sm leading-6">{match.summary}</p>
-          {match.url && hasHttpUrl(match.url) ? <SafeLink href={match.url}>{match.url}</SafeLink> : (
-            <p className="text-xs text-muted">Tautan sumber tidak ada di korpus ini.</p>
-          )}
-        </article>
-      ))}
+      {matches.length === 0 ? (
+        <p className="text-sm text-muted">{NO_STRONG_MATCH}</p>
+      ) : (
+        <p className="text-xs text-muted">{linked} dari {matches.length} padanan punya tautan artikel.</p>
+      )}
+      {matches.map((match) => {
+        const article = match.url && hasHttpUrl(match.url) ? match.url : null;
+        const mafindo = isMafindoSource(match.source);
+        return (
+          <article key={match.id} className="border-t border-border pt-3">
+            <p className="text-sm font-medium">
+              {article ? <SafeLink href={article}>{match.title}</SafeLink> : match.title}
+              <TermTip {...glossaryTip("padanan")} />
+            </p>
+            <p className="mt-1 text-xs text-muted">
+              {verdictLabel(match.verdict)} · kemiripan {percent(match.similarity)} · {match.source} · {match.license}
+            </p>
+            {mafindo ? (
+              <p className="mt-2 inline-flex items-center rounded-full border border-border px-2 py-0.5 text-xs">
+                {mafindoBadge(match.verdict)}
+                <TermTip {...glossaryTip("sumber-mafindo")} />
+              </p>
+            ) : (
+              <p className="mt-1 text-sm leading-6">{match.summary}</p>
+            )}
+            {article ? <p className="mt-1 text-xs"><SafeLink href={article}>{article}</SafeLink></p> : mafindo ? (
+              <p className="mt-1 text-xs">
+                <SafeLink href={turnbackhoaxSearchUrl(match.title)}>Cari di TurnBackHoax</SafeLink>
+              </p>
+            ) : (
+              <p className="mt-1 text-xs text-muted">Tautan sumber tidak ada di korpus ini.</p>
+            )}
+          </article>
+        );
+      })}
       {detail.external.length > 0 ? (
         <div className="border-t border-border pt-3">
           <p className="inline-flex items-center text-sm font-medium">

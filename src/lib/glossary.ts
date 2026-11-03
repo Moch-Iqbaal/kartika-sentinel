@@ -315,8 +315,19 @@ export function glossaryGroups(): GlossaryGroup[] {
         term(
           "padanan",
           "Padanan cek fakta",
-          "Cek fakta lokal yang mirip dengan teks ini, bukan putusan sistem.",
-          `Maksimal 5, kemiripan minimal ${percent(MATCH_MIN_SIMILARITY)}.`,
+          "Cek fakta lokal yang cukup mirip dengan teks ini, bukan putusan sistem.",
+          `Maksimal 5. Di bawah ${percent(MATCH_MIN_SIMILARITY)} disembunyikan dan tulisannya “Tidak ada padanan kuat”.`,
+        ),
+        term(
+          "sumber-mafindo",
+          "Sumber: Mafindo (label hoaks dari Mafindo)",
+          "Label dari korpus Mafindo, bukan putusan baru Kartika Sentinel.",
+          "Judul menjadi tautan hanya bila pencarian TurnBackHoax menemukan judul yang sama. Kalau tidak, yang tampil adalah tautan cari.",
+        ),
+        term(
+          "cari-turnbackhoax",
+          "Cari di TurnBackHoax",
+          "Tautan cari judul ini di TurnBackHoax, bukan tautan artikel yang sudah dicocokkan.",
         ),
         term("vonis", "Hoaks / Menyesatkan / Benar / Belum terverifikasi", "Label pada padanan cek fakta, bukan putusan sistem."),
         term("fact-check-tools", "Fact Check Tools", "Padanan dari luar, bila kunci API terisi. “Tautan” membuka sumbernya."),

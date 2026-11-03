@@ -3,6 +3,8 @@ import { confidenceSentence, decideConfidence } from "@/lib/analyze/confidence";
 import { ringkasanFromCase } from "@/lib/analyze/ringkasan";
 import type { CaseDetail } from "@/lib/db/types";
 import { evidenceFirst, hasHttpUrl } from "@/lib/factcheck/order";
+import { NO_STRONG_MATCH } from "@/lib/factcheck/threshold";
+import { isMafindoSource, mafindoBadge, turnbackhoaxSearchUrl } from "@/lib/factcheck/turnbackhoax";
 import { alertStatusLabel, bandLabel, caseStatusLabel, engineLabel, formatWhen, percent, verdictLabel } from "@/lib/format";
 
 function winAnsi(value: string): string {
@@ -56,12 +58,16 @@ export async function casePdf(detail: CaseDetail): Promise<Uint8Array> {
   draw("Bukti utama: padanan cek fakta", { bold: true, size: 12 });
   draw("Tautan sumber adalah bukti yang dibaca lebih dulu. Skor bukan bukti.", { size: 9 });
   const matches = evidenceFirst(detail.matches);
-  if (matches.length === 0 && detail.external.length === 0) draw("Tidak ada padanan di atas ambang dan tidak ada tautan sumber.");
+  if (matches.length === 0) draw(NO_STRONG_MATCH);
   for (const match of matches) {
     draw(`${verdictLabel(match.verdict)} · kemiripan ${percent(match.similarity)} · ${match.source}`, { bold: true });
+    const article = match.url && hasHttpUrl(match.url) ? match.url : null;
     draw(match.title);
-    draw(match.summary, { size: 9 });
-    draw(match.url && hasHttpUrl(match.url) ? match.url : "Tautan sumber tidak ada di korpus ini.", { size: 8 });
+    if (isMafindoSource(match.source)) draw(mafindoBadge(match.verdict), { size: 9 });
+    else draw(match.summary, { size: 9 });
+    if (article) draw(article, { size: 8 });
+    else if (isMafindoSource(match.source)) draw(`Cari di TurnBackHoax ${turnbackhoaxSearchUrl(match.title)}`, { size: 8 });
+    else draw("Tautan sumber tidak ada di korpus ini.", { size: 8 });
   }
   for (const item of detail.external) {
     draw(`${item.publisher ? `${item.publisher}: ` : ""}${item.title}${item.rating ? ` (${item.rating})` : ""}`, { bold: true });

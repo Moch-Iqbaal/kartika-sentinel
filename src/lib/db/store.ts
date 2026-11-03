@@ -8,6 +8,8 @@ import { DEMO_ADMIN_ID, DEMO_ANALYST_ID, demoAccounts } from "@/lib/auth/demo-us
 import type { Session } from "@/lib/auth/token";
 import type { ExternalFact, FactCheck, FactMatch } from "@/lib/factcheck/types";
 import { assessmentIsUnscored } from "@/lib/analyze/unscored";
+import { articleUrlFor } from "@/lib/factcheck/turnbackhoax";
+import { strongMatches } from "@/lib/factcheck/threshold";
 import { cardRecommendation, recommendation } from "@/lib/format";
 import type { HoaxAssessment } from "@/lib/model/classify";
 import type { AiTextFlag } from "@/lib/model/ai-text";
@@ -467,18 +469,18 @@ export function getCase(alertId: string): CaseDetail | null {
     topics: rationale.topics ?? [],
     ai: assessment.ai,
     assessment,
-    matches: matchRows.map((match) => ({
+    matches: strongMatches(matchRows.map((match) => ({
       id: text(match.id),
       source: text(match.source),
       title: text(match.title),
       claim: text(match.claim),
       verdict: text(match.verdict) as FactMatch["verdict"],
-      url: text(match.url) || null,
+      url: articleUrlFor(text(match.source), text(match.title), text(match.url) || null),
       publishedAt: text(match.published_at) || null,
       summary: text(match.summary),
       license: text(match.license),
       similarity: num(match.similarity),
-    })),
+    }))),
     external: rationale.external ?? [],
     metrics: metrics.map((metric) => ({
       observedAt: text(metric.observed_at),
