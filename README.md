@@ -115,8 +115,6 @@ Penyematan cek fakta berdimensi **128** (`src/lib/embed/hashing.ts`): hashing ka
 
 Model linier `linear-ngram-v1` dilatih di mesin ini pada label hoax/valid IDNHoaxCorpus, potongan 80/20, seed 2026. Skrip latih menulis hold-out 752 contoh (termasuk teks yang juga muncul di potongan latih): akurasi 0,7407, F1 hoaks 0,8282, presisi 0,8902, recall 0,7743.
 
-Uji yang diterbitkan di halaman Evaluasi membuang 24 teks hold-out itu karena sama dengan teks latih. Sisa 728 contoh, dihitung `npm run eval` pada bobot yang sudah ada, tidak dilatih ulang: akurasi 0,7390, presisi hoaks 0,8878, recall hoaks 0,7723, F1 hoaks 0,8260. Matriks: 451 benar hoaks, 57 positif palsu, 133 terlewat, 87 benar valid. IndoBERT tidak dijalankan pada uji ini. Angka itu bukan klaim kartu model.
-
 Dua kalimat percobaan pada IndoBERT lokal (bukan tolok ukur): klaim "20.000 prajurit sudah diterbangkan ke Gaza" mendapat probabilitas HOAX 0,9987; kalimat bernada keterangan Kapuspen tentang latihan udara mendapat 0,9499. Model ini mudah memberi skor tinggi pada teks pendek. Karena itu heuristik tetap ditampilkan terpisah, dan dasbor demo memakai model linier supaya peringkat awal deterministik. Tombol "Skor ulang IndoBERT lokal" memanggil proses di mesin sendiri.
 
 Korpus `nlp-brin-id` tidak dipakai. Repositorinya berpagar dan tidak lagi dipelihara.

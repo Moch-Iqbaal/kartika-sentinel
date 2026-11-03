@@ -5,7 +5,7 @@ import { buildRingkasan, decideVerdict, type RingkasanInput } from "./ringkasan.
 import { decideConfidence } from "./confidence.ts";
 import { detectOpinion, OPINION_SENTENCE } from "./opinion.ts";
 import { UNSCORED_IMAGE_REASON, unscoredImageCard } from "./unscored.ts";
-import { KNOWN_FALSE_POSITIVES } from "../evaluate/known-cases.ts";
+import { KNOWN_FALSE_POSITIVES } from "../../../tests/known-cases.ts";
 import { extractArticle } from "../ingest/article.ts";
 import {
   dampenShortTextProbability,

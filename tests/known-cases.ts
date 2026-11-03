@@ -2,6 +2,7 @@
  * Kasus yang pernah salah di meja ini.
  * Angka "sebelumnya" adalah laporan pemilik dan perbaikan yang sudah masuk,
  * bukan hasil ulang IndoBERT pada mesin ini.
+ * Dipakai uji regresi vonis, bukan halaman laporan.
  */
 
 export type KnownCase = {
