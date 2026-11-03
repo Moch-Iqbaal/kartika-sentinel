@@ -3,7 +3,7 @@ import test from "node:test";
 import { assertScorableText, isNonContentText } from "./content-guard.ts";
 import { buildRingkasan, decideVerdict, type RingkasanInput } from "./ringkasan.ts";
 import { decideConfidence } from "./confidence.ts";
-import { detectOpinion, OPINION_NOTE } from "./opinion.ts";
+import { detectOpinion, OPINION_SENTENCE } from "./opinion.ts";
 import { UNSCORED_IMAGE_REASON, unscoredImageCard } from "./unscored.ts";
 import { KNOWN_FALSE_POSITIVES } from "../evaluate/known-cases.ts";
 import { extractArticle } from "../ingest/article.ts";
@@ -61,7 +61,8 @@ test("judul MBG di bawah 20 kata tidak menjadi HOAKS", () => {
   assert.equal(text.headline, SHORT_WORD_VERDICT);
   assert.notEqual(text.headline, "Kemungkinan HOAKS");
   const joined = text.sentences.join(" ");
-  assert.match(joined, new RegExp(OPINION_NOTE));
+  assert.match(joined, new RegExp(OPINION_SENTENCE.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.doesNotMatch(joined, /Ini terbaca sebagai kritik\. kritik/);
   assert.match(joined, /20 kata/);
   assert.ok(text.sentences.length <= 3);
   assert.equal(KNOWN_FALSE_POSITIVES.some((item) => item.title === HEADLINE), true);

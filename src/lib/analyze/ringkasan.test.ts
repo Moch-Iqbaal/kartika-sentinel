@@ -166,7 +166,8 @@ test("opini tidak menahan vonis bila keyakinan bukan rendah", () => {
     textChars: 400,
   }));
   assert.equal(text.headline, "Kemungkinan HOAKS");
-  assert.match(text.sentences.join(" "), /kritik kebijakan bukan hoaks/);
+  assert.match(text.sentences.join(" "), /Isinya terbaca sebagai kritik kebijakan, dan kritik bukan hoaks/);
+  assert.doesNotMatch(text.sentences.join(" "), /Ini terbaca sebagai kritik\. kritik/);
   assert.ok(text.sentences.length <= 3);
 });
 

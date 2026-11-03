@@ -3,7 +3,7 @@ import { decideConfidence } from "./confidence";
 import { HOAX_ALONE_MIN, HOAX_CALL_MIN } from "./bands";
 import { credibleLabel, evidenceStance } from "./evidence-stance";
 import { percent } from "../format";
-import { OPINION_NOTE } from "./opinion";
+import { OPINION_SENTENCE } from "./opinion";
 import { SHORT_WORD_VERDICT } from "../ingest/short-text";
 import { ENGINE_DIVERGENCE } from "../model/divergence";
 import type { RiskBand } from "../scoring/risk";
@@ -49,6 +49,8 @@ export type RingkasanInput = {
   externalCount: number;
   /** Label pada cek fakta langsung, misalnya Salah atau Benar. */
   externalRatings?: string[];
+  /** Nama pemeriksaan fakta yang benar-benar menyebut hoaks. Kosong bila hanya angka sistem. */
+  hoaxCheckers?: string[];
   /** Teks dari media atau situs resmi yang memberitakan hal yang sama. */
   credibleSource?: boolean;
   /** Nama yang tampil, misalnya Kompas TV. */
@@ -130,7 +132,15 @@ function analystLine(): string {
 }
 
 function opinionLine(): string {
-  return `Ini terbaca sebagai kritik. ${OPINION_NOTE}.`;
+  return OPINION_SENTENCE;
+}
+
+function outletName(input: RingkasanInput): string {
+  return input.credibleName?.trim() || "berita itu";
+}
+
+function checkers(input: RingkasanInput): string[] {
+  return (input.hoaxCheckers ?? []).map((name) => name.trim()).filter(Boolean);
 }
 
 function sourceLine(input: RingkasanInput): string {
@@ -167,17 +177,23 @@ export function buildRingkasan(input: RingkasanInput): Ringkasan {
     const disagree = enginesDisagree(input);
     const evidence = stances(input);
     const score = percent(Number.isFinite(input.hoaxScore) ? input.hoaxScore : 0);
+    const named = checkers(input);
+    const outlet = outletName(input);
     const why = input.shortText
       ? "Teksnya terlalu pendek, jadi belum bisa dipastikan."
-      : evidence.hoax && (evidence.valid || input.credibleSource)
-        ? "Ada yang menyebut hoaks, ada juga berita yang menguatkan, jadi belum bisa dipastikan."
-        : disagree
-          ? "Dua penilaian tidak sejalan, jadi belum bisa dipastikan."
-          : evidence.hoax
-            ? "Ada pemeriksaan fakta yang menyebut hoaks, tetapi angkanya rendah, jadi belum bisa dipastikan."
-            : input.hoaxScore >= HOAX_CALL_MIN && input.hoaxScore < HOAX_ALONE_MIN
-              ? `Angka kemiripan hoaks ${score} belum cukup, dan belum ada bukti hoaks.`
-              : "Belum ada sumber yang menguatkan atau menyanggah.";
+      : input.credibleSource && named.length > 0
+        ? `${named[0]} menyebut ini hoaks, tapi ${outlet} memberitakan hal yang sama, jadi belum bisa dipastikan.`
+        : input.credibleSource && input.hoaxScore >= HOAX_CALL_MIN
+          ? `Mesin menilai mirip hoaks, tapi ${outlet} memberitakan hal yang sama, jadi belum bisa dipastikan.`
+          : disagree
+            ? "Dua penilaian tidak sejalan, jadi belum bisa dipastikan."
+            : named.length > 0
+              ? `${named[0]} menyebut ini hoaks, tetapi angkanya rendah, jadi belum bisa dipastikan.`
+              : evidence.hoax
+                ? "Pemeriksaan fakta menyebut ini hoaks, tetapi angkanya rendah, jadi belum bisa dipastikan."
+                : input.hoaxScore >= HOAX_CALL_MIN && input.hoaxScore < HOAX_ALONE_MIN
+                  ? `Angka kemiripan hoaks ${score} belum cukup, dan belum ada bukti hoaks.`
+                  : "Belum ada sumber yang menguatkan atau menyanggah.";
     return {
       verdict,
       headline: VERDICT_LINE.uncertain,
@@ -194,9 +210,11 @@ export function buildRingkasan(input: RingkasanInput): Ringkasan {
     sentences: [
       verdict === "not-hoax"
         ? sourceLine(input)
-        : stances(input).hoax
-          ? "Ada pemeriksaan fakta yang menyebut ini hoaks."
-          : "Angka kemiripan hoaks tinggi, dan belum ada sumber yang menyanggah.",
+        : checkers(input).length > 0
+          ? `${checkers(input)[0]} menyebut ini hoaks.`
+          : stances(input).hoax
+            ? "Pemeriksaan fakta menyebut ini hoaks."
+            : "Angka kemiripan hoaks tinggi, dan belum ada sumber yang menyanggah.",
       input.opinion ? opinionLine() : null,
       analystLine(),
     ].filter((sentence): sentence is string => Boolean(sentence)),
@@ -225,6 +243,14 @@ export function ringkasanFromCase(detail: CaseDetail): Ringkasan {
     matches: detail.matches.map((match) => ({ verdict: match.verdict, similarity: match.similarity })),
     externalCount: detail.external.length,
     externalRatings: detail.external.map((item) => item.rating ?? ""),
+    hoaxCheckers: detail.external
+      .filter((item) => evidenceStance(item.rating) === "hoax")
+      .map((item) => {
+        const publisher = item.publisher?.trim();
+        if (item.source === "Cek Fakta" && publisher && !/cek fakta/i.test(publisher)) return `Cek Fakta ${publisher}`;
+        return publisher || item.source;
+      })
+      .filter((name, index, all) => Boolean(name) && all.indexOf(name) === index),
     credibleName: credibleLabel(detail.sourceUrl, detail.text),
     credibleSource: credibleLabel(detail.sourceUrl, detail.text) != null,
   });

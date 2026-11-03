@@ -73,6 +73,41 @@ test("video berita 62,4% tidak menjadi HOAKS hanya karena skornya", () => {
   assert.match(buildRingkasan(withoutOutlet).sentences[0], /belum cukup/);
 });
 
+test("angka tinggi dan berita Tribun tidak mengarang pemeriksaan fakta", () => {
+  const text = buildRingkasan(input({
+    hoaxScore: 0.993,
+    indobert: 0.993,
+    linear: 0.993,
+    heuristic: 0.993,
+    credibleSource: true,
+    credibleName: "Tribun",
+    matches: [{ verdict: "hoax", similarity: 0.55 }],
+  }));
+  assert.equal(text.headline, "Belum bisa dipastikan");
+  assert.equal(
+    text.sentences[0],
+    "Mesin menilai mirip hoaks, tapi Tribun memberitakan hal yang sama, jadi belum bisa dipastikan.",
+  );
+  assert.doesNotMatch(text.sentences.join(" "), /Ada yang menyebut/);
+});
+
+test("pemeriksaan fakta disebut namanya hanya bila memang ada", () => {
+  const text = buildRingkasan(input({
+    hoaxScore: 0.993,
+    indobert: 0.993,
+    linear: 0.993,
+    heuristic: 0.993,
+    credibleSource: true,
+    credibleName: "Tribun",
+    hoaxCheckers: ["TurnBackHoax"],
+    matches: [{ verdict: "hoax", similarity: 0.8 }],
+  }));
+  assert.equal(
+    text.sentences[0],
+    "TurnBackHoax menyebut ini hoaks, tapi Tribun memberitakan hal yang sama, jadi belum bisa dipastikan.",
+  );
+});
+
 test("bukti hoaks pada skor yang sama tetap HOAKS, bukti benar menahannya", () => {
   const backed = input({
     matches: [{ verdict: "hoax", similarity: 0.8 }],

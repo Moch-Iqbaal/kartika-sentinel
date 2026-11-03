@@ -1,9 +1,10 @@
 /**
  * Isyarat opini atau kritik kebijakan. Bukan klasifikasi hoaks.
- * Kalimat pemicu sengaja pendek dan tetap sama di Ringkasan.
+ * Catatan pendek disimpan di berkas. Kalimat di Ringkasan ada di OPINION_SENTENCE.
  */
 
 export const OPINION_NOTE = "kritik kebijakan bukan hoaks";
+export const OPINION_SENTENCE = "Isinya terbaca sebagai kritik kebijakan, dan kritik bukan hoaks.";
 
 const CUES = ["kritik", "menilai", "tak selaras", "tidak selaras", "menurut"];
 
