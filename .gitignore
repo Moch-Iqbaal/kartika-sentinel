@@ -30,8 +30,17 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files (contoh tanpa rahasia boleh di-commit)
 .env*
+!.env.example
+
+# basis data lokal, cache unduhan, dan bobot model (besar, tanpa token)
+/data/runtime/
+/data/cache/
+/models/
+*.sqlite
+*.sqlite-journal
+/agent-tools/
 
 # vercel
 .vercel
