@@ -190,7 +190,18 @@ export function glossaryGroups(): GlossaryGroup[] {
           "Mode tempel narasi langsung.",
           "Minimal 12 karakter, maksimal 6000 karakter.",
         ),
-        term("url-tombol", "URL", "Mode tautan. YouTube lewat oEmbed, halaman lain harus lolos penjaga SSRF."),
+        term(
+          "url-tombol",
+          "URL",
+          "Mode tautan. YouTube dibaca judul, deskripsi, dan transkrip bila ada.",
+          "watch, youtu.be, dan shorts. Transkrip: Indonesia, lalu Indonesia otomatis, lalu Inggris. Tanpa deskripsi dan transkrip, peringatan teks pendek tetap.",
+        ),
+        term(
+          "bagian-video",
+          "Yang terbaca dari video",
+          "Menyebut bagian video yang ikut dinilai: judul, deskripsi, atau transkrip.",
+          "Kalimat “Video tanpa transkrip; hanya judul yang terbaca.” muncul bila deskripsi dan transkrip kosong.",
+        ),
         term(
           "gambar-tombol",
           "Gambar",

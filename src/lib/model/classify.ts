@@ -39,6 +39,11 @@ export type HoaxAssessment = {
     cues: string[];
     note: string;
   } | null;
+  /** Bagian video yang benar-benar ikut dinilai. */
+  youtube?: {
+    parts: string[];
+    note: string;
+  } | null;
 };
 
 /**

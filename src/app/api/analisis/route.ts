@@ -43,6 +43,7 @@ export async function POST(request: Request) {
     let url: string | null = null;
     let author: string | null = null;
     let bodyChars: number | null = null;
+    let youtubeNote: { parts: string[]; note: string } | null = null;
     let image: Awaited<ReturnType<typeof inspectImage>> | null = null;
     if (body.kind === "gambar") {
       const target = (body.url ?? "").trim();
@@ -86,6 +87,7 @@ export async function POST(request: Request) {
       url = extracted.finalUrl;
       author = extracted.authorHandle;
       bodyChars = extracted.bodyChars;
+      youtubeNote = extracted.youtube ?? null;
     } else {
       raw = body.text ?? "";
       if (raw.trim().length < 12) return NextResponse.json({ error: "Teks terlalu pendek." }, { status: 400 });
@@ -95,6 +97,7 @@ export async function POST(request: Request) {
     const corpus = await corpusFromDb();
     const card = applyShortTextCaution(await scoreContent(raw, 0, corpus, true), bodyChars);
     card.assessment.ai = applyImageReport(card.assessment.ai, image);
+    if (youtubeNote) card.assessment.youtube = youtubeNote;
     const external = await searchGoogleFactChecks(card.clean);
     const id = await saveScoredAlert({
       platform: body.kind === "gambar" ? "gambar" : body.kind === "url" ? "url" : "masukan-analis",

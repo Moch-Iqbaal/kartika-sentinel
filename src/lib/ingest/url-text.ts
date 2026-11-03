@@ -1,6 +1,21 @@
 import { extractArticle, scoredPageText } from "@/lib/ingest/article";
+import {
+  assembleYoutube,
+  captionRequestUrl,
+  chooseCaptionTrack,
+  parseAttributedDescription,
+  parseInnertubeClient,
+  parsePlayerResponse,
+  parseTimedText,
+  parseTranscriptParams,
+  transcriptFromInnertube,
+  watchUrl,
+  youtubeVideoId,
+  type YoutubeCaptionTrack,
+  type YoutubePart,
+} from "@/lib/ingest/youtube";
 import { redactSensitive } from "@/lib/security/redact";
-import { safeFetchText } from "@/lib/security/ssrf";
+import { safeFetchText, safePostJson, UnsafeUrlError } from "@/lib/security/ssrf";
 import { sanitizeUntrusted } from "@/lib/security/untrusted";
 
 export type ExtractedPage = {
@@ -11,48 +26,102 @@ export type ExtractedPage = {
   /**
    * Panjang tubuh artikel, tanpa judul.
    * Di bawah 200 karakter, pemanggil wajib menurunkan keyakinan skor.
-   * Untuk YouTube dan JSON tidak ada tubuh terpisah, jadi panjang teks yang dinilai dipakai.
+   * Untuk YouTube ini panjang deskripsi ditambah transkrip.
    */
   bodyChars: number;
+  youtube?: {
+    parts: YoutubePart[];
+    note: string;
+  } | null;
 };
 
-function youtubeId(url: URL): string | null {
-  const host = url.hostname.replace(/^www\./, "");
-  if (host === "youtu.be") return url.pathname.split("/").filter(Boolean)[0] || null;
-  if (host === "youtube.com" || host === "m.youtube.com" || host === "music.youtube.com") {
-    if (url.pathname === "/watch") return url.searchParams.get("v");
-    const parts = url.pathname.split("/").filter(Boolean);
-    if (parts[0] === "shorts" || parts[0] === "embed") return parts[1] || null;
+const YOUTUBE_BROWSER = "Mozilla/5.0 (compatible; KartikaSentinel/0.1; +https://kartika-sentinel.vercel.app)";
+
+async function readCaption(tracks: YoutubeCaptionTrack[]): Promise<string | null> {
+  const track = chooseCaptionTrack(tracks);
+  const captionUrl = track ? captionRequestUrl(track.baseUrl) : null;
+  if (!captionUrl) return null;
+  try {
+    const caption = await safeFetchText(captionUrl, {
+      timeoutMs: 4000,
+      accept: "application/json,application/xml,text/xml,text/plain",
+      userAgent: YOUTUBE_BROWSER,
+    });
+    return parseTimedText(caption.body).trim() || null;
+  } catch {
+    return null;
   }
-  return null;
+}
+
+async function readInnertubeTranscript(html: string): Promise<string | null> {
+  const params = parseTranscriptParams(html);
+  const client = parseInnertubeClient(html);
+  if (!params || !client) return null;
+  const body = await safePostJson("https://www.youtube.com/youtubei/v1/get_transcript?prettyPrint=false", {
+    context: { client: { clientName: "WEB", clientVersion: client.clientVersion, hl: "id", gl: "ID" } },
+    params,
+  });
+  if (!body) return null;
+  try {
+    return transcriptFromInnertube(JSON.parse(body)).trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+async function textFromYoutube(videoId: string): Promise<ExtractedPage> {
+  const watch = watchUrl(videoId);
+  const oembedUrl = `https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(watch)}`;
+  const [oembedResult, pageResult] = await Promise.allSettled([
+    safeFetchText(oembedUrl, { timeoutMs: 4000, accept: "application/json" }),
+    safeFetchText(watch, { timeoutMs: 7000, userAgent: YOUTUBE_BROWSER, accept: "text/html" }),
+  ]);
+  let title: string | null = null;
+  let channel: string | null = null;
+  let description: string | null = null;
+  let transcript: string | null = null;
+  if (oembedResult.status === "fulfilled") {
+    try {
+      const payload = JSON.parse(oembedResult.value.body) as { title?: string; author_name?: string };
+      title = payload.title?.trim() || null;
+      channel = payload.author_name?.trim() || null;
+    } catch {
+      title = null;
+    }
+  }
+  if (pageResult.status === "fulfilled") {
+    const player = parsePlayerResponse(pageResult.value.body);
+    if (player) {
+      title = player.title || title;
+      channel = player.channel || channel;
+      description = player.description;
+      transcript = await readCaption(player.captions);
+    }
+    if (!description) description = parseAttributedDescription(pageResult.value.body);
+    if (!transcript) transcript = await readInnertubeTranscript(pageResult.value.body);
+  }
+  if (!title && !description && !transcript) {
+    const reason = pageResult.status === "rejected" && pageResult.reason instanceof UnsafeUrlError
+      ? pageResult.reason.message
+      : "Video YouTube tidak dapat dibaca.";
+    throw new UnsafeUrlError(reason);
+  }
+  const assembled = assembleYoutube({ title, channel, description, transcript });
+  const text = sanitizeUntrusted(redactSensitive(assembled.text));
+  return {
+    text,
+    finalUrl: watch,
+    authorHandle: channel,
+    title,
+    bodyChars: assembled.bodyChars,
+    youtube: { parts: assembled.parts, note: assembled.note },
+  };
 }
 
 export async function textFromUrl(input: string): Promise<ExtractedPage> {
   const parsed = new URL(input);
-  const videoId = youtubeId(parsed);
-  if (videoId) {
-    const watch = `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`;
-    const oembed = `https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(watch)}`;
-    const response = await safeFetchText(oembed);
-    const payload = JSON.parse(response.body) as {
-      title?: string;
-      author_name?: string;
-      provider_name?: string;
-    };
-    const title = payload.title?.trim() || null;
-    const text = sanitizeUntrusted(
-      redactSensitive([title, payload.provider_name ? `Penyedia: ${payload.provider_name}` : ""]
-        .filter(Boolean)
-        .join("\n")),
-    );
-    return {
-      text,
-      finalUrl: watch,
-      authorHandle: payload.author_name?.trim() || null,
-      title,
-      bodyChars: text.length,
-    };
-  }
+  const videoId = youtubeVideoId(parsed);
+  if (videoId) return textFromYoutube(videoId);
 
   const response = await safeFetchText(input);
   if (response.contentType.includes("json")) {

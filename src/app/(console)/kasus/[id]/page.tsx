@@ -3,10 +3,10 @@ import { notFound } from "next/navigation";
 import { CaseActions } from "@/components/case-actions";
 import { CaseEvidence } from "@/components/case-evidence";
 import { TermTip } from "@/components/term-tip";
+import { glossaryTip } from "@/lib/glossary";
 import { confidenceSentence, CONFIDENCE_LABEL, decideConfidence } from "@/lib/analyze/confidence";
 import { ringkasanFromCase } from "@/lib/analyze/ringkasan";
 import { MIN_RELIABLE_CHARS, MIN_RELIABLE_WORDS, SHORT_WORD_VERDICT } from "@/lib/ingest/short-text";
-import { glossaryTip } from "@/lib/glossary";
 import { Disclaimer } from "@/components/disclaimer";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -107,6 +107,12 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
       </div>
       <Card className="space-y-3 p-4">
         <h2 className="font-medium">Teks yang dinilai</h2>
+        {detail.assessment.youtube?.note ? (
+          <p className="inline-flex items-center text-sm">
+            {detail.assessment.youtube.note}
+            <TermTip {...glossaryTip("bagian-video")} />
+          </p>
+        ) : null}
         {detail.platform === "gambar" && !unscored ? (
           <p className="text-sm text-muted">Yang dinilai adalah keterangan yang ditempel analis, bukan piksel atau metadata gambar.</p>
         ) : null}

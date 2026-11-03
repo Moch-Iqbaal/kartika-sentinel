@@ -110,6 +110,7 @@ export async function casePdf(detail: CaseDetail): Promise<Uint8Array> {
   draw("Bukti teks", { bold: true, size: 12 });
   draw(detail.demo ? "Sumber: data demo sintetis." : "Sumber: masukan analis.");
   if (detail.sourceUrl) draw(detail.sourceUrl, { size: 9 });
+  if (detail.assessment.youtube?.note) draw(detail.assessment.youtube.note, { size: 9 });
   draw(detail.text);
   y -= 6;
   draw("Linimasa", { bold: true, size: 12 });

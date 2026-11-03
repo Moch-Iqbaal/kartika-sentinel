@@ -181,22 +181,26 @@ async function assertResolvedHost(hostname: string): Promise<void> {
   }
 }
 
-export async function safeFetchText(input: string): Promise<{
+export async function safeFetchText(
+  input: string,
+  options?: { accept?: string; userAgent?: string; timeoutMs?: number },
+): Promise<{
   finalUrl: string;
   contentType: string;
   body: string;
 }> {
   let current = input;
+  const timeoutMs = options?.timeoutMs ?? 5000;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
     const url = assertPublicHttpUrl(current);
     await assertResolvedHost(url.hostname);
     const response = await fetch(url, {
       method: "GET",
       redirect: "manual",
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(timeoutMs),
       headers: {
-        accept: "text/html,application/json,text/plain;q=0.9",
-        "user-agent": "KartikaSentinel/0.1 (fact-check triage; +https://localhost)",
+        accept: options?.accept ?? "text/html,application/json,text/plain;q=0.9",
+        "user-agent": options?.userAgent ?? "KartikaSentinel/0.1 (fact-check triage; +https://localhost)",
       },
     });
     if (response.status >= 300 && response.status < 400) {
@@ -216,6 +220,32 @@ export async function safeFetchText(input: string): Promise<{
     };
   }
   throw new UnsafeUrlError("Terlalu banyak redirect.");
+}
+
+/** POST JSON kecil ke host publik. Gagal atau redirect tidak dilempar, supaya transkrip opsional. */
+export async function safePostJson(input: string, payload: unknown, timeoutMs = 4000): Promise<string | null> {
+  const url = assertPublicHttpUrl(input);
+  await assertResolvedHost(url.hostname);
+  const response = await fetch(url, {
+    method: "POST",
+    redirect: "manual",
+    signal: AbortSignal.timeout(timeoutMs),
+    headers: {
+      accept: "application/json",
+      "content-type": "application/json",
+      "user-agent": "KartikaSentinel/0.1 (fact-check triage; +https://localhost)",
+    },
+    body: JSON.stringify(payload),
+  });
+  if (response.status >= 300 || !response.ok) {
+    await response.body?.cancel().catch(() => undefined);
+    return null;
+  }
+  try {
+    return (await readLimitedText(response)).body;
+  } catch {
+    return null;
+  }
 }
 
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
