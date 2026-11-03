@@ -57,7 +57,7 @@ test("bukti paling banyak tiga butir dan tidak mengandalkan satu sumber", () => 
   assert.match(two[2].text, /Belum ada sumber lain yang memberitakan/);
   assert.match(two[0].text, /TurnBackHoax/);
   assert.match(two[0].text, /2025/);
-  assert.match(two[1].text, /Cek Fakta/);
+  assert.match(two[1].text, /Tempo/);
   assert.equal(two[1].href, "https://cekfakta.com/focus/30019");
   assert.doesNotMatch(two.map((item) => item.text).join(" "), /n-gram|IndoBERT/);
   assert.doesNotMatch(two.map((item) => item.text).join(" "), /Hanya satu sumber/);
