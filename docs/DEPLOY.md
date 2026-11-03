@@ -7,7 +7,7 @@ Kuota gratis bisa berubah. Sebelum menekan deploy, baca angka yang tertulis di k
 ## 1. Supabase
 
 1. Buat proyek di organisasi gratis.
-2. Buka SQL Editor. Jalankan isi `supabase/migrations/0001_init.sql`, lalu `supabase/migrations/0002_analyst_notes.sql`.
+2. Buka SQL Editor. Jalankan berurutan `supabase/migrations/0001_init.sql`, `supabase/migrations/0002_analyst_notes.sql`, lalu `supabase/migrations/0003_hardening.sql`.
 3. Di Authentication, buat satu pengguna email untuk analis dan satu untuk admin. Kata sandi dipilih pemilik akun.
 4. Salin UUID pengguna dari tabel `auth.users`.
 5. Jalankan, dengan UUID dan email yang nyata:
