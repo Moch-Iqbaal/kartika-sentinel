@@ -43,6 +43,29 @@ const BROAD = new Set([
  * Kueri pendek. 20.000 dibaca "20 ribu". Kata yang terlalu umum (TNI, tentara)
  * kalah dari kata yang lebih khas, misalnya Gaza, supaya pencarian tidak melebar.
  */
+/**
+ * Dua atau tiga frasa klaim. Bukan hanya judul.
+ * Frasa pertama tetap yang paling khas. Berikutnya entitas atau sisa kata.
+ */
+export function claimQueries(text: string): string[] {
+  const stripped = text.replace(/(?:^|\n)\s*Kanal:\s*.+/g, " ");
+  const primary = factQuery(stripped);
+  const normalized = stripped
+    .replace(/\b(\d{1,3})\.000\b/g, "$1 ribu")
+    .replace(/\b(\d{2,3})000\b/g, "$1 ribu");
+  const queries = [primary];
+  const entities = [
+    ...normalized.matchAll(/\b[A-ZÀ-Ž]{2,}\b/g),
+    ...normalized.matchAll(/\b[A-ZÀ-Ž][a-zà-ž]{3,}\b/g),
+  ].map((match) => match[0].toLowerCase());
+  const uniqueEntities = [...new Set(entities)].filter((word) => !STOP.has(word) && !BROAD.has(word));
+  if (uniqueEntities.length >= 2) queries.push(uniqueEntities.slice(0, 3).join(" "));
+  const used = new Set(primary.split(" "));
+  const rest = contentTokens(normalized).filter((word) => !BROAD.has(word) && !used.has(word) && !/^(me|di|ter|ber|mem|men|meng|per)/.test(word));
+  if (rest.length >= 2) queries.push(rest.slice(0, 3).join(" "));
+  return [...new Set(queries.map((query) => query.trim()).filter((query) => query.split(/\s+/).length >= 2))].slice(0, 3);
+}
+
 export function factQuery(text: string): string {
   const normalized = text
     .replace(/\b(\d{1,3})\.000\b/g, "$1 ribu")
@@ -70,16 +93,18 @@ export function tokenHits(query: string, haystack: string): number {
   return contentTokens(query).filter((word) => words.has(word)).length;
 }
 
+const OUTLET_WORDS = new Set([
+  "kompas", "kompastv", "detik", "tempo", "antara", "liputan", "liputan6", "tirto",
+  "kumparan", "tribun", "tribunnews", "republika", "metrotv", "tvone", "cnnindonesia",
+]);
+
 export function relevantHit(query: string, haystack: string): boolean {
-  const queryWords = contentTokens(query);
-  if (queryWords.length === 0) return false;
-  const hits = tokenHits(query, haystack);
-  if (hits >= 2) return true;
-  if (queryWords.length <= 3 && hits >= 1) {
-    const shared = queryWords.filter((word) => contentTokens(haystack).includes(word));
-    return shared.some((word) => word.length >= 5);
-  }
-  return false;
+  const queryWords = contentTokens(query).filter((word) => !OUTLET_WORDS.has(word));
+  if (queryWords.length < 2) return false;
+  const haystackWords = new Set(contentTokens(haystack).filter((word) => !OUTLET_WORDS.has(word)));
+  const shared = [...new Set(queryWords.filter((word) => haystackWords.has(word)))];
+  const need = queryWords.length <= 2 ? queryWords.length : Math.max(2, Math.ceil(queryWords.length * 0.6));
+  return shared.length >= need;
 }
 
 export function normalizeFactDate(value: string | null | undefined): string | null {
@@ -285,6 +310,65 @@ export function parseAntara(body: string, query: string): ExternalFact[] {
   return rankFacts(query, items);
 }
 
+export function parseKompasSearch(body: string, query: string): ExternalFact[] {
+  const pattern = /href="(https:\/\/www\.kompas\.com\/cekfakta\/read\/(\d{4})\/(\d{2})\/(\d{2})\/[^"]+)"[\s\S]{0,800}?alt="([^"]+)"/gi;
+  const items: Array<ExternalFact & { haystack: string }> = [];
+  for (const match of body.matchAll(pattern)) {
+    const title = plainText(match[5]);
+    if (!/hoaks|cek fakta|cekfakta|klarifikasi|fakta/i.test(title)) continue;
+    items.push({
+      source: "Kompas Cek Fakta",
+      title,
+      url: match[1].split("?")[0],
+      rating: /hoaks/i.test(title) ? "Hoaks" : "Cek fakta",
+      publisher: "Kompas",
+      publishedAt: `${match[2]}-${match[3]}-${match[4]}`,
+      haystack: title,
+    });
+  }
+  return rankFacts(query, items);
+}
+
+export function parseDetikSearch(body: string, query: string): ExternalFact[] {
+  const pattern = /href="(https:\/\/[^"]*detik\.com\/[^"]+\/d-\d+\/[^"?#]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+  const items: Array<ExternalFact & { haystack: string }> = [];
+  for (const match of body.matchAll(pattern)) {
+    const title = plainText(match[2]);
+    if (title.length < 12 || !/hoaks|cek fakta|klarifikasi/i.test(title)) continue;
+    items.push({
+      source: "Detik",
+      title,
+      url: match[1],
+      rating: /hoaks/i.test(title) ? "Hoaks" : "Cek fakta",
+      publisher: "Detik",
+      publishedAt: null,
+      haystack: title,
+    });
+  }
+  return rankFacts(query, items);
+}
+
+export function parseLiputanRss(body: string, query: string): ExternalFact[] {
+  const pattern = /<item\b[\s\S]*?<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>[\s\S]*?<link>([^<]+)<\/link>/gi;
+  const items: Array<ExternalFact & { haystack: string }> = [];
+  for (const match of body.matchAll(pattern)) {
+    const title = plainText(match[1]);
+    const url = match[2].trim();
+    if (!title || !/^https?:\/\//.test(url)) continue;
+    if (!/liputan6\.com\/cek-fakta/i.test(url) && !/hoaks|cek fakta/i.test(title)) continue;
+    items.push({
+      source: "Liputan6 Cek Fakta",
+      title,
+      url: url.split("?")[0],
+      rating: /hoaks/i.test(title) ? "Hoaks" : "Cek fakta",
+      publisher: "Liputan6",
+      publishedAt: null,
+      haystack: title,
+    });
+  }
+  return rankFacts(query, items);
+}
+
 export function parseKomdigi(body: string, query: string): ExternalFact[] {
   if (/access denied/i.test(body.slice(0, 800))) return [];
   const pattern = /<a[^>]+href="(https?:\/\/(?:www\.)?komdigi\.go\.id\/[^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
@@ -320,8 +404,14 @@ export function dedupeFacts(items: ExternalFact[]): ExternalFact[] {
 export function sourceFamily(item: { source: string; url?: string | null; publisher?: string | null }): string {
   const blob = `${item.source} ${item.url ?? ""} ${item.publisher ?? ""}`.toLowerCase();
   if (blob.includes("turnbackhoax") || blob.includes("mafindo")) return "TurnBackHoax";
-  if (blob.includes("cekfakta") || blob.includes("cek fakta")) return "Cek Fakta";
+  if (blob.includes("kompas")) return "Kompas";
+  if (blob.includes("detik")) return "Detik";
+  if (blob.includes("liputan")) return "Liputan6";
+  if (blob.includes("tempo")) return "Tempo";
+  if (blob.includes("tirto")) return "Tirto";
+  if (blob.includes("kumparan")) return "Kumparan";
   if (blob.includes("antaranews") || blob.includes("antara")) return "Antara";
+  if (blob.includes("cekfakta") || blob.includes("cek fakta")) return "Cek Fakta";
   if (blob.includes("komdigi") || blob.includes("kominfo")) return "Komdigi";
   if (item.publisher?.trim()) return item.publisher.trim();
   return item.source.trim() || "Sumber lain";

@@ -99,7 +99,7 @@ export async function POST(request: Request) {
     card.assessment.ai = applyImageReport(card.assessment.ai, image);
     if (youtubeNote) card.assessment.youtube = youtubeNote;
     const found = await collectExternalFacts(card.clean);
-    card.assessment = { ...card.assessment, factCheck: { checkedAt: found.checkedAt } };
+    card.assessment = { ...card.assessment, factCheck: { checkedAt: found.checkedAt, sources: found.sources } };
     const external = found.external;
     const id = await saveScoredAlert({
       platform: body.kind === "gambar" ? "gambar" : body.kind === "url" ? "url" : "masukan-analis",

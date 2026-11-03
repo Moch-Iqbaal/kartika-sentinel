@@ -47,6 +47,7 @@ export type HoaxAssessment = {
   /** Waktu pencarian cek fakta langsung, saat analisis. */
   factCheck?: {
     checkedAt: string;
+    sources?: { name: string; state: string; detail?: string }[];
   } | null;
 };
 

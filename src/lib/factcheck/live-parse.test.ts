@@ -4,7 +4,11 @@ import {
   cekfaktaQuery,
   checkedAtLabel,
   factDateLabel,
+  claimQueries,
   factQuery,
+  parseDetikSearch,
+  parseKompasSearch,
+  parseLiputanRss,
   normalizeFactDate,
   parseAntara,
   parseCekfakta,
@@ -63,6 +67,12 @@ const ANTARA = `
 <span class="text-dark text-capitalize">1 Mei 2026</span>
 </a>`;
 
+test("dua atau tiga frasa klaim, bukan hanya judul", () => {
+  const queries = claimQueries("Blak-blakan dr Tirta Ngaku Dapat DM dari 2 Wamen soal Insentif MBG. Kanal: Tribunnews");
+  assert.ok(queries.length >= 2 && queries.length <= 3);
+  assert.match(queries.join(" "), /tirta|mbg|insentif/);
+});
+
 test("20.000 dibaca sebagai 20 ribu, bukan 000", () => {
   assert.equal(
     factQuery("Sebarkan! 20.000 prajurit TNI sudah diterbangkan ke Gaza sebagai pasukan perdamaian."),
@@ -95,8 +105,25 @@ test("parser menolak artikel yang tidak nyambung dan menyimpan tanggal", () => {
   assert.equal(antara.length, 1);
   assert.equal(antara[0].publishedAt, "2025-04-29");
   assert.equal(sourceFamily(tbh[0]), "TurnBackHoax");
-  assert.equal(sourceFamily(cek[0]), "Cek Fakta");
+  assert.equal(sourceFamily(cek[0]), "Tempo");
   assert.equal(sourceFamily(antara[0]), "Antara");
+});
+
+test("kompas, detik, dan liputan6 hanya menyimpan yang nyambung", () => {
+  const kompas = `<a href="https://www.kompas.com/cekfakta/read/2026/10/27/190800482/hoaks-mbg"><img alt="Hoaks Kompas Beritakan Prabowo Hentikan MBG" /></a>
+    <a href="https://www.kompas.com/cekfakta/read/2026/01/01/1/cuaca"><img alt="Cek Fakta Cuaca Jakarta" /></a>`;
+  const rows = parseKompasSearch(kompas, "prabowo hentikan mbg");
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].publisher, "Kompas");
+  assert.equal(rows[0].publishedAt, "2026-10-27");
+  const detik = `<a href="https://news.detik.com/berita/d-1/hoaks-insentif-mbg">Hoaks insentif MBG Rp1 triliun</a>
+    <a href="https://news.detik.com/berita/d-2/inflasi">Inflasi pangan naik</a>`;
+  assert.equal(parseDetikSearch(detik, "insentif mbg").length, 1);
+  const rss = `<item><title><![CDATA[Cek Fakta: Hoaks Insentif MBG]]></title><link>https://www.liputan6.com/cek-fakta/read/1/hoaks-insentif</link></item>
+    <item><title>Berita bola</title><link>https://www.liputan6.com/bola/read/2/bola</link></item>`;
+  const liputan = parseLiputanRss(rss, "insentif mbg");
+  assert.equal(liputan.length, 1);
+  assert.equal(liputan[0].source, "Liputan6 Cek Fakta");
 });
 
 test("Komdigi yang menolak akses tidak mengarang artikel", () => {

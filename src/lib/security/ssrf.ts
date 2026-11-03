@@ -21,6 +21,8 @@ const ALLOWED_TYPES = [
   "application/xhtml+xml",
   "application/xml",
   "text/xml",
+  "application/rss+xml",
+  "application/atom+xml",
 ];
 
 /**
