@@ -14,7 +14,7 @@ export type ImageMetadataReport = {
   disclaimer: string;
 };
 
-const DISCLAIMER =
+export const IMAGE_METADATA_DISCLAIMER =
   "Pemeriksaan ini hanya membaca metadata dan rangkaian byte. Ia tidak menilai piksel, tidak memverifikasi tanda tangan C2PA, dan tidak membuktikan gambar asli atau palsu.";
 
 const GENERATORS: Array<[RegExp, string]> = [
@@ -55,6 +55,6 @@ export function inspectImage(bytes: Uint8Array, contentType: string): ImageMetad
     generatorHint,
     c2paMarker,
     signals,
-    disclaimer: DISCLAIMER,
+    disclaimer: IMAGE_METADATA_DISCLAIMER,
   };
 }

@@ -7,6 +7,7 @@ const links = [
   { href: "/analisis", label: "Analisis" },
   { href: "/ontologi", label: "Ontologi" },
   { href: "/audit", label: "Audit" },
+  { href: "/panduan", label: "Panduan Istilah" },
 ];
 
 export async function Shell({ children }: { children: React.ReactNode }) {

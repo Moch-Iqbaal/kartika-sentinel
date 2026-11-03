@@ -6,6 +6,7 @@ import type { Session } from "@/lib/auth/token";
 import { embedText } from "@/lib/embed/hashing";
 import type { ExternalFact, FactCheck } from "@/lib/factcheck/types";
 import { recommendation } from "@/lib/format";
+import { AUDIT_LIST_LIMIT, DEMO_RETENTION_DAYS } from "@/lib/limits";
 import { hashHandle } from "@/lib/security/redact";
 import { riskBand, viralityFromMetrics, type MetricPoint } from "@/lib/scoring/risk";
 import { parseCsv } from "@/lib/text/csv";
@@ -407,7 +408,7 @@ export async function saveAnalystNote(session: Session, alertId: string, note: s
 
 export async function listAudit(session: Session): Promise<AuditEntry[]> {
   if (session.role !== "admin") throw new Error("Log audit hanya untuk admin.");
-  const rows = unwrap(await supabaseAdmin().from("audit_log").select("id, table_name, row_id, action, actor, diff, created_at").order("id", { ascending: false }).limit(80));
+  const rows = unwrap(await supabaseAdmin().from("audit_log").select("id, table_name, row_id, action, actor, diff, created_at").order("id", { ascending: false }).limit(AUDIT_LIST_LIMIT));
   return (rows as Record<string, unknown>[]).map((row) => ({
     id: Number(row.id),
     tableName: String(row.table_name),
@@ -459,7 +460,7 @@ export async function rescoreAlert(session: Session, alertId: string, card: Scor
 
 export async function purgeOldDemo(session: Session): Promise<number> {
   if (session.role !== "admin") throw new Error("Retensi hanya untuk admin.");
-  const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+  const cutoff = new Date(Date.now() - DEMO_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
   const posts = unwrap(await supabaseAdmin().from("posts").select("id, posted_at").eq("demo", true).lt("posted_at", cutoff)) as { id: string }[];
   let removed = 0;
   for (const post of posts) {

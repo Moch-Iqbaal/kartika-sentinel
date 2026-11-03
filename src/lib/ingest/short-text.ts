@@ -16,7 +16,7 @@ export const MIN_RELIABLE_CHARS = 200;
 export const SHORT_TEXT_WARNING = "Teks terlalu pendek, skor tidak andal.";
 
 /** Sisa keyakinan yang dipertahankan bila tubuh artikel di bawah ambang. */
-const SHORT_TEXT_KEEP = 0.25;
+export const SHORT_TEXT_KEEP = 0.25;
 
 export type ShortTextNote = {
   warning: string;

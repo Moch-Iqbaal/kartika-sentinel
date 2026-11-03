@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { computeRisk, viralityFromMetrics } from "./risk.ts";
+import {
+  BAND_KRITIS_MIN,
+  BAND_PRIORITAS_MIN,
+  EFFECTIVE_VIRALITY_FLOOR,
+  computeRisk,
+  effectiveVirality,
+  riskBand,
+  viralityFromMetrics,
+} from "./risk.ts";
 
 test("risiko tetap di antara 0 dan 1", () => {
   const score = computeRisk(0.9, 0.95, 1);
@@ -12,6 +20,14 @@ test("risiko tetap di antara 0 dan 1", () => {
 test("viralitas nol tidak memaksa risiko menjadi nol", () => {
   const quiet = computeRisk(0.8, 0.9, 0);
   assert.ok(quiet > 0.2);
+  assert.equal(effectiveVirality(0), EFFECTIVE_VIRALITY_FLOOR);
+  assert.equal(computeRisk(1, 1, 0), EFFECTIVE_VIRALITY_FLOOR);
+});
+
+test("pita mengikuti ambang risiko, bukan skor hoaks", () => {
+  assert.equal(riskBand(BAND_KRITIS_MIN), "kritis");
+  assert.equal(riskBand(BAND_PRIORITAS_MIN), "prioritas");
+  assert.equal(riskBand(BAND_PRIORITAS_MIN - 0.001), "pantau");
 });
 
 test("jejak sebar menaikkan viralitas", () => {

@@ -79,6 +79,11 @@ export const TOPICS: TopicDef[] = [
   },
 ];
 
+/** Kemiripan kosinus minimum bila tidak ada kata kunci yang kena. */
+export const TOPIC_SIMILARITY_MIN = 0.42;
+/** Lantai sensitivitas bila tidak ada topik yang cocok. Tetap di bawah topik yang berbobot. */
+export const NO_TOPIC_SENSITIVITY = 0.35;
+
 export function matchTopics(text: string): TopicHit[] {
   const vector = embedText(text);
   const lower = text.toLowerCase();
@@ -86,7 +91,7 @@ export function matchTopics(text: string): TopicHit[] {
   for (const topic of TOPICS) {
     const keywordsHit = topic.keywords.filter((keyword) => lower.includes(keyword));
     const similarity = cosine(vector, embedText(`${topic.prototype} ${topic.keywords.join(" ")}`));
-    if (keywordsHit.length === 0 && similarity < 0.42) continue;
+    if (keywordsHit.length === 0 && similarity < TOPIC_SIMILARITY_MIN) continue;
     const keywordScore = Math.min(1, keywordsHit.length / 2);
     hits.push({
       ...topic,
@@ -99,6 +104,6 @@ export function matchTopics(text: string): TopicHit[] {
 
 /** Jika tidak ada topik, lantai 0,35 supaya hoaks umum tidak hilang, tetapi tetap di bawah topik sensitif. */
 export function topicSensitivity(hits: TopicHit[]): number {
-  if (hits.length === 0) return 0.35;
+  if (hits.length === 0) return NO_TOPIC_SENSITIVITY;
   return Math.min(1, Math.max(...hits.map((hit) => hit.sensitivity * Math.min(1, hit.score))));
 }

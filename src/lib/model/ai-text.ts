@@ -1,7 +1,14 @@
 import type { ImageMetadataReport } from "../media/metadata";
+import {
+  AI_SCORE_CAP,
+  AI_TEXT_DISCLAIMER,
+  aiConfidence,
+  type AiConfidence,
+} from "./ai-confidence";
 import { stylometrySignals } from "./stylometry";
 
-export type AiConfidence = "rendah" | "sedang" | "tinggi";
+export type { AiConfidence } from "./ai-confidence";
+export { AI_CONFIDENCE_SEDANG_MIN, AI_CONFIDENCE_TINGGI_MIN, AI_SCORE_CAP, AI_TEXT_DISCLAIMER, aiConfidence } from "./ai-confidence";
 
 export type AiTextFlag = {
   flagged: boolean;
@@ -11,15 +18,6 @@ export type AiTextFlag = {
   signals: { name: string; detail: string }[];
   disclaimer: string;
 };
-
-const DISCLAIMER =
-  "Indikasi gaya dan metadata, bukan deteksi deepfake dan bukan perplexity model bahasa. Keyakinan rendah berarti sinyal lemah. Analis harus melihat berkas asli.";
-
-function confidenceOf(score: number): AiConfidence {
-  if (score >= 0.62) return "tinggi";
-  if (score >= 0.4) return "sedang";
-  return "rendah";
-}
 
 function cues(text: string): { name: string; detail: string; weight: number }[] {
   const lower = text.toLowerCase();
@@ -48,15 +46,15 @@ export function detectAiText(text: string): AiTextFlag {
       weight: 0.1,
     });
   }
-  const capped = Math.min(0.9, score);
-  const confidence = confidenceOf(capped);
+  const capped = Math.min(AI_SCORE_CAP, score);
+  const confidence = aiConfidence(capped);
   return {
     flagged: confidence !== "rendah" && found.length > 0,
     score: capped,
     confidence,
     reasons: found.map((item) => item.detail),
     signals: found.map((item) => ({ name: item.name, detail: item.detail })),
-    disclaimer: DISCLAIMER,
+    disclaimer: AI_TEXT_DISCLAIMER,
   };
 }
 
@@ -64,9 +62,9 @@ export function applyImageReport(flag: AiTextFlag, image: ImageMetadataReport | 
   if (!image?.checked) return flag;
   const reasons = [...flag.reasons, ...image.signals];
   let score = flag.score;
-  if (image.generatorHint) score = Math.min(0.9, score + 0.34);
-  else if (image.c2paMarker) score = Math.min(0.9, score + 0.08);
-  const confidence = image.generatorHint ? "tinggi" : confidenceOf(score);
+  if (image.generatorHint) score = Math.min(AI_SCORE_CAP, score + 0.34);
+  else if (image.c2paMarker) score = Math.min(AI_SCORE_CAP, score + 0.08);
+  const confidence = image.generatorHint ? "tinggi" : aiConfidence(score);
   return {
     flagged: Boolean(image.generatorHint) || confidence !== "rendah",
     score,

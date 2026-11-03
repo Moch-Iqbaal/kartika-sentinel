@@ -5,6 +5,15 @@ import { probeLocalIndoBert, type LocalModelScore, type ModelAvailability } from
 
 export type HoaxEngine = "indobert-local" | "linear-ngram" | "heuristic";
 
+/**
+ * Selisih absolut antara probabilitas IndoBERT dan heuristik.
+ * Di atas atau sama dengan angka ini, berkas meminta analis membaca keduanya.
+ * Perbandingan ini bukan IndoBERT lawan model linier. Skor utama tetap satu mesin, tidak dicampur.
+ */
+export const ENGINE_DIVERGENCE = 0.35;
+export const ENGINE_DIVERGENCE_WARNING =
+  "IndoBERT dan heuristik berselisih jauh. Baca keduanya. Jangan mengandalkan satu angka.";
+
 export type HoaxAssessment = {
   probability: number;
   engine: HoaxEngine;

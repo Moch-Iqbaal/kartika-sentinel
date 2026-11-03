@@ -11,6 +11,7 @@ import { recommendation } from "@/lib/format";
 import type { HoaxAssessment } from "@/lib/model/classify";
 import type { AiTextFlag } from "@/lib/model/ai-text";
 import type { TopicHit } from "@/lib/ontology/topics";
+import { AUDIT_LIST_LIMIT, DEMO_RETENTION_DAYS } from "@/lib/limits";
 import { hashHandle } from "@/lib/security/redact";
 import { riskBand, viralityFromMetrics, type MetricPoint } from "@/lib/scoring/risk";
 import { parseCsv } from "@/lib/text/csv";
@@ -689,7 +690,7 @@ export function updateCaseStatus(session: Session, alertId: string, status: Case
 export function listAudit(session: Session): AuditEntry[] {
   if (session.role !== "admin") throw new Error("Log audit hanya untuk admin.");
   const rows = db().prepare(
-    "select id, table_name, row_id, action, actor, diff, created_at from audit_log order by id desc limit 80",
+    `select id, table_name, row_id, action, actor, diff, created_at from audit_log order by id desc limit ${AUDIT_LIST_LIMIT}`,
   ).all() as Row[];
   return rows.map((row) => ({
     id: num(row.id),
@@ -704,7 +705,7 @@ export function listAudit(session: Session): AuditEntry[] {
 
 export function purgeOldDemo(session: Session): number {
   if (session.role !== "admin") throw new Error("Retensi hanya untuk admin.");
-  const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
+  const cutoff = Date.now() - DEMO_RETENTION_DAYS * 24 * 60 * 60 * 1000;
   const posts = db().prepare("select id, posted_at from posts where demo = 1").all() as Row[];
   let removed = 0;
   for (const post of posts) {
@@ -720,7 +721,7 @@ export function purgeOldDemo(session: Session): number {
     removed += 1;
   }
   if (removed > 0) {
-    writeAudit(db(), "posts", "purge", "DELETE", session.sub, { removed, olderThanDays: 90 });
+    writeAudit(db(), "posts", "purge", "DELETE", session.sub, { removed, olderThanDays: DEMO_RETENTION_DAYS });
   }
   return removed;
 }

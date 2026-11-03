@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { hashHandle, redactSensitive } from "./redact.ts";
+import { displayHandle, hashHandle, redactSensitive } from "./redact.ts";
 
 test("menyembunyikan nomor, NIK, dan alamat", () => {
   const clean = redactSensitive(
@@ -11,6 +11,12 @@ test("menyembunyikan nomor, NIK, dan alamat", () => {
   assert.match(clean, /nomor disamarkan/);
   assert.match(clean, /nik disamarkan/);
   assert.match(clean, /alamat disamarkan/);
+});
+
+test("tampilan pegangan hanya awalan hash", () => {
+  assert.equal(displayHandle(null), "tanpa pegangan");
+  assert.equal(displayHandle(""), "tanpa pegangan");
+  assert.equal(displayHandle("0123456789abcdef"), "sid:0123456789");
 });
 
 test("hash pegangan tidak sama dengan teks asli", () => {
