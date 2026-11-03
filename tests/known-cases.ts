@@ -33,7 +33,14 @@ export const KNOWN_FALSE_POSITIVES: KnownCase[] = [
     title: "Video YouTube berita TNI/Polri soal MBG",
     detail: "https://www.youtube.com/watch?v=0uecxWhlS-w",
     before: "IndoBERT 62,4% pada berita ini, dan angka itu terbaca sebagai kemungkinan hoaks.",
-    now: "Kanal Kompas TV adalah asal video, bukan berita lain. Angka 62,4% tetap hoaks. Bila penilaian lain jauh berbeda, keyakinan rendah.",
+    now: "Kanal Kompas TV adalah asal video, bukan berita lain. Penilaian lain jauh di bawah 50%, jadi vonis Kemungkinan FAKTA dengan keyakinan rendah.",
+  },
+  {
+    id: "youtube-yonif-143",
+    title: "450 Prajurit TNI AD Yonif 143 kembali ke Lampung",
+    detail: "https://www.youtube.com/watch?v=YEfOFbJSuYQ",
+    before: "IndoBERT 99,3% pada berita Tribun ini, dan angka itu terbaca sebagai kemungkinan hoaks.",
+    now: "Tidak ada pemeriksaan fakta hoaks. Penilaian cadangan sekitar 34% tidak sejalan, jadi vonis Kemungkinan FAKTA dengan keyakinan rendah.",
   },
   {
     id: "antara-mbg",

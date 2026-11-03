@@ -4,6 +4,8 @@ import { HOAX_CALL_MIN } from "./bands";
 import { evidenceStance, independentReports } from "./evidence-stance";
 import { percent } from "../format";
 import { countsAsPrimary } from "../factcheck/recency";
+import { publicSourceName } from "../factcheck/public-name";
+import { plainNewsReport } from "./news-prior";
 import { OPINION_SENTENCE } from "./opinion";
 import { SHORT_WORD_VERDICT } from "../ingest/short-text";
 import { ENGINE_DIVERGENCE } from "../model/divergence";
@@ -12,9 +14,11 @@ import type { RiskBand } from "../scoring/risk";
 /**
  * Vonis hanya dua: HOAKS atau FAKTA.
  * Urutan: pemeriksaan fakta hoaks, lalu fakta/berita lain, lalu kritik kebijakan, lalu angka.
- * Angka memakai IndoBERT bila ada, kalau tidak angka yang tersimpan.
+ * Tanpa pemeriksaan fakta hoaks, angka tinggi sendirian tidak cukup bila penilaian lain tidak sejalan,
+ * atau bila teksnya berita dari kanal berita yang dikenal tanpa ajakan sebar.
+ * Pada kedua keadaan itu, hoaks hanya bila kedua angka 0,5 atau lebih.
  * Keyakinan rendah menjelaskan teks pendek, dua penilaian yang tidak sejalan, atau bukti sedikit.
- * Kanal sendiri dan domain artikel sendiri bukan berita penguat.
+ * Kanal sendiri dan domain artikel sendiri bukan berita penguat. Kanal berita hanya prior ringan.
  * Artikel lama tidak mengubah vonis, kecuali kemiripannya hampir sama.
  */
 
@@ -55,6 +59,9 @@ export type RingkasanInput = {
   contentPublishedAt?: string | null;
   /** Untuk uji. Kosong berarti hari ini. */
   now?: Date;
+  /** Teks yang dinilai, untuk prior kanal berita. */
+  text?: string;
+  sourceUrl?: string | null;
 };
 
 export type Ringkasan = {
@@ -127,11 +134,31 @@ function otherOutlets(input: RingkasanInput): string[] {
   return names(input.otherOutlets);
 }
 
+function backupScore(input: RingkasanInput): number | null {
+  return finite(input.linear) ?? finite(input.heuristic);
+}
+
+/** Satu angka tinggi tidak boleh menjadi hoaks bila cadangan tidak ikut, atau teksnya berita biasa. */
+export function indoBertNeedsAgreement(input: RingkasanInput): boolean {
+  if (hasHoaxCheck(input)) return false;
+  if (finite(input.indobert) == null) return false;
+  if (backupScore(input) == null) return false;
+  return enginesDisagree(input) || plainNewsReport(input.text ?? "", input.sourceUrl);
+}
+
+function bothScoresCallHoax(input: RingkasanInput): boolean {
+  const primary = finite(input.indobert);
+  const backup = backupScore(input);
+  if (primary == null || backup == null) return false;
+  return primary >= HOAX_CALL_MIN && backup >= HOAX_CALL_MIN;
+}
+
 export function decideVerdict(input: RingkasanInput): SummaryVerdict {
   if (input.unscored) return "unscored";
   if (hasHoaxCheck(input)) return "hoax";
   if (hasValidCheck(input) || otherOutlets(input).length > 0) return "not-hoax";
   if (input.opinion) return "not-hoax";
+  if (indoBertNeedsAgreement(input)) return bothScoresCallHoax(input) ? "hoax" : "not-hoax";
   return scoreVerdict(verdictScore(input));
 }
 
@@ -139,15 +166,16 @@ function analystLine(): string {
   return "Keputusan akhir ada pada analis.";
 }
 
-function checkerLine(names: string[], kind: "hoax" | "valid"): string {
-  if (names.length === 0) {
+function checkerLine(rawNames: string[], kind: "hoax" | "valid"): string {
+  const shown = names(rawNames).map((name) => publicSourceName(name));
+  if (shown.length === 0) {
     return kind === "hoax"
       ? "Pemeriksaan fakta menyebut ini hoaks."
       : "Pemeriksaan fakta menyebut ini benar.";
   }
   return kind === "hoax"
-    ? `${names[0]} menyebut ini hoaks.`
-    : `${names[0]} menyebut ini benar.`;
+    ? `${shown[0]} menyebut ini hoaks.`
+    : `${shown[0]} menyebut ini benar.`;
 }
 
 export function buildRingkasan(input: RingkasanInput): Ringkasan {
@@ -190,7 +218,11 @@ export function buildRingkasan(input: RingkasanInput): Ringkasan {
   else if (verdict === "not-hoax" && hasValidCheck(input)) lead = checkerLine(names(input.validCheckers), "valid");
   else if (verdict === "not-hoax" && outlets.length > 0) lead = `${outlets[0]} memberitakan hal yang sama.`;
   else if (verdict === "not-hoax" && input.opinion) lead = OPINION_SENTENCE;
-  else lead = `Angka kemiripan hoaks ${score}.`;
+  else if (verdict === "not-hoax" && indoBertNeedsAgreement(input)) {
+    lead = plainNewsReport(input.text ?? "", input.sourceUrl)
+      ? "Ini terbaca sebagai berita dari kanal berita, dan tidak ada pemeriksaan fakta yang menyebut hoaks."
+      : "Dua penilaian tidak sejalan, dan tidak ada pemeriksaan fakta yang menyebut hoaks.";
+  } else lead = `Angka kemiripan hoaks ${score}.`;
 
   const reason = confidenceReason ? `Keyakinan rendah: ${confidenceReason}.` : null;
   const sentences = [lead, reason, analystLine()].filter((sentence): sentence is string => Boolean(sentence));
@@ -204,9 +236,7 @@ export function buildRingkasan(input: RingkasanInput): Ringkasan {
 }
 
 function factName(source: string, publisher: string | null | undefined): string {
-  const pub = publisher?.trim();
-  if (source === "Cek Fakta" && pub && !/cek fakta/i.test(pub)) return `Cek Fakta ${pub}`;
-  return pub || source;
+  return publicSourceName(source, publisher);
 }
 
 export function ringkasanFromCase(detail: CaseDetail, now = new Date()): Ringkasan {
@@ -255,5 +285,7 @@ export function ringkasanFromCase(detail: CaseDetail, now = new Date()): Ringkas
       .map((item) => item.name),
     contentPublishedAt,
     now,
+    text: detail.text,
+    sourceUrl: detail.sourceUrl,
   });
 }

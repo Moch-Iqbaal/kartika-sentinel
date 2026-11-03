@@ -8,6 +8,7 @@ import {
 } from "./bands";
 import { sourceFamily } from "../factcheck/live-parse";
 import { hasHttpUrl } from "../factcheck/order";
+import { publicSourceName } from "../factcheck/public-name";
 import { countsAsPrimary, isOldEvidence, plainWhen } from "../factcheck/recency";
 import type { ExternalFact, FactMatch } from "../factcheck/types";
 
@@ -89,7 +90,8 @@ function factBullet(item: ExternalFact, contentPublishedAt: string | null | unde
 
 function corpusBullet(item: FactMatch, contentPublishedAt: string | null | undefined, now: Date): EvidenceBullet {
   const when = whenLabel(item.publishedAt, contentPublishedAt, now);
-  const head = when ? `${item.source}, ${when}` : item.source;
+  const source = publicSourceName(item.source);
+  const head = when ? `${source}, ${when}` : source;
   return {
     text: `Artikel lama. ${head}: ${item.title}`,
     href: item.url && hasHttpUrl(item.url) ? item.url : null,

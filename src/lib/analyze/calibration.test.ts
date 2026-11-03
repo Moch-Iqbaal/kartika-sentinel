@@ -69,12 +69,13 @@ test("kanal video sendiri bukan berita lain", () => {
   assert.equal(other[0]?.name, "Antara");
 });
 
-test("video Kompas 62,4 persen menjadi hoaks karena kanalnya bukan penguat", () => {
+test("video Kompas 62,4 persen tidak menjadi hoaks bila cadangan tidak sejalan", () => {
   const text = buildRingkasan(input());
-  assert.equal(decideVerdict(input()), "hoax");
-  assert.equal(text.headline, "Kemungkinan HOAKS");
+  assert.equal(decideVerdict(input()), "not-hoax");
+  assert.equal(text.headline, "Kemungkinan FAKTA");
   assert.equal(text.confidenceReason, "dua penilaian tidak sejalan");
-  assert.doesNotMatch(text.sentences.join(" "), /memberitakan hal yang sama|Belum bisa dipastikan/);
+  assert.match(text.sentences[0], /tidak ada pemeriksaan fakta yang menyebut hoaks/);
+  assert.doesNotMatch(text.sentences.join(" "), /memberitakan hal yang sama|Belum bisa dipastikan|umn-cyber|IndoBERT/);
 });
 
 test("video Tribun 99,3 persen mengikuti angka bila tidak ada sumber lain", () => {
@@ -106,4 +107,37 @@ test("pemeriksaan fakta hoaks mengalahkan angka rendah", () => {
   }));
   assert.equal(text.headline, "Kemungkinan HOAKS");
   assert.match(text.sentences[0], /TurnBackHoax menyebut ini hoaks/);
+});
+
+const YONIF_TEXT = [
+  "450 Prajurit TNI AD Yonif 143 Kembali ke Lampung Usai Bertugas di Perbatasan RI-PNG",
+  "Kanal: Tribunnews",
+  "Download aplikasi berita TribunX di Play Store atau App Store untuk dapatkan pengalaman baru TRIBUN-VIDEO.COM - Tribunners, sebanyak 450 prajurit TNI AD Yonif 143 Tri Wira Eka Jaya kembali ke Lampung setelah menyelesaikan tugas pengamanan perbatasan Indonesia-Papua Nugini. Kedatangan mereka disambut di Pelabuhan Panjang, Bandar Lampung, Selasa (3/11/2026). Pjs Kapenrem 043 Gatam, Kapten Denny Charliansyah, memastikan seluruh 450 personel kembali dengan selamat dan jumlah yang sama seperti saat diberangkatkan.",
+].join("\n\n");
+
+test("berita Tribun kepulangan Yonif 143 tidak menjadi hoaks dari angka tinggi sendirian", () => {
+  const card = input({
+    hoaxScore: 0.993,
+    indobert: 0.993,
+    linear: 0.3416,
+    heuristic: 0.22,
+    textChars: YONIF_TEXT.length,
+    text: YONIF_TEXT,
+    sourceUrl: "https://www.youtube.com/watch?v=YEfOFbJSuYQ",
+  });
+  const text = buildRingkasan(card);
+  assert.equal(decideVerdict(card), "not-hoax");
+  assert.equal(text.headline, "Kemungkinan FAKTA");
+  assert.equal(text.confidenceReason, "dua penilaian tidak sejalan");
+  assert.match(text.sentences[0], /berita dari kanal berita/);
+  assert.doesNotMatch(text.sentences.join(" "), /memberitakan hal yang sama|umn-cyber|IndoBERT|n-gram/);
+  const named = buildRingkasan(input({
+    hoaxScore: 0.2,
+    indobert: 0.2,
+    linear: 0.2,
+    hoaxCheckers: ["umn-cyber/mafindo-2024"],
+  }));
+  assert.equal(named.headline, "Kemungkinan HOAKS");
+  assert.match(named.sentences[0], /Mafindo menyebut ini hoaks/);
+  assert.doesNotMatch(named.sentences.join(" "), /umn-cyber/);
 });

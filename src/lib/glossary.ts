@@ -250,8 +250,8 @@ export function glossaryGroups(): GlossaryGroup[] {
         term(
           "vonis-laporan",
           "Kemungkinan HOAKS / Kemungkinan FAKTA",
-          "Hanya dua pilihan: kemungkinan hoaks atau kemungkinan fakta. Artikel lama tidak membalik berita baru, kecuali klaimnya hampir sama.",
-          `Pemeriksaan fakta hoaks menang dulu. Berita dari media lain, atau pemeriksaan yang menyebut benar, menjadi fakta. Selain itu angka ${percent(HOAX_CALL_MIN)} ke atas adalah hoaks. Kanal video sendiri tidak dihitung sebagai berita lain. Bukti berumur ${RECENCY_OLD_DAYS} hari atau lebih dibanding tanggal berita (atau dibanding hari ini bila berita tak bertanggal) hanya mengubah vonis bila kemiripan minimal ${decimal(NEAR_SAME_SIMILARITY)}. Selain itu tampil sebagai Artikel lama. Keyakinan rendah menjelaskan teks pendek, penilaian yang tidak sejalan, atau bukti sedikit.`,
+          "Hanya dua pilihan: kemungkinan hoaks atau kemungkinan fakta. Angka tinggi sendirian tidak cukup bila penilaian lain tidak sejalan dan tidak ada yang menyebut hoaks.",
+          `Pemeriksaan fakta hoaks menang dulu. Berita dari media lain, atau pemeriksaan yang menyebut benar, menjadi fakta. Bila dua penilaian selisihnya besar, atau teksnya berita dari kanal berita yang dikenal tanpa ajakan sebar, hoaks hanya bila kedua angka ${percent(HOAX_CALL_MIN)} atau lebih. Kanal video sendiri tidak dihitung sebagai berita lain. Bukti berumur ${RECENCY_OLD_DAYS} hari atau lebih dibanding tanggal berita (atau dibanding hari ini bila berita tak bertanggal) hanya mengubah vonis bila kemiripan minimal ${decimal(NEAR_SAME_SIMILARITY)}. Selain itu tampil sebagai Artikel lama. Nama model tidak ditulis di ringkasan. Keyakinan rendah menjelaskan teks pendek, penilaian yang tidak sejalan, atau bukti sedikit.`,
           "Vonis hanya hoaks atau fakta. Keyakinan di sampingnya menunjukkan seberapa kuat dasar vonis itu.",
         ),
         term(
