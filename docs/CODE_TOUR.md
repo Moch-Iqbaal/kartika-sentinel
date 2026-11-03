@@ -32,7 +32,7 @@ Tiga jenis masukan:
 
 `src/lib/analyze/score.ts` menyusun kartu skor: teks bersih, penilaian hoaks, topik, risiko, dan padanan cek fakta.
 
-`src/lib/model/local-indobert.ts` menentukan boleh tidaknya URL model. Loopback boleh HTTP. Host lain wajib HTTPS dan `LOCAL_MODEL_TOKEN`. Waktu tunggu jarak jauh bawaan 60 detik. Kegagalan pada host jarak jauh ditandai `bangun` supaya antarmuka bisa berkata cold start, lalu skor jatuh ke model linier.
+`src/lib/model/local-indobert.ts` menentukan boleh tidaknya URL model. `LOCAL_HOAX_URL` kosong berarti mode ringan dan tidak ada panggilan. Loopback boleh HTTP. Host lain wajib HTTPS dan `LOCAL_MODEL_TOKEN`. Waktu tunggu jarak jauh bawaan 60 detik. Kegagalan pada host jarak jauh ditandai `bangun`, lalu skor jatuh ke model n-gram.
 
 `src/lib/model/linear.ts` membaca bobot n-gram yang dilatih `scripts/train-linear.ts`.
 

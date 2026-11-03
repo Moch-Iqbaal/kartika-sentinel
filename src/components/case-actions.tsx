@@ -83,7 +83,7 @@ export function CaseActions({
           </Button>
         )}
         <Button type="button" size="sm" variant="outline" disabled={pending} onClick={() => run(() => postJson(`/api/kasus/${alertId}/reskor`, {}))}>
-          Skor ulang IndoBERT lokal
+          Skor ulang
         </Button>
         <Button type="button" size="sm" variant="ghost" asChild>
           <a href={`/api/kasus/${alertId}/pdf`}>Unduh PDF</a>

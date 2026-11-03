@@ -59,7 +59,7 @@ export type CaseDetail = {
   assignedTo: string | null;
   recommendation: string;
   analystNote: string | null;
-  modelStatus: "siap" | "bangun" | "mati" | "dilewati";
+  modelStatus: "siap" | "bangun" | "mati" | "dilewati" | "ringan";
   timeline: { at: string; label: string; detail: string }[];
 };
 

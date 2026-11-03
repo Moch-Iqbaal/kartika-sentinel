@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { currentSession } from "@/lib/auth/session";
 import { getCase } from "@/lib/db";
-import { alertStatusLabel, bandLabel, caseStatusLabel, engineLabel, percent, verdictLabel } from "@/lib/format";
+import { alertStatusLabel, bandLabel, caseStatusLabel, engineLabel, modelModeLabel, percent, verdictLabel } from "@/lib/format";
 import { displayHandle } from "@/lib/security/redact";
 
 function httpUrl(href: string): string | null {
@@ -48,12 +48,15 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
           {bandLabel(detail.band)} · {percent(detail.riskScore)}
         </Badge>
       </div>
-      <Disclaimer />
+      <Disclaimer mode={modelModeLabel(detail.modelStatus)} />
+      {detail.modelStatus === "ringan" || detail.modelStatus === "dilewati" ? (
+        <Card className="p-4 text-sm">mode ringan. Skor ini dari model n-gram dan heuristik, tanpa panggilan IndoBERT.</Card>
+      ) : null}
       {detail.modelStatus === "bangun" ? (
-        <Card className="border-warning/50 p-4 text-sm">Model sedang bangun (cold start). Skor tersimpan memakai cadangan lokal. Skor ulang setelah layanan siap.</Card>
+        <Card className="border-warning/50 p-4 text-sm">IndoBERT on-premise sedang bangun. Skor tersimpan memakai model n-gram. Skor ulang setelah tunnel dan proses di Mac siap.</Card>
       ) : null}
       {detail.modelStatus === "mati" ? (
-        <Card className="p-4 text-sm text-muted">Layanan IndoBERT tidak menjawab. Skor memakai model linier atau heuristik di server web.</Card>
+        <Card className="p-4 text-sm text-muted">IndoBERT on-premise tidak menjawab. Skor memakai model n-gram atau heuristik di server web.</Card>
       ) : null}
       <div className="grid gap-3 md:grid-cols-4">
         <Card className="p-4"><p className="text-xs text-muted">Skor utama</p><p className="text-xl font-semibold">{percent(detail.hoaxScore)}</p><p className="text-xs text-muted">{engineLabel(detail.engine)}</p></Card>
@@ -70,7 +73,7 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
       <Card className="space-y-2 p-4">
         <h2 className="font-medium">Mesin skor</h2>
         <p className="text-sm">Versi: {detail.modelVersion}</p>
-        {detail.assessment.indobert ? <p className="text-sm">IndoBERT lokal ({detail.assessment.indobert.label}): {percent(detail.assessment.indobert.probability)}</p> : <p className="text-sm text-muted">IndoBERT lokal tidak dipakai pada skor yang tersimpan. Tombol skor ulang akan memanggil proses lokal jika hidup.</p>}
+        {detail.assessment.indobert ? <p className="text-sm">IndoBERT on-premise ({detail.assessment.indobert.label}): {percent(detail.assessment.indobert.probability)}</p> : <p className="text-sm text-muted">IndoBERT on-premise tidak dipakai pada skor ini. Dalam mode ringan tombol skor ulang tetap memakai n-gram sampai LOCAL_HOAX_URL diisi.</p>}
         {detail.assessment.linear ? <p className="text-sm">Model linier: {percent(detail.assessment.linear.probability)}</p> : null}
         <ul className="list-disc pl-5 text-sm text-muted">
           {(detail.assessment.heuristic?.reasons ?? []).map((reason: string) => <li key={reason}>{reason}</li>)}

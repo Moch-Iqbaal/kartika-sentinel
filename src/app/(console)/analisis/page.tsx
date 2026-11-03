@@ -1,6 +1,7 @@
 import { AnalyzeForm } from "@/components/analyze-form";
 import { Disclaimer } from "@/components/disclaimer";
 import { Card } from "@/components/ui/card";
+import { indoBertConfigured } from "@/lib/model/local-indobert";
 
 export default function AnalisisPage() {
   return (
@@ -9,7 +10,7 @@ export default function AnalisisPage() {
       <p className="text-sm leading-6 text-muted">
         Tempel teks Indonesia atau URL publik. YouTube dibaca lewat oEmbed. Halaman lain hanya diambil jika lolos penjaga SSRF: http/https, bukan alamat privat, ukuran dan tipe konten dibatasi.
       </p>
-      <Disclaimer />
+      <Disclaimer mode={indoBertConfigured() ? "IndoBERT on-premise" : "mode ringan"} />
       <Card className="p-5">
         <AnalyzeForm />
       </Card>

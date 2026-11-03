@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { resolveModelEndpoint } from "./local-indobert.ts";
+import { indoBertConfigured, resolveModelEndpoint } from "./local-indobert.ts";
 
 const KEYS = ["LOCAL_HOAX_URL", "LOCAL_MODEL_TOKEN"] as const;
 
@@ -18,15 +18,19 @@ function withEnv(values: Record<string, string | undefined>, run: () => void) {
   }
 }
 
-test("alamat bawaan adalah loopback", () => {
+test("tanpa LOCAL_HOAX_URL tidak ada endpoint", () => {
   withEnv({}, () => {
-    const target = resolveModelEndpoint();
-    assert.equal(target?.remote, false);
-    assert.equal(target?.url.hostname, "127.0.0.1");
+    assert.equal(resolveModelEndpoint(), null);
   });
 });
 
-test("Cloud Run https ditolak tanpa token layanan", () => {
+test("mode ringan bila URL tidak diisi", () => {
+  withEnv({}, () => {
+    assert.equal(indoBertConfigured(), false);
+  });
+});
+
+test("https publik ditolak tanpa token layanan", () => {
   withEnv({ LOCAL_HOAX_URL: "https://kartika-hoax-abc.a.run.app/classify" }, () => {
     assert.equal(resolveModelEndpoint(), null);
   });

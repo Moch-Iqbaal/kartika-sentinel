@@ -45,10 +45,18 @@ export function verdictLabel(verdict: Verdict | string): string {
 }
 
 export function engineLabel(engine: string): string {
-  if (engine === "indobert-local") return "IndoBERT lokal";
-  if (engine === "linear-ngram") return "Model linier lokal";
+  if (engine === "indobert-local") return "IndoBERT on-premise";
+  if (engine === "linear-ngram") return "Model n-gram";
   if (engine === "heuristic") return "Heuristik";
   return engine;
+}
+
+/** Label yang tampil di dasbor. Kosongnya URL model adalah mode ringan, bukan kegagalan. */
+export function modelModeLabel(status: string): string {
+  if (status === "siap") return "IndoBERT on-premise";
+  if (status === "bangun") return "IndoBERT on-premise · sedang bangun";
+  if (status === "mati") return "IndoBERT on-premise · tidak tersambung";
+  return "mode ringan";
 }
 
 export function recommendation(band: RiskBand): string {

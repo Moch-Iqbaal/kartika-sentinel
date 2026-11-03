@@ -7,7 +7,7 @@ import { displayHandle } from "@/lib/security/redact";
 import { listAlerts, topicCounts, velocitySeries } from "@/lib/db";
 import { localIndoBertHealth } from "@/lib/model/local-indobert";
 import { TOPICS } from "@/lib/ontology/topics";
-import { alertStatusLabel, bandLabel, percent } from "@/lib/format";
+import { alertStatusLabel, bandLabel, modelModeLabel, percent } from "@/lib/format";
 import { riskBand } from "@/lib/scoring/risk";
 
 export default async function DashboardPage({
@@ -46,11 +46,19 @@ export default async function DashboardPage({
           Peringkat memakai hoaks × sensitivitas topik × viralitas efektif.
         </p>
       </div>
-      <Disclaimer modelReady={model === "siap" ? "siap" : model === "bangun" ? "sedang bangun (cold start)" : "tidak tersambung, cadangan linier dipakai"} />
+      <Disclaimer mode={modelModeLabel(model)} />
+      {model === "ringan" ? (
+        <Card className="p-4 text-sm">
+          <span className="font-medium">mode ringan.</span> LOCAL_HOAX_URL tidak diisi. Skor memakai model n-gram dan heuristik di server web.
+        </Card>
+      ) : null}
       {model === "bangun" ? (
         <Card className="border-warning/50 p-4 text-sm">
-          IndoBERT sedang bangun. Instance Cloud Run yang tertidur butuh waktu untuk memuat bobot. Skor baru bisa jatuh ke model linier sampai layanan siap.
+          IndoBERT on-premise sedang bangun. Proses di Mac masih memuat bobot, atau tunnel baru tersambung. Skor sementara memakai model n-gram.
         </Card>
+      ) : null}
+      {model === "siap" ? (
+        <Card className="border-ok/40 p-4 text-sm">IndoBERT on-premise tersambung.</Card>
       ) : null}
       {loadError ? <Card className="border-danger/50 p-4 text-sm text-danger">{loadError}</Card> : null}
       <div className="grid gap-3 sm:grid-cols-3">
@@ -63,8 +71,8 @@ export default async function DashboardPage({
           <p className="mt-1 text-2xl font-semibold text-danger">{critical}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs uppercase text-muted">IndoBERT lokal</p>
-          <p className="mt-1 text-2xl font-semibold">{model === "siap" ? "Siap" : "Cadangan"}</p>
+          <p className="text-xs uppercase text-muted">Mesin skor</p>
+          <p className="mt-1 text-lg font-semibold">{modelModeLabel(model)}</p>
         </Card>
       </div>
       <Card className="p-4">

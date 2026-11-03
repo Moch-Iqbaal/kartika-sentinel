@@ -10,13 +10,13 @@ flowchart LR
   web[Next.js di Vercel]
   sqlite[(SQLite lokal)]
   pg[(Supabase Postgres)]
-  model[IndoBERT di Cloud Run]
+  mac[IndoBERT di Mac on-premise]
   publik[URL publik setelah SSRF]
 
   analis -->|cookie httpOnly| web
   web -->|tanpa kredensial Supabase| sqlite
   web -->|service_role hanya di server| pg
-  web -->|HTTPS plus LOCAL_MODEL_TOKEN| model
+  web -->|opsional, HTTPS plus token| mac
   web --> publik
 ```
 
@@ -26,7 +26,7 @@ Cold start:
 sequenceDiagram
   participant A as Analis
   participant W as Web
-  participant M as Cloud Run
+  participant M as Mac on-premise
   A->>W: Analisis teks
   W->>M: POST /classify, tunggu hingga MODEL_TIMEOUT_MS
   alt Model sudah siap
@@ -45,7 +45,7 @@ Web dan model sengaja dipisah.
 - Web adalah Next.js. Di laptop ia memakai SQLite. Di Vercel ia memakai Supabase bila `SUPABASE_URL` dan `SUPABASE_SERVICE_ROLE_KEY` terisi. Kunci `service_role` tidak pernah diberi awalan `NEXT_PUBLIC_`.
 - Model adalah proses Python `services/hoax/server.py`. Ia memuat `umn-cyber/indobert-hoax` dengan tokenizer `indobenchmark/indobert-base-p1`. Tidak ada Inference API. Image Docker mengunduh bobot saat build dan memasang wheel torch CPU.
 
-Cloud Run gratis yang dipakai di dokumen deploy: CPU saja, memori 2 GiB, `min-instances 0` sehingga instance bisa tertidur. Permintaan pertama membangunkan instance dan memuat model di dalam permintaan itu, supaya CPU yang hanya dialokasikan saat ada request tetap cukup untuk menghitung.
+Jalur utama web tidak membutuhkan mesin model. `LOCAL_HOAX_URL` kosong membuat status `ringan`: n-gram dan heuristik di proses Next.js. IndoBERT hanya dipanggil bila URL itu diisi, biasanya tunnel dari Mac (`docs/ONPREM.md`). Cloud Run tetap terdokumentasi sebagai opsi, bukan syarat.
 
 ## Skor
 

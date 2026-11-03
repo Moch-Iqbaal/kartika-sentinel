@@ -1,8 +1,8 @@
-# Deploy gratis: Vercel, Supabase, Cloud Run
+# Deploy web: Vercel dan Supabase
 
-Tiga akun yang perlu dibuat pemilik repositori. Jangan mengirim kunci itu ke git. Nama variabel ada di `.env.example`.
+Web berjalan di Vercel. Tanpa `LOCAL_HOAX_URL`, situs memakai **mode ringan** (model n-gram di repo dan heuristik). IndoBERT tidak ikut di Vercel. Jalur skor penuh adalah proses di Mac pemilik, lewat tunnel HTTPS gratis, dijelaskan di [ONPREM.md](ONPREM.md).
 
-Kuota gratis bisa berubah. Sebelum menekan deploy, baca angka yang tertulis di konsol masing-masing layanan. Dokumen ini tidak menambahkan angka kuota di luar yang diminta untuk bentuk layanan: Cloud Run CPU, memori 2 GiB, scale-to-zero.
+Jangan mengirim kunci ke git. Nama variabel ada di `.env.example`. Kuota gratis Vercel dan Supabase bisa berubah; baca angka di konsol sebelum deploy.
 
 ## 1. Supabase
 
@@ -24,9 +24,32 @@ values
 
 Tanpa langkah ini, web tetap jalan dengan SQLite di laptop. Vercel tanpa kunci Supabase hanya punya disk sementara.
 
-## 2. Cloud Run untuk IndoBERT
+## 2. Vercel untuk web
 
-Perlu Google Cloud CLI yang sudah login, dan proyek dengan penagihan yang masih di dalam kuota gratis. Image membangun torch CPU dan mengunduh bobot publik saat build. Bangun di Cloud Build, bukan di laptop yang memblokir huggingface.co.
+1. Impor repositori ini sebagai proyek Next.js.
+2. Untuk mode ringan, jangan isi `LOCAL_HOAX_URL` dan `LOCAL_MODEL_TOKEN`. Dasbor akan bertuliskan mode ringan.
+3. Untuk IndoBERT on-premise, jalankan `./scripts/start-onprem.sh` di Mac dan tempel dua baris yang dicetak. Lihat [ONPREM.md](ONPREM.md).
+4. Isi environment Production yang lain, tanpa mengutip nilai di dokumen:
+
+| Nama | Isi |
+| --- | --- |
+| `SUPABASE_URL` | URL proyek |
+| `SUPABASE_ANON_KEY` | anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | service role |
+| `NEXT_PUBLIC_SUPABASE_URL` | URL yang sama, untuk sesi peramban |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon key |
+| `SESSION_SECRET` | string acak minimal 32 karakter |
+| `HANDLE_HASH_SALT` | string acak |
+| `LOCAL_HOAX_URL` | kosong untuk mode ringan, atau `https://….trycloudflare.com/classify` |
+| `LOCAL_MODEL_TOKEN` | kosong untuk mode ringan, atau token yang sama dengan Mac |
+| `DEMO_MODE` | `false` |
+
+5. Deploy. Buka situs, masuk dengan pengguna Supabase, tempel satu teks.
+6. Mode ringan langsung memakai n-gram. Jika URL on-premise diisi tetapi Mac masih memuat bobot, halaman menampilkan sedang bangun dan skor sementara tetap dari n-gram.
+
+## 3. Opsional: Cloud Run
+
+Bagian ini tidak dipakai sebagai jalur utama. Ia tetap ada bila suatu saat ada kuota Google Cloud tanpa kartu. Image membangun torch CPU dan mengunduh bobot publik saat build.
 
 ```bash
 gcloud config set project PROJECT_ID
@@ -63,44 +86,19 @@ curl -s -X POST "https://URL/classify" \
 
 Permintaan pertama bisa lama karena image ditarik dan bobot dimuat. `/health` boleh menjawab `"ready": false` selama itu. `/classify` memuat model di dalam permintaan.
 
-## 3. Vercel untuk web
-
-1. Impor repositori ini sebagai proyek Next.js.
-2. Isi environment Production, tanpa mengutip nilai di dokumen:
-
-| Nama | Isi |
-| --- | --- |
-| `SUPABASE_URL` | URL proyek |
-| `SUPABASE_ANON_KEY` | anon key |
-| `SUPABASE_SERVICE_ROLE_KEY` | service role |
-| `NEXT_PUBLIC_SUPABASE_URL` | URL yang sama, untuk sesi peramban |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon key |
-| `SESSION_SECRET` | string acak minimal 32 karakter |
-| `HANDLE_HASH_SALT` | string acak |
-| `LOCAL_HOAX_URL` | `https://URL/classify` |
-| `LOCAL_MODEL_TOKEN` | token yang sama dengan Cloud Run |
-| `MODEL_TIMEOUT_MS` | `60000` |
-| `DEMO_MODE` | `false` |
-
-3. Deploy. Buka situs, masuk dengan pengguna Supabase, tempel satu teks.
-4. Jika model masih tidur, halaman menampilkan bahwa layanan sedang bangun dan skor memakai model linier. Ulangi setelah `/health` berisi `"ready": true`.
-
-## 4. Laptop
+## 4. Laptop, mode ringan
 
 ```bash
 npm install
-python3 -m pip install "torch==2.15.0+cpu" --index-url https://download.pytorch.org/whl/cpu
-python3 -m pip install -r services/hoax/requirements.txt
-python3 scripts/fetch_indobert.py
-python3 services/hoax/server.py
+npm test
 npm run dev
 ```
 
-Proses model di laptop terikat `127.0.0.1` dan tidak mewajibkan token. Web di `http://127.0.0.1:43123`.
+Tanpa `LOCAL_HOAX_URL`, dasbor lokal juga mode ringan. IndoBERT di Mac ada di [ONPREM.md](ONPREM.md): `./scripts/start-onprem.sh`.
 
-## Alternatif: Oracle Cloud Always Free
+## Opsional: VM lain
 
-Pakai ini bila Cloud Run tidak tersedia. Di konsol Oracle, buat VM yang berlabel Always Free. Pasang Docker dan plugin Compose.
+Bukan jalur utama. `docker-compose.yml` tetap ada bila ada VM Linux. Web menolak HTTP ke host publik, jadi URL yang diisi di Vercel harus HTTPS, dengan `LOCAL_MODEL_TOKEN` yang sama. Di Mac, pakai [ONPREM.md](ONPREM.md), bukan Compose.
 
 ```bash
 git clone URL_REPO

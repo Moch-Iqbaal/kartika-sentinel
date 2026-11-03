@@ -14,7 +14,7 @@ npm run dev
 
 Buka [http://127.0.0.1:43123](http://127.0.0.1:43123).
 
-Deploy gratis (Vercel, Supabase, Cloud Run CPU 2 GiB scale-to-zero) ada di [docs/DEPLOY.md](docs/DEPLOY.md). Tur kode ada di [docs/CODE_TOUR.md](docs/CODE_TOUR.md).
+Desainnya on-premise. Web di Vercel bisa jalan sendiri sebagai **mode ringan** (n-gram + heuristik) bila `LOCAL_HOAX_URL` kosong. IndoBERT berjalan di Mac pemilik dan dijangkau lewat tunnel HTTPS, tanpa kartu: [docs/ONPREM.md](docs/ONPREM.md). Langkah Vercel dan Supabase ada di [docs/DEPLOY.md](docs/DEPLOY.md). Tur kode ada di [docs/CODE_TOUR.md](docs/CODE_TOUR.md).
 
 Pada `npm run dev`, halaman masuk menampilkan dua akun latihan (bukan rahasia produksi):
 
@@ -48,13 +48,13 @@ flowchart LR
   web[Next.js]
   sqlite[(SQLite demo)]
   pg[(Supabase Postgres)]
-  model[IndoBERT lokal 127.0.0.1]
+  mac[Mac on-premise plus tunnel HTTPS]
   url[URL publik setelah SSRF]
 
   analis --> web
   web --> sqlite
   web -.-> pg
-  web --> model
+  web -.-> mac
   web --> url
 ```
 

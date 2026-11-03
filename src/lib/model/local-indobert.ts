@@ -1,11 +1,11 @@
 /**
- * Klien ke proses IndoBERT di mesin sendiri atau Cloud Run.
+ * Klien ke proses IndoBERT on-premise.
  * Tidak ada Inference API dan tidak ada token Hugging Face.
  * Teks dikirim sebagai field `text`, bukan sebagai instruksi.
  *
- * Cold start Cloud Run (scale-to-zero) bisa puluhan detik.
- * Timeout jarak jauh lebih panjang. Jika habis, pemanggil memakai model linier
- * dan menandai status "bangun".
+ * LOCAL_HOAX_URL kosong berarti mode ringan: n-gram dan heuristik di web,
+ * tanpa mencoba 127.0.0.1. URL terisi (tunnel HTTPS atau mesin sendiri)
+ * berarti IndoBERT on-premise. Timeout jarak jauh lebih panjang.
  */
 
 export type LocalModelScore = {
@@ -15,18 +15,25 @@ export type LocalModelScore = {
   version: string;
 };
 
-export type ModelAvailability = "siap" | "bangun" | "mati" | "dilewati";
+export type ModelAvailability = "siap" | "bangun" | "mati" | "dilewati" | "ringan";
 
 export type ModelProbe =
   | { state: "siap"; score: LocalModelScore }
   | { state: "bangun"; reason: string }
   | { state: "mati"; reason: string }
-  | { state: "dilewati"; reason: string };
+  | { state: "dilewati"; reason: string }
+  | { state: "ringan"; reason: string };
 
 const LOOPBACK = new Set(["127.0.0.1", "localhost", "[::1]"]);
 
+/** Kosong = mode ringan. Web tidak menebak localhost. */
+export function indoBertConfigured(): boolean {
+  return Boolean(process.env.LOCAL_HOAX_URL?.trim());
+}
+
 export function resolveModelEndpoint(): { url: URL; remote: boolean } | null {
-  const raw = process.env.LOCAL_HOAX_URL || "http://127.0.0.1:43124/classify";
+  const raw = process.env.LOCAL_HOAX_URL?.trim();
+  if (!raw) return null;
   let url: URL;
   try {
     url = new URL(raw);
@@ -50,6 +57,12 @@ function timeoutMs(remote: boolean): number {
 }
 
 export async function probeLocalIndoBert(text: string): Promise<ModelProbe> {
+  if (!indoBertConfigured()) {
+    return {
+      state: "ringan",
+      reason: "LOCAL_HOAX_URL kosong. Mode ringan memakai model n-gram dan heuristik di server web.",
+    };
+  }
   const target = resolveModelEndpoint();
   if (!target) {
     return { state: "mati", reason: "URL model tidak diizinkan atau token layanan kosong." };
@@ -101,7 +114,7 @@ export async function probeLocalIndoBert(text: string): Promise<ModelProbe> {
     return {
       state: target.remote ? "bangun" : "mati",
       reason: target.remote
-        ? "Layanan model belum menjawab. Cold start Cloud Run sedang berjalan, atau waktu tunggu habis."
+        ? "Layanan IndoBERT on-premise belum menjawab. Tunnel atau proses di Mac mungkin masih memuat bobot."
         : "Proses model lokal tidak menjawab.",
     };
   }
@@ -113,6 +126,7 @@ export async function classifyWithLocalIndoBert(text: string): Promise<LocalMode
 }
 
 export async function localIndoBertHealth(): Promise<ModelAvailability> {
+  if (!indoBertConfigured()) return "ringan";
   const target = resolveModelEndpoint();
   if (!target) return "mati";
   try {
