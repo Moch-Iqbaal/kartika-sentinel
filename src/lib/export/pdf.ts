@@ -1,4 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { ringkasanFromCase } from "@/lib/analyze/ringkasan";
 import type { CaseDetail } from "@/lib/db/types";
 import { alertStatusLabel, bandLabel, caseStatusLabel, engineLabel, formatWhen, percent, verdictLabel } from "@/lib/format";
 
@@ -90,6 +91,11 @@ export async function casePdf(detail: CaseDetail): Promise<Uint8Array> {
   y -= 6;
   draw("Rekomendasi sistem", { bold: true, size: 12 });
   draw(detail.recommendation);
+  y -= 6;
+  const ringkasan = ringkasanFromCase(detail);
+  draw("Ringkasan", { bold: true, size: 12 });
+  draw(ringkasan.headline, { bold: true });
+  for (const sentence of ringkasan.sentences) draw(sentence);
   draw(`Diekspor ${formatWhen(new Date().toISOString())}`, { size: 8, color: [0.4, 0.42, 0.46] });
   return doc.save();
 }

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CaseActions } from "@/components/case-actions";
 import { TermTip } from "@/components/term-tip";
+import { ringkasanFromCase } from "@/lib/analyze/ringkasan";
 import { glossaryTip } from "@/lib/glossary";
 import { Disclaimer } from "@/components/disclaimer";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +39,7 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
   if (!detail) notFound();
   const session = await currentSession();
   const canEdit = Boolean(session && (session.role === "admin" || session.sub === detail.assignedTo));
+  const ringkasan = ringkasanFromCase(detail);
   const gap = detail.assessment.indobert
     && Math.abs(detail.assessment.indobert.probability - detail.assessment.heuristic.probability) >= ENGINE_DIVERGENCE;
   return (
@@ -191,6 +193,13 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
             ))}
           </ol>
         )}
+      </Card>
+      <Card className="space-y-2 p-4">
+        <h2 className="font-medium">Ringkasan</h2>
+        <p className="text-lg font-semibold">{ringkasan.headline}</p>
+        {ringkasan.sentences.map((sentence) => (
+          <p key={sentence} className="text-sm leading-6">{sentence}</p>
+        ))}
       </Card>
     </div>
   );
