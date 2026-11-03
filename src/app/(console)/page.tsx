@@ -62,6 +62,9 @@ export default async function DashboardPage({
       {model === "siap" ? (
         <Card className="border-ok/40 p-4 text-sm">IndoBERT on-premise tersambung.</Card>
       ) : null}
+      {model === "offline" || model === "mati" ? (
+        <Card className="p-4 text-sm text-muted">IndoBERT offline. Skor memakai model n-gram sampai Mac mengirim heartbeat lagi.</Card>
+      ) : null}
       {loadError ? <Card className="border-danger/50 p-4 text-sm text-danger">{loadError}</Card> : null}
       <div className="grid gap-3 sm:grid-cols-3">
         <Card className="p-4">

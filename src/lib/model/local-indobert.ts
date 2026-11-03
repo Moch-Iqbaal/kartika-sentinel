@@ -15,7 +15,7 @@ export type LocalModelScore = {
   version: string;
 };
 
-export type ModelAvailability = "siap" | "bangun" | "mati" | "dilewati" | "ringan";
+export type ModelAvailability = "siap" | "bangun" | "mati" | "offline" | "dilewati" | "ringan";
 
 export type ModelProbe =
   | { state: "siap"; score: LocalModelScore }
@@ -56,19 +56,43 @@ function timeoutMs(remote: boolean): number {
   return remote ? 60000 : 8000;
 }
 
+type ActiveTarget = { url: URL; token: string; remote: boolean; stale: boolean };
+
+async function activeTarget(): Promise<ActiveTarget | null> {
+  try {
+    const store = await import("./endpoint-store");
+    const row = await store.readModelEndpoint();
+    if (row && store.endpointIsFresh(row)) {
+      const url = new URL(row.url);
+      return { url, token: row.token, remote: true, stale: false };
+    }
+    if (row) {
+      const env = resolveModelEndpoint();
+      if (env) return { url: env.url, token: process.env.LOCAL_MODEL_TOKEN?.trim() || "", remote: env.remote, stale: false };
+      const url = new URL(row.url);
+      return { url, token: row.token, remote: true, stale: true };
+    }
+  } catch {
+    // Supabase tidak ada atau tabel belum ada. Lanjut ke env.
+  }
+  const env = resolveModelEndpoint();
+  if (!env) return null;
+  return { url: env.url, token: process.env.LOCAL_MODEL_TOKEN?.trim() || "", remote: env.remote, stale: false };
+}
+
 export async function probeLocalIndoBert(text: string): Promise<ModelProbe> {
-  if (!indoBertConfigured()) {
+  const target = await activeTarget();
+  if (!target) {
     return {
       state: "ringan",
-      reason: "LOCAL_HOAX_URL kosong. Mode ringan memakai model n-gram dan heuristik di server web.",
+      reason: "Tidak ada endpoint IndoBERT. Mode ringan memakai model n-gram dan heuristik di server web.",
     };
   }
-  const target = resolveModelEndpoint();
-  if (!target) {
-    return { state: "mati", reason: "URL model tidak diizinkan atau token layanan kosong." };
+  if (target.stale) {
+    return { state: "mati", reason: "Heartbeat IndoBERT kedaluwarsa. Mac mungkin mati atau tunnel putus." };
   }
   const headers: Record<string, string> = { "content-type": "application/json" };
-  const token = process.env.LOCAL_MODEL_TOKEN?.trim();
+  const token = target.token;
   if (token) headers["x-kartika-model-token"] = token;
   try {
     const response = await fetch(target.url, {
@@ -126,17 +150,17 @@ export async function classifyWithLocalIndoBert(text: string): Promise<LocalMode
 }
 
 export async function localIndoBertHealth(): Promise<ModelAvailability> {
-  if (!indoBertConfigured()) return "ringan";
-  const target = resolveModelEndpoint();
-  if (!target) return "mati";
+  const target = await activeTarget();
+  if (!target) return "ringan";
+  if (target.stale) return "offline";
   try {
     const health = new URL("/health", target.url);
     const response = await fetch(health, { signal: AbortSignal.timeout(target.remote ? 4000 : 800) });
-    if (!response.ok) return target.remote ? "bangun" : "mati";
+    if (!response.ok) return "offline";
     const payload = (await response.json()) as { ready?: boolean };
     if (payload.ready) return "siap";
     return "bangun";
   } catch {
-    return target.remote ? "bangun" : "mati";
+    return "offline";
   }
 }

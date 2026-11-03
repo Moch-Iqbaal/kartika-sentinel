@@ -2,6 +2,7 @@ import type { ExternalFact, FactMatch, Verdict } from "@/lib/factcheck/types";
 import type { AiTextFlag } from "@/lib/model/ai-text";
 import type { HoaxAssessment } from "@/lib/model/classify";
 import type { TopicHit } from "@/lib/ontology/topics";
+import type { ModelAvailability } from "@/lib/model/local-indobert";
 import type { MetricPoint, RiskBand } from "@/lib/scoring/risk";
 import type { Session } from "@/lib/auth/token";
 
@@ -60,7 +61,7 @@ export type CaseDetail = {
   assignedTo: string | null;
   recommendation: string;
   analystNote: string | null;
-  modelStatus: "siap" | "bangun" | "mati" | "dilewati" | "ringan";
+  modelStatus: ModelAvailability;
   timeline: { at: string; label: string; detail: string }[];
 };
 

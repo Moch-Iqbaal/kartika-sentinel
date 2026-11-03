@@ -33,16 +33,36 @@ python -m pip install -q torch
 python -m pip install -q -r services/hoax/requirements.txt
 python scripts/fetch_indobert.py
 
+ENV_FILE="$ROOT/.env.onprem"
+if [[ -f "$ENV_FILE" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$ENV_FILE"
+  set +a
+fi
+
+if [[ -z "${LOCAL_MODEL_TOKEN:-}" && -f .onprem-token ]]; then
+  LOCAL_MODEL_TOKEN="$(tr -d '\n' < .onprem-token)"
+fi
 if [[ -z "${LOCAL_MODEL_TOKEN:-}" ]]; then
-  if [[ -f .onprem-token ]]; then
-    LOCAL_MODEL_TOKEN="$(cat .onprem-token)"
-  else
-    LOCAL_MODEL_TOKEN="$(openssl rand -hex 32)"
-    umask 077
-    printf '%s\n' "$LOCAL_MODEL_TOKEN" > .onprem-token
-  fi
+  LOCAL_MODEL_TOKEN="$(openssl rand -hex 32)"
 fi
 export LOCAL_MODEL_TOKEN
+umask 077
+touch "$ENV_FILE"
+tmp_env="$(mktemp)"
+if [[ -s "$ENV_FILE" ]]; then
+  awk -v token="$LOCAL_MODEL_TOKEN" '
+    BEGIN { done = 0 }
+    /^LOCAL_MODEL_TOKEN=/ { print "LOCAL_MODEL_TOKEN=" token; done = 1; next }
+    { print }
+    END { if (!done) print "LOCAL_MODEL_TOKEN=" token }
+  ' "$ENV_FILE" > "$tmp_env"
+else
+  printf 'LOCAL_MODEL_TOKEN=%s\n' "$LOCAL_MODEL_TOKEN" > "$tmp_env"
+fi
+mv "$tmp_env" "$ENV_FILE"
+chmod 600 "$ENV_FILE"
 
 PORT="${HOAX_MODEL_PORT:-43124}"
 export HOAX_BIND_HOST=127.0.0.1
@@ -59,8 +79,12 @@ TUNNEL_LOG="$LOG_DIR/kartika-cloudflared.log"
 python services/hoax/server.py >"$SERVER_LOG" 2>&1 &
 SERVER_PID=$!
 TUNNEL_PID=""
+HEART_PID=""
 
 cleanup() {
+  if [[ -n "$HEART_PID" ]]; then
+    kill "$HEART_PID" 2>/dev/null || true
+  fi
   if [[ -n "$TUNNEL_PID" ]]; then
     kill "$TUNNEL_PID" 2>/dev/null || true
   fi
@@ -107,11 +131,38 @@ if [[ -z "$PUBLIC_URL" ]]; then
   exit 1
 fi
 
+register_endpoint() {
+  if [[ -z "${MODEL_REGISTER_SECRET:-}" || -z "${KARTIKA_APP_URL:-}" ]]; then
+    return 2
+  fi
+  local base="${KARTIKA_APP_URL%/}"
+  local payload
+  payload="$(PUBLIC_URL="$PUBLIC_URL" LOCAL_MODEL_TOKEN="$LOCAL_MODEL_TOKEN" python3 -c 'import json,os; print(json.dumps({"url": os.environ["PUBLIC_URL"] + "/classify", "token": os.environ["LOCAL_MODEL_TOKEN"]}))')"
+  curl -fsS -X POST "${base}/api/model/register" \
+    -H "content-type: application/json" \
+    -H "authorization: Bearer ${MODEL_REGISTER_SECRET}" \
+    --data "$payload" >/dev/null
+}
+
 echo
 echo "IndoBERT on-premise siap di Mac ini."
-echo "Tempel dua baris ini ke environment Vercel, lalu redeploy:"
-echo "LOCAL_HOAX_URL=${PUBLIC_URL}/classify"
-echo "LOCAL_MODEL_TOKEN=${LOCAL_MODEL_TOKEN}"
+echo "Tunnel: ${PUBLIC_URL}"
+if [[ -n "${MODEL_REGISTER_SECRET:-}" && -n "${KARTIKA_APP_URL:-}" ]]; then
+  if register_endpoint; then
+    echo "Endpoint terdaftar di web. Tidak perlu mengubah environment Vercel."
+  else
+    echo "Pendaftaran ke web gagal. Tunnel tetap jalan." >&2
+  fi
+  (
+    while true; do
+      sleep 30
+      register_endpoint || true
+    done
+  ) &
+  HEART_PID=$!
+else
+  echo "Isi MODEL_REGISTER_SECRET dan KARTIKA_APP_URL di .env.onprem agar tunnel terdaftar sendiri." >&2
+fi
 echo
 echo "Biarkan jendela ini terbuka. Menutupnya memutus tunnel."
 echo "Permintaan pertama dari web bisa menunggu bobot termuat."

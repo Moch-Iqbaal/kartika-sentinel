@@ -55,7 +55,7 @@ export function engineLabel(engine: string): string {
 export function modelModeLabel(status: string): string {
   if (status === "siap") return "IndoBERT on-premise";
   if (status === "bangun") return "IndoBERT on-premise · sedang bangun";
-  if (status === "mati") return "IndoBERT on-premise · tidak tersambung";
+  if (status === "mati" || status === "offline") return "IndoBERT on-premise · offline";
   return "mode ringan";
 }
 

@@ -36,4 +36,6 @@ test("proxy mengirim pengunjung tanpa sesi ke login", () => {
   assert.equal(accessGate("/login", true), "home");
   assert.equal(accessGate("/", true), "allow");
   assert.equal(accessGate("/api/auth/logout", false), "allow");
+  assert.equal(accessGate("/api/model/register", false), "allow");
+  assert.equal(accessGate("/api/health", false), "allow");
 });
