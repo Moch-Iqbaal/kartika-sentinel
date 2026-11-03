@@ -8,12 +8,14 @@ import { BAND_KRITIS_MIN, BAND_PRIORITAS_MIN } from "../scoring/risk";
  */
 export type PlainBand = "rendah" | "sedang" | "tinggi";
 
-/**
- * Ambang tiap angka: 0,5 ke atas lebih mirip hoaks daripada fakta.
- * Bukan vonis sendirian. Menaikkan ambang satu angka (misalnya ke 0,7) tidak
- * menahan skor 99% yang tidak disetujui angka lain.
- */
+/** Ambang tiap angka untuk arti skor. Bukan vonis sendirian. */
 export const HOAX_CALL_MIN = 0.5;
+
+/**
+ * Tanpa pemeriksaan fakta, hoaks hanya bila kedua angka mencapai ambang ini
+ * dan tidak berselisih jauh. Satu angka 99% tidak cukup.
+ */
+export const HOAX_ALONE_MIN = 0.7;
 
 export const SCORE_MEANING = "seberapa mirip hoaks";
 export const SENSITIVITY_MEANING = "seberapa rawan topiknya";

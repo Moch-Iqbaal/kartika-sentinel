@@ -39,7 +39,7 @@ test("ambang skor: 0,5 ke atas hoaks, di bawahnya fakta", () => {
 });
 
 test("teks pendek tetap punya vonis, dengan keyakinan rendah", () => {
-  const card = input({ hoaxScore: 0.99, shortText: true, linear: 0.99 });
+  const card = input({ hoaxScore: 0.99, shortText: true, linear: 0.99, indobert: 0.99 });
   assert.equal(decideVerdict(card), "hoax");
   const text = buildRingkasan(card);
   assert.equal(text.headline, "Kemungkinan HOAKS");
@@ -66,8 +66,16 @@ test("selisih IndoBERT dan model linier pada ambang membuat belum pasti", () => 
     linear: 0.9 - ENGINE_DIVERGENCE + 0.001,
     heuristic: 0.9,
   });
-  assert.equal(decideVerdict(close), "hoax");
-  assert.equal(buildRingkasan(close).headline, "Kemungkinan HOAKS");
+  assert.equal(decideVerdict(close), "not-hoax");
+  assert.equal(buildRingkasan(close).headline, "Kemungkinan FAKTA");
+  const agreed = input({
+    hoaxScore: 0.8,
+    engine: "indobert-local",
+    indobert: 0.8,
+    linear: 0.75,
+    heuristic: 0.8,
+  });
+  assert.equal(decideVerdict(agreed), "hoax");
   assert.ok(buildRingkasan(close).sentences.length <= 3);
 });
 
@@ -118,6 +126,8 @@ test("ringkasan hoaks paling banyak tiga kalimat awam", () => {
     band: "kritis",
     virality: 0.5,
     linear: 0.8,
+    indobert: 0.8,
+    engine: "indobert-local",
     aiFlagged: true,
     aiConfidence: "tinggi",
     topicLabels: ["TNI"],
@@ -144,20 +154,21 @@ test("berkas tanpa teks isi tidak punya skor hoaks", () => {
   assert.ok(text.sentences.length <= 3);
 });
 
-test("skor 50 persen ke atas hoaks, di bawahnya fakta, tanpa sumber lain", () => {
-  const mid = buildRingkasan(input({ hoaxScore: 0.62, linear: 0.62 }));
-  assert.equal(mid.headline, "Kemungkinan HOAKS");
-  assert.equal(mid.confidenceReason, "bukti sedikit");
-  const fact = buildRingkasan(input({ hoaxScore: 0.45, linear: 0.45 }));
-  assert.equal(fact.headline, "Kemungkinan FAKTA");
-  const strong = buildRingkasan(input({ hoaxScore: 0.85, linear: 0.85 }));
+test("satu angka tidak menjadi hoaks; dua angka 0,7 yang sejalan baru hoaks", () => {
+  const one = buildRingkasan(input({ hoaxScore: 0.85, linear: 0.85, indobert: null }));
+  assert.equal(one.headline, "Kemungkinan FAKTA");
+  assert.equal(one.confidenceReason, "bukti sedikit");
+  const low = buildRingkasan(input({ hoaxScore: 0.62, indobert: 0.62, linear: 0.62, engine: "indobert-local" }));
+  assert.equal(low.headline, "Kemungkinan FAKTA");
+  const strong = buildRingkasan(input({ hoaxScore: 0.85, indobert: 0.85, linear: 0.8, engine: "indobert-local" }));
   assert.equal(strong.headline, "Kemungkinan HOAKS");
-  assert.doesNotMatch([mid, fact, strong].map((item) => item.headline).join(" "), /Belum bisa dipastikan/);
+  assert.doesNotMatch([one, low, strong].map((item) => item.headline).join(" "), /Belum bisa dipastikan/);
 });
 
 test("sensitivitas dan viralitas tidak mengubah vonis", () => {
-  const low = decideVerdict(input({ hoaxScore: 0.62, linear: 0.62, sensitivity: 0.95, virality: 0.9 }));
-  const high = decideVerdict(input({ hoaxScore: 0.62, linear: 0.62, sensitivity: 0.1, virality: 0 }));
+  const base = { hoaxScore: 0.8, indobert: 0.8, linear: 0.75, engine: "indobert-local" as const };
+  const low = decideVerdict(input({ ...base, sensitivity: 0.95, virality: 0.9 }));
+  const high = decideVerdict(input({ ...base, sensitivity: 0.1, virality: 0 }));
   assert.equal(low, "hoax");
   assert.equal(high, "hoax");
 });

@@ -1,4 +1,4 @@
-import { HOAX_CALL_MIN } from "@/lib/analyze/bands";
+import { HOAX_ALONE_MIN, HOAX_CALL_MIN } from "@/lib/analyze/bands";
 import {
   NEAR_SAME_SIMILARITY,
   RECENCY_FRESH_DAYS,
@@ -256,7 +256,7 @@ export function glossaryGroups(): GlossaryGroup[] {
           "vonis-laporan",
           "Kemungkinan HOAKS / Kemungkinan FAKTA",
           "Hanya dua pilihan: kemungkinan hoaks atau kemungkinan fakta. Angka tinggi sendirian tidak cukup bila penilaian lain tidak sejalan dan tidak ada yang menyebut hoaks.",
-          `Pemeriksaan fakta hoaks menang dulu. Berita dari media lain, atau pemeriksaan yang menyebut benar, menjadi fakta. Bila kedua angka ada, hoaks hanya bila keduanya ${percent(HOAX_CALL_MIN)} atau lebih dan selisihnya tidak besar. Satu ambang yang lebih tinggi tidak menggantikan kesepakatan itu. Kanal video sendiri tidak dihitung sebagai berita lain. Bukti berumur ${RECENCY_OLD_DAYS} hari atau lebih dibanding tanggal berita (atau dibanding hari ini bila berita tak bertanggal) hanya mengubah vonis bila kemiripan minimal ${decimal(NEAR_SAME_SIMILARITY)}. Selain itu tampil sebagai Artikel lama. Nama model hanya di Detail teknis. Keyakinan rendah menjelaskan teks pendek, penilaian yang tidak sejalan, atau bukti sedikit.`,
+          `Pemeriksaan fakta hoaks menang dulu. Berita dari media lain, atau pemeriksaan yang menyebut benar, menjadi fakta. Tanpa itu, hoaks hanya bila kedua angka ${percent(HOAX_ALONE_MIN)} atau lebih dan selisihnya tidak besar. Satu angka, meski ${percent(HOAX_CALL_MIN)} atau 99%, tidak cukup. Kanal video sendiri tidak dihitung sebagai berita lain. Bukti berumur ${RECENCY_OLD_DAYS} hari atau lebih dibanding tanggal berita hanya mengubah vonis bila kemiripan minimal ${decimal(NEAR_SAME_SIMILARITY)}. Selain itu tampil sebagai Artikel lama. Keyakinan rendah menjelaskan teks pendek, penilaian yang tidak sejalan, atau bukti sedikit.`,
           "Vonis hanya hoaks atau fakta. Keyakinan di sampingnya menunjukkan seberapa kuat dasar vonis itu.",
         ),
         term(

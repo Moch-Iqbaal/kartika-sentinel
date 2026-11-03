@@ -1,6 +1,6 @@
 import type { CaseDetail } from "../db/types";
 import { decideConfidence, CONFIDENCE_LABEL } from "./confidence";
-import { HOAX_CALL_MIN } from "./bands";
+import { HOAX_ALONE_MIN, HOAX_CALL_MIN } from "./bands";
 import { evidenceStance, independentReports } from "./evidence-stance";
 import { percent } from "../format";
 import { countsAsPrimary, NEAR_SAME_SIMILARITY } from "../factcheck/recency";
@@ -151,17 +151,13 @@ function backupScore(input: RingkasanInput): number | null {
   return finite(input.linear) ?? finite(input.heuristic);
 }
 
-function bothModelsPresent(input: RingkasanInput): boolean {
-  return finite(input.indobert) != null && backupScore(input) != null;
-}
-
-/** Kedua angka ada, tidak berselisih jauh, dan masing-masing 0,5 atau lebih. */
+/** Kedua angka ada, tidak berselisih jauh, dan masing-masing mencapai 0,7. */
 function agreedHoaxCall(input: RingkasanInput): boolean {
-  if (!bothModelsPresent(input) || enginesDisagree(input)) return false;
   const primary = finite(input.indobert);
   const backup = backupScore(input);
   if (primary == null || backup == null) return false;
-  return primary >= HOAX_CALL_MIN && backup >= HOAX_CALL_MIN;
+  if (Math.abs(primary - backup) >= ENGINE_DIVERGENCE) return false;
+  return primary >= HOAX_ALONE_MIN && backup >= HOAX_ALONE_MIN;
 }
 
 export function decideVerdict(input: RingkasanInput): SummaryVerdict {
@@ -169,8 +165,8 @@ export function decideVerdict(input: RingkasanInput): SummaryVerdict {
   if (hasHoaxCheck(input)) return "hoax";
   if (hasValidCheck(input) || otherOutlets(input).length > 0) return "not-hoax";
   if (input.opinion) return "not-hoax";
-  if (bothModelsPresent(input)) return agreedHoaxCall(input) ? "hoax" : "not-hoax";
-  return scoreVerdict(verdictScore(input));
+  if (agreedHoaxCall(input)) return "hoax";
+  return "not-hoax";
 }
 
 function analystLine(): string {
@@ -229,7 +225,7 @@ export function buildRingkasan(input: RingkasanInput): Ringkasan {
   else if (verdict === "not-hoax" && hasValidCheck(input)) lead = checkerLine(names(input.validCheckers), "valid");
   else if (verdict === "not-hoax" && outlets.length > 0) lead = `${outlets[0]} memberitakan hal yang sama.`;
   else if (verdict === "not-hoax" && input.opinion) lead = OPINION_SENTENCE;
-  else if (verdict === "not-hoax" && bothModelsPresent(input) && !agreedHoaxCall(input)) {
+  else if (verdict === "not-hoax") {
     if (enginesDisagree(input) && plainNewsReport(input.text ?? "", input.sourceUrl)) {
       lead = "Dua penilaian tidak sejalan. Ini terbaca sebagai berita dari kanal berita, dan tidak ada pemeriksaan fakta yang menyebut hoaks.";
     } else if (enginesDisagree(input)) lead = "Dua penilaian tidak sejalan, dan tidak ada pemeriksaan fakta yang menyebut hoaks.";
