@@ -54,3 +54,10 @@ __pycache__/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local model / raw training caches
+/models/
+/training/output/
+/training/data/runs/
+*.safetensors
+/tmp/

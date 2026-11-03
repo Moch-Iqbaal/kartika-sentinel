@@ -1,0 +1,1786 @@
+{
+  "new": {
+    "n": 110,
+    "accuracy": 0.8545454545454545,
+    "fakta_accuracy": 0.84,
+    "fakta_mean_hoax_prob": 0.156775,
+    "fakta_fp_rate": 0.16,
+    "hoax_accuracy": 1.0,
+    "hoax_mean_hoax_prob": 0.9997400000000001,
+    "yonif143_hoax_prob": 0.0065,
+    "rows": [
+      {
+        "tag": "yonif143_tribun",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0065,
+        "ok": true,
+        "title": "450 Prajurit TNI AD Yonif 143 Kembali ke Lampung Usai Bertugas di Perbatasan RI-"
+      },
+      {
+        "tag": "official_tni_border",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.6862,
+        "ok": false,
+        "title": "Panglima TNI Tinjau Pos Perbatasan RI-PNG"
+      },
+      {
+        "tag": "istana_rapat",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0101,
+        "ok": true,
+        "title": "Presiden buka rapat kabinet di Istana Negara"
+      },
+      {
+        "tag": "bmkg",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9918,
+        "ok": false,
+        "title": "BMKG keluarkan peringatan dini cuaca ekstrem Jawa Barat"
+      },
+      {
+        "tag": "polri_mudik",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9948,
+        "ok": false,
+        "title": "Polri amankan jalur mudik Lebaran dengan rekayasa lalu lintas"
+      },
+      {
+        "tag": "hut_tni_ad",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0885,
+        "ok": true,
+        "title": "KSAD pimpin upacara HUT TNI AD di Markas Besar"
+      },
+      {
+        "tag": "yonif_papua_official",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9973,
+        "ok": false,
+        "title": "Satgas Yonif Raider berangkat tugas operasi di Papua"
+      },
+      {
+        "tag": "kemhan_alutsista",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9842,
+        "ok": false,
+        "title": "Kementerian Pertahanan serahkan alutsista baru kepada TNI AL"
+      },
+      {
+        "tag": "bps_inflasi",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9846,
+        "ok": false,
+        "title": "Antara: Inflasi bulanan tetap terkendali menurut BPS"
+      },
+      {
+        "tag": "dki_sim",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9845,
+        "ok": false,
+        "title": "Kompas: Pemda DKI perpanjang masa berlaku SIM keliling"
+      },
+      {
+        "tag": "pln",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.8703,
+        "ok": false,
+        "title": "Detik: PLN pastikan pasokan listrik aman saat libur nasional"
+      },
+      {
+        "tag": "kodam_baksos",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9667,
+        "ok": false,
+        "title": "Tribun: Kodam XII/Tpr gelar bakti sosial di perbatasan"
+      },
+      {
+        "tag": "ikn_resmi",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0944,
+        "ok": true,
+        "title": "CNN Indonesia: Jokowi tinjau proyek Ibu Kota Nusantara"
+      },
+      {
+        "tag": "bi_suku_bunga",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.7253,
+        "ok": false,
+        "title": "Liputan6: Bank Indonesia pertahankan suku bunga acuan"
+      },
+      {
+        "tag": "mk_sidang",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9865,
+        "ok": false,
+        "title": "Tempo: Mahkamah Konstitusi jadwalkan sidang uji materi"
+      },
+      {
+        "tag": "kemenag_ramadan",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9859,
+        "ok": false,
+        "title": "Republika: Kemenag tetapkan awal Ramadan berdasarkan hisab dan rukyat"
+      },
+      {
+        "tag": "basarnas_banjir",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.8842,
+        "ok": false,
+        "title": "Okezone: Basarnas evakuasi korban banjir di Sulawesi"
+      },
+      {
+        "tag": "dpr_ruu",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.995,
+        "ok": false,
+        "title": "Sindonews: DPR sahkan RUU terkait perlindungan data pribadi"
+      },
+      {
+        "tag": "tni_au_latihan",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9887,
+        "ok": false,
+        "title": "TNI AU laksanakan latihan angkut semesta di Lanud"
+      },
+      {
+        "tag": "polda_papua",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9983,
+        "ok": false,
+        "title": "Polda Papua amankan barang bukti senjata rakitan"
+      },
+      {
+        "tag": "hoax_tni_gaza",
+        "expected": 1,
+        "pred": 1,
+        "hoax_prob": 0.9995,
+        "ok": true,
+        "title": "20.000 prajurit TNI diterbangkan ke Gaza"
+      },
+      {
+        "tag": "hoax_presiden_diganti",
+        "expected": 1,
+        "pred": 1,
+        "hoax_prob": 0.9998,
+        "ok": true,
+        "title": "Presiden diganti diam-diam malam ini"
+      },
+      {
+        "tag": "hoax_vaksin_chip",
+        "expected": 1,
+        "pred": 1,
+        "hoax_prob": 0.9998,
+        "ok": true,
+        "title": "Vaksin mengandung chip pelacak satelit"
+      },
+      {
+        "tag": "hoax_bbm_wa",
+        "expected": 1,
+        "pred": 1,
+        "hoax_prob": 0.9999,
+        "ok": true,
+        "title": "BBM naik malam ini sesuai pesan WA"
+      },
+      {
+        "tag": "hoax_tsunami",
+        "expected": 1,
+        "pred": 1,
+        "hoax_prob": 0.9998,
+        "ok": true,
+        "title": "Tsunami 100 meter akan hantam Jawa malam ini"
+      },
+      {
+        "tag": "hoax_uang_chip",
+        "expected": 1,
+        "pred": 1,
+        "hoax_prob": 0.9998,
+        "ok": true,
+        "title": "Uang baru berciri chip RFID untuk pantau warga"
+      },
+      {
+        "tag": "hoax_kudeta",
+        "expected": 1,
+        "pred": 1,
+        "hoax_prob": 0.9998,
+        "ok": true,
+        "title": "Panglima TNI kudeta istana"
+      },
+      {
+        "tag": "hoax_papua_pbb",
+        "expected": 1,
+        "pred": 1,
+        "hoax_prob": 0.9993,
+        "ok": true,
+        "title": "Papua merdeka diakui PBB hari ini"
+      },
+      {
+        "tag": "hoax_bantuan_barcode",
+        "expected": 1,
+        "pred": 1,
+        "hoax_prob": 0.9998,
+        "ok": true,
+        "title": "Bantuan COVID cair Rp 10 juta scan barcode"
+      },
+      {
+        "tag": "hoax_lemon_corona",
+        "expected": 1,
+        "pred": 1,
+        "hoax_prob": 0.9999,
+        "ok": true,
+        "title": "Air putih campur lemon bunuh virus corona dalam 24 jam"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0002,
+        "ok": true,
+        "title": "Gempa Cianjur, DPR Akan Panggil Pemerintah Bahas Peringatan Dini Gempa"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0002,
+        "ok": true,
+        "title": "Ini 5 Produsen Makanan Pencemar Sampah Plastik Versi ECOTON"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0002,
+        "ok": true,
+        "title": "Jasa Raharja Jamin Seluruh Korban Kecelakaan Bus di Tol Batang-Semarang"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Menag Yaqut Sebut Kunjungan Paus Fransiskus Bukti Hubungan RI dan Vatikan Terjal"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0002,
+        "ok": true,
+        "title": "Singgung Dugaan Kasus Judi dan Narkoba Terkait Sambo, Mahfud: Kalau Diteruskan R"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0002,
+        "ok": true,
+        "title": "Semua Ternak Sembuh PMK, Pasar Hewan Susun Strategi"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0003,
+        "ok": true,
+        "title": "Kapolri Datangi Polsek Astana Anyar Lokasi Serangan Bom Bunuh Diri"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Pansus Haji Belum Bisa Pastikan Adanya Unsur Pidana soal Pembagian Kuota Haji"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "UKT Batal Naik, Nadiem Beri Tenggat PTN Ajukan Perubahan Tarif hingga 5 Juni"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0002,
+        "ok": true,
+        "title": "Jember Bakal Bangun Sentra Industri Hasil Tembakau"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0003,
+        "ok": true,
+        "title": "Perumpamaan \"Politik Septic Tank\" dan Janji pada Papua"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Butet Kartaredjasa soal Pelaporan Relawan Jokowi ke Polda DIY: Kalau Polisi Memp"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Gus Halim Beberkan Kebijakan Baru Pemanfaatan Dana Desa 2023, Kepala Desa Wajib "
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0002,
+        "ok": true,
+        "title": "Soal Revisi UU TNI dan Polri, Hadi Tjahjanto: Masih Dalam Proses"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Persiapan Resepsi Kaesang dan Erina, Jokowi Langsung ke Solo"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0004,
+        "ok": true,
+        "title": "Saat Jokowi Ajak Prabowo Sapa Delegasi Berbagai Negara di Gala Dinner IAF"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Hasto Kristiyanto Akan Bawa Obor Api Abadi Mrapen ke Lokasi Rakernas PDIP"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0002,
+        "ok": true,
+        "title": "Gakkum KLHK Tindak Lanjuti Aduan Warga soal Karhutla di Muaro Jambi"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Hindari Macet Parah Jelang Misa Akbar Besok, Gunakan Rute Alternatif"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0002,
+        "ok": true,
+        "title": "Unjuk Rasa Anti-Lockdown COVID berkobar di Seluruh China, Xi Jinping Diminta Mun"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0002,
+        "ok": true,
+        "title": "Jokowi Minta Projo Cabut Laporan, Mahfud: Bagus Tapi Jangan Hanya Butet"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0003,
+        "ok": true,
+        "title": "Suara Sah Pilpres 2024: Anies 40.971.906, Prabowo 96.214.691, Ganjar 27.040.878"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0002,
+        "ok": true,
+        "title": "Dianggap Lamban Menangani Korupsi. AKBP Denny Menjawab"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Tragedi Kanjuruhan, Bambang Rukminto: Copot Kapolda Jatim & Kapolres Malang"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0003,
+        "ok": true,
+        "title": "Respons Gibran soal Sorotan Gaya Celingukan dan Nilai Ijazahnya yang Viral di Me"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0002,
+        "ok": true,
+        "title": "Sering Ditegur karena Bicara Kasar, Prabowo: Saya Ini Mantan Serdadu, Nggak Bisa"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0003,
+        "ok": true,
+        "title": "Singgung Revisi UU Pilkada, Mahfud Md: Itu Hanya Upaya Loloskan Kaesang"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0002,
+        "ok": true,
+        "title": "Pemulihan Ekonomi RI Terjadi di Semua Sektor, Sri Mulyani Beri Buktinya"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Resmikan Hotel dan Pusat Konvensi, Jokowi Sebut Fasilitas Akomodasi di IKN Berta"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "BNI Salurkan Bantuan Tanggap Darurat, Ringankan Beban Korban Gempa Tapanuli Utar"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0002,
+        "ok": true,
+        "title": "Presiden China Xi Jinping Meninggalkan Arab Saudi Setelah Kunjungan Kenegaraan"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0002,
+        "ok": true,
+        "title": "Harga BBM Pertamina Resmi Turun! Ini Daftar Terbaru di SPBU"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0002,
+        "ok": true,
+        "title": "RS Bhayangkara Brimob Beri Trauma Healing untuk Korban Kecelakaan Bus SMK Lingga"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Tak Seperti Pejabat Lainnya Naik Helikopter, Jokowi Datangi Cianjur dengan Jalur"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Kompetitor Jadi Kolaborator, Kilas Balik Persaingan Prabowo-Jokowi saat Pilpres "
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Kelakar PKB Usai PKS Usung Duet Anies-Sohibul Iman: Emang Kita Enggak Punya Kade"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.4395,
+        "ok": true,
+        "title": "Konsumsi Naik, Kemendag Bakal Impor 991.000 Ton Gula?"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0002,
+        "ok": true,
+        "title": "Ikuti Jejak Jokowi, Ridwan Kamil Bagi-Bagi Sepeda di Bogor"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0004,
+        "ok": true,
+        "title": "Historia Bisnis: Ketika Sri Mulyani Tersenggol Suspensi Saham Grup Bakrie (BUMI)"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Sewindu Jokowi: 'Penyakit Belanda' Masih Belenggu Ekonomi RI"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Pelindo Genjot Proyek Terminal Kalibaru, Bagaimana Nasib Patimban?"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Hutama Karya Bidik Rp34 Triliun dari Divestasi Tol Trans Sumatra"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Jokowi: 66 Negara Bakal Kolaps, 345 Juta Orang Kelaparan"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Resmi Naik! Ini Daftar Terbaru Harga BBM Pertamina di SPBU"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Operator Kapal Ferry Teriak, Tarif Angkutan Tak Kunjung Naik"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Jreeng..Kuota Pertalite Makin Sekarat, Tersisa 3,55 Juta KL!"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Penghuni Mess Cenderawasih Bakal Diusir, Abraham Siap Lawan Pemprov Papua"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0002,
+        "ok": true,
+        "title": "Wali Kota Eri Surati Kemenkes, Minta Vaksin Meningitis Segera Dikirim"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Ramai-ramai Jebol Pagar DPR, Pelajar: Mahasiswa, Sini Masuk!"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Urutan Perjalanan Ibadah Haji Mulai Karantina di Asrama Haji hingga Kembali ke T"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0003,
+        "ok": true,
+        "title": "Saksi Kubu Ganjar Sebut Ada Pemberian Bantuan Berlogo Prabowo-Gibran di Masa Ten"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Jajaran KPU Temui Jokowi, Bahas Perkembangan Pilpres dan Pilkada 2024"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Faizal Assegaf Cs Desak Anies dan Ganjar Gulirkan Hak Angket untuk Ungkap Kecura"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Helikopter Hilang di Hutan Halmahera, Basarnas Sebut Pencarian Juga Ditentukan F"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0002,
+        "ok": true,
+        "title": "Komisi D DPRD DKI Usulkan Sutiyoso jadi Mediator Polemik Kampung Susun Bayam"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Janji Kementerian Pendidikan Agar Dosen PPPK Segera Jadi PNS"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0002,
+        "ok": true,
+        "title": "Jokowi Resmikan Gedung Pelayanan Kanker Ibu dan Anak RS Dharmais"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0003,
+        "ok": true,
+        "title": "Prabowo Lebaran ke Kediaman Zulhas, Turun Mobil Langsung 'PAN PAN PAN'"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0002,
+        "ok": true,
+        "title": "Marak Kasus Gangguan Ginjal Akut, Buruh Demo di Kemenkes Jumat Besok"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Faik Fahmi Kembali Ditunjuk Sebagai Direktur Utama Angkasa Pura I"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0013,
+        "ok": true,
+        "title": " Petisi Rahasia yang Menuntut Referendum Kemerdekaan Baru untuk Papua Barat Tela"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "PBNU Dukung Kebijakan Kemenag Ganti Siaran Azan Magrib jadi Running Text saat Mi"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "PDI-P Tak Masalah Menterinya Dicopot Jokowi, Hasto: Jabatan Tinggal Berapa Hari"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Krakatau Steel (KRAS) Siapkan Rencana Besar Lunasi Utang Rp 26 Triliun"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Terima Kasih, Jokowi! Lewat Tol 'Atlantis', Cuma Bayar Segini"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0002,
+        "ok": true,
+        "title": "Buka Jakarta Fair Kemayoran 2024, Jokowi: Event yang Ditunggu Masyarakat"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "KPU  DKI Jakarta Terima Pendaftaran Calon Independen Pilkada 2024 Sampai Hari In"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Dipanggil Jokowi, Angga Raka Bahas Soal Penanganan Judi \u201cOnline\u201d"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0002,
+        "ok": true,
+        "title": "Dugaan Pelanggaran Kampanye Ganjar Pranowo, Bawaslu Beri Waktu Pelapor Lengkapi "
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0002,
+        "ok": true,
+        "title": "Anggota F-PSI DKI Sebut Jakarta Macet Sebabkan Kerugian Rp 65 T Per Tahun"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Dirjen PPKL: Perkuat Pemberdayaan Masyarakat Dalam Pengelolaan Ekosistem Gambut "
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Ma'ruf Amin Harap Panas Sengketa Pilpres di MK Tidak Belah Masyarakat"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0003,
+        "ok": true,
+        "title": "Penyelundupan Ratusan Karung Tokek Kering Digagalkan, Bravo, Bea Cukai & TNI-Pol"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0002,
+        "ok": true,
+        "title": "Ganjar dan Puan Tampak Mesra di Solo, Ternyata Ada Niatan Bersua!"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Begini Upaya Pemerintah Menghilangkan Hambatan Implementasi UU TPKS"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0003,
+        "ok": true,
+        "title": "KKB Hadang dan Bakar Truk yang Angkut Warga di Yahukimo, Sopir Dibunuh"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0002,
+        "ok": true,
+        "title": "Yusril Ihza Mahendra Pimpin Tim Pembela Prabowo-Gibran di MK, Dulu Kuasa Hukum J"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Kemenkes Distribusikan Obat Penawar Ginjal Akut ke RSUP Prof Ngoerah Bali"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0002,
+        "ok": true,
+        "title": "Mahfud Md Pastikan Rencana Hak Angket Bukan Gertakan, Gugatan ke MK juga Tunggu "
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0001,
+        "ok": true,
+        "title": "Respons Timnas Amin soal TNI Perbolehkan Prabowo-Gibran Pakai Gedung untuk Kampa"
+      }
+    ]
+  },
+  "old": {
+    "n": 110,
+    "accuracy": 0.4909090909090909,
+    "fakta_accuracy": 0.44,
+    "fakta_mean_hoax_prob": 0.563333,
+    "fakta_fp_rate": 0.56,
+    "hoax_accuracy": 1.0,
+    "hoax_mean_hoax_prob": 0.99766,
+    "yonif143_hoax_prob": 0.911,
+    "rows": [
+      {
+        "tag": "yonif143_tribun",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.911,
+        "ok": false,
+        "title": "450 Prajurit TNI AD Yonif 143 Kembali ke Lampung Usai Bertugas di Perbatasan RI-"
+      },
+      {
+        "tag": "official_tni_border",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9869,
+        "ok": false,
+        "title": "Panglima TNI Tinjau Pos Perbatasan RI-PNG"
+      },
+      {
+        "tag": "istana_rapat",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9933,
+        "ok": false,
+        "title": "Presiden buka rapat kabinet di Istana Negara"
+      },
+      {
+        "tag": "bmkg",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0774,
+        "ok": true,
+        "title": "BMKG keluarkan peringatan dini cuaca ekstrem Jawa Barat"
+      },
+      {
+        "tag": "polri_mudik",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.5924,
+        "ok": false,
+        "title": "Polri amankan jalur mudik Lebaran dengan rekayasa lalu lintas"
+      },
+      {
+        "tag": "hut_tni_ad",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9959,
+        "ok": false,
+        "title": "KSAD pimpin upacara HUT TNI AD di Markas Besar"
+      },
+      {
+        "tag": "yonif_papua_official",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.994,
+        "ok": false,
+        "title": "Satgas Yonif Raider berangkat tugas operasi di Papua"
+      },
+      {
+        "tag": "kemhan_alutsista",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9963,
+        "ok": false,
+        "title": "Kementerian Pertahanan serahkan alutsista baru kepada TNI AL"
+      },
+      {
+        "tag": "bps_inflasi",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.3558,
+        "ok": true,
+        "title": "Antara: Inflasi bulanan tetap terkendali menurut BPS"
+      },
+      {
+        "tag": "dki_sim",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9841,
+        "ok": false,
+        "title": "Kompas: Pemda DKI perpanjang masa berlaku SIM keliling"
+      },
+      {
+        "tag": "pln",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9963,
+        "ok": false,
+        "title": "Detik: PLN pastikan pasokan listrik aman saat libur nasional"
+      },
+      {
+        "tag": "kodam_baksos",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9627,
+        "ok": false,
+        "title": "Tribun: Kodam XII/Tpr gelar bakti sosial di perbatasan"
+      },
+      {
+        "tag": "ikn_resmi",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9947,
+        "ok": false,
+        "title": "CNN Indonesia: Jokowi tinjau proyek Ibu Kota Nusantara"
+      },
+      {
+        "tag": "bi_suku_bunga",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9907,
+        "ok": false,
+        "title": "Liputan6: Bank Indonesia pertahankan suku bunga acuan"
+      },
+      {
+        "tag": "mk_sidang",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9895,
+        "ok": false,
+        "title": "Tempo: Mahkamah Konstitusi jadwalkan sidang uji materi"
+      },
+      {
+        "tag": "kemenag_ramadan",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9105,
+        "ok": false,
+        "title": "Republika: Kemenag tetapkan awal Ramadan berdasarkan hisab dan rukyat"
+      },
+      {
+        "tag": "basarnas_banjir",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9899,
+        "ok": false,
+        "title": "Okezone: Basarnas evakuasi korban banjir di Sulawesi"
+      },
+      {
+        "tag": "dpr_ruu",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.994,
+        "ok": false,
+        "title": "Sindonews: DPR sahkan RUU terkait perlindungan data pribadi"
+      },
+      {
+        "tag": "tni_au_latihan",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9868,
+        "ok": false,
+        "title": "TNI AU laksanakan latihan angkut semesta di Lanud"
+      },
+      {
+        "tag": "polda_papua",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.3782,
+        "ok": true,
+        "title": "Polda Papua amankan barang bukti senjata rakitan"
+      },
+      {
+        "tag": "hoax_tni_gaza",
+        "expected": 1,
+        "pred": 1,
+        "hoax_prob": 0.9985,
+        "ok": true,
+        "title": "20.000 prajurit TNI diterbangkan ke Gaza"
+      },
+      {
+        "tag": "hoax_presiden_diganti",
+        "expected": 1,
+        "pred": 1,
+        "hoax_prob": 0.9974,
+        "ok": true,
+        "title": "Presiden diganti diam-diam malam ini"
+      },
+      {
+        "tag": "hoax_vaksin_chip",
+        "expected": 1,
+        "pred": 1,
+        "hoax_prob": 0.9986,
+        "ok": true,
+        "title": "Vaksin mengandung chip pelacak satelit"
+      },
+      {
+        "tag": "hoax_bbm_wa",
+        "expected": 1,
+        "pred": 1,
+        "hoax_prob": 0.998,
+        "ok": true,
+        "title": "BBM naik malam ini sesuai pesan WA"
+      },
+      {
+        "tag": "hoax_tsunami",
+        "expected": 1,
+        "pred": 1,
+        "hoax_prob": 0.9968,
+        "ok": true,
+        "title": "Tsunami 100 meter akan hantam Jawa malam ini"
+      },
+      {
+        "tag": "hoax_uang_chip",
+        "expected": 1,
+        "pred": 1,
+        "hoax_prob": 0.9979,
+        "ok": true,
+        "title": "Uang baru berciri chip RFID untuk pantau warga"
+      },
+      {
+        "tag": "hoax_kudeta",
+        "expected": 1,
+        "pred": 1,
+        "hoax_prob": 0.998,
+        "ok": true,
+        "title": "Panglima TNI kudeta istana"
+      },
+      {
+        "tag": "hoax_papua_pbb",
+        "expected": 1,
+        "pred": 1,
+        "hoax_prob": 0.9938,
+        "ok": true,
+        "title": "Papua merdeka diakui PBB hari ini"
+      },
+      {
+        "tag": "hoax_bantuan_barcode",
+        "expected": 1,
+        "pred": 1,
+        "hoax_prob": 0.9986,
+        "ok": true,
+        "title": "Bantuan COVID cair Rp 10 juta scan barcode"
+      },
+      {
+        "tag": "hoax_lemon_corona",
+        "expected": 1,
+        "pred": 1,
+        "hoax_prob": 0.999,
+        "ok": true,
+        "title": "Air putih campur lemon bunuh virus corona dalam 24 jam"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.1123,
+        "ok": true,
+        "title": "Gempa Cianjur, DPR Akan Panggil Pemerintah Bahas Peringatan Dini Gempa"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.993,
+        "ok": false,
+        "title": "Ini 5 Produsen Makanan Pencemar Sampah Plastik Versi ECOTON"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0087,
+        "ok": true,
+        "title": "Jasa Raharja Jamin Seluruh Korban Kecelakaan Bus di Tol Batang-Semarang"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0819,
+        "ok": true,
+        "title": "Menag Yaqut Sebut Kunjungan Paus Fransiskus Bukti Hubungan RI dan Vatikan Terjal"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9582,
+        "ok": false,
+        "title": "Singgung Dugaan Kasus Judi dan Narkoba Terkait Sambo, Mahfud: Kalau Diteruskan R"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9446,
+        "ok": false,
+        "title": "Semua Ternak Sembuh PMK, Pasar Hewan Susun Strategi"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0032,
+        "ok": true,
+        "title": "Kapolri Datangi Polsek Astana Anyar Lokasi Serangan Bom Bunuh Diri"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0222,
+        "ok": true,
+        "title": "Pansus Haji Belum Bisa Pastikan Adanya Unsur Pidana soal Pembagian Kuota Haji"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.089,
+        "ok": true,
+        "title": "UKT Batal Naik, Nadiem Beri Tenggat PTN Ajukan Perubahan Tarif hingga 5 Juni"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.527,
+        "ok": false,
+        "title": "Jember Bakal Bangun Sentra Industri Hasil Tembakau"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9952,
+        "ok": false,
+        "title": "Perumpamaan \"Politik Septic Tank\" dan Janji pada Papua"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.4011,
+        "ok": true,
+        "title": "Butet Kartaredjasa soal Pelaporan Relawan Jokowi ke Polda DIY: Kalau Polisi Memp"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.2477,
+        "ok": true,
+        "title": "Gus Halim Beberkan Kebijakan Baru Pemanfaatan Dana Desa 2023, Kepala Desa Wajib "
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0131,
+        "ok": true,
+        "title": "Soal Revisi UU TNI dan Polri, Hadi Tjahjanto: Masih Dalam Proses"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9945,
+        "ok": false,
+        "title": "Persiapan Resepsi Kaesang dan Erina, Jokowi Langsung ke Solo"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9956,
+        "ok": false,
+        "title": "Saat Jokowi Ajak Prabowo Sapa Delegasi Berbagai Negara di Gala Dinner IAF"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.012,
+        "ok": true,
+        "title": "Hasto Kristiyanto Akan Bawa Obor Api Abadi Mrapen ke Lokasi Rakernas PDIP"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.5835,
+        "ok": false,
+        "title": "Gakkum KLHK Tindak Lanjuti Aduan Warga soal Karhutla di Muaro Jambi"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0192,
+        "ok": true,
+        "title": "Hindari Macet Parah Jelang Misa Akbar Besok, Gunakan Rute Alternatif"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9972,
+        "ok": false,
+        "title": "Unjuk Rasa Anti-Lockdown COVID berkobar di Seluruh China, Xi Jinping Diminta Mun"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0498,
+        "ok": true,
+        "title": "Jokowi Minta Projo Cabut Laporan, Mahfud: Bagus Tapi Jangan Hanya Butet"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0184,
+        "ok": true,
+        "title": "Suara Sah Pilpres 2024: Anies 40.971.906, Prabowo 96.214.691, Ganjar 27.040.878"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0325,
+        "ok": true,
+        "title": "Dianggap Lamban Menangani Korupsi. AKBP Denny Menjawab"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9703,
+        "ok": false,
+        "title": "Tragedi Kanjuruhan, Bambang Rukminto: Copot Kapolda Jatim & Kapolres Malang"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0373,
+        "ok": true,
+        "title": "Respons Gibran soal Sorotan Gaya Celingukan dan Nilai Ijazahnya yang Viral di Me"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.105,
+        "ok": true,
+        "title": "Sering Ditegur karena Bicara Kasar, Prabowo: Saya Ini Mantan Serdadu, Nggak Bisa"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.015,
+        "ok": true,
+        "title": "Singgung Revisi UU Pilkada, Mahfud Md: Itu Hanya Upaya Loloskan Kaesang"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.7711,
+        "ok": false,
+        "title": "Pemulihan Ekonomi RI Terjadi di Semua Sektor, Sri Mulyani Beri Buktinya"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.3487,
+        "ok": true,
+        "title": "Resmikan Hotel dan Pusat Konvensi, Jokowi Sebut Fasilitas Akomodasi di IKN Berta"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.993,
+        "ok": false,
+        "title": "BNI Salurkan Bantuan Tanggap Darurat, Ringankan Beban Korban Gempa Tapanuli Utar"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9956,
+        "ok": false,
+        "title": "Presiden China Xi Jinping Meninggalkan Arab Saudi Setelah Kunjungan Kenegaraan"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9893,
+        "ok": false,
+        "title": "Harga BBM Pertamina Resmi Turun! Ini Daftar Terbaru di SPBU"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.007,
+        "ok": true,
+        "title": "RS Bhayangkara Brimob Beri Trauma Healing untuk Korban Kecelakaan Bus SMK Lingga"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0639,
+        "ok": true,
+        "title": "Tak Seperti Pejabat Lainnya Naik Helikopter, Jokowi Datangi Cianjur dengan Jalur"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9783,
+        "ok": false,
+        "title": "Kompetitor Jadi Kolaborator, Kilas Balik Persaingan Prabowo-Jokowi saat Pilpres "
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.7309,
+        "ok": false,
+        "title": "Kelakar PKB Usai PKS Usung Duet Anies-Sohibul Iman: Emang Kita Enggak Punya Kade"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.992,
+        "ok": false,
+        "title": "Konsumsi Naik, Kemendag Bakal Impor 991.000 Ton Gula?"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9922,
+        "ok": false,
+        "title": "Ikuti Jejak Jokowi, Ridwan Kamil Bagi-Bagi Sepeda di Bogor"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.995,
+        "ok": false,
+        "title": "Historia Bisnis: Ketika Sri Mulyani Tersenggol Suspensi Saham Grup Bakrie (BUMI)"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9904,
+        "ok": false,
+        "title": "Sewindu Jokowi: 'Penyakit Belanda' Masih Belenggu Ekonomi RI"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9892,
+        "ok": false,
+        "title": "Pelindo Genjot Proyek Terminal Kalibaru, Bagaimana Nasib Patimban?"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.8543,
+        "ok": false,
+        "title": "Hutama Karya Bidik Rp34 Triliun dari Divestasi Tol Trans Sumatra"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9948,
+        "ok": false,
+        "title": "Jokowi: 66 Negara Bakal Kolaps, 345 Juta Orang Kelaparan"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9899,
+        "ok": false,
+        "title": "Resmi Naik! Ini Daftar Terbaru Harga BBM Pertamina di SPBU"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.3685,
+        "ok": true,
+        "title": "Operator Kapal Ferry Teriak, Tarif Angkutan Tak Kunjung Naik"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9822,
+        "ok": false,
+        "title": "Jreeng..Kuota Pertalite Makin Sekarat, Tersisa 3,55 Juta KL!"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.7151,
+        "ok": false,
+        "title": "Penghuni Mess Cenderawasih Bakal Diusir, Abraham Siap Lawan Pemprov Papua"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.1436,
+        "ok": true,
+        "title": "Wali Kota Eri Surati Kemenkes, Minta Vaksin Meningitis Segera Dikirim"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0385,
+        "ok": true,
+        "title": "Ramai-ramai Jebol Pagar DPR, Pelajar: Mahasiswa, Sini Masuk!"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9432,
+        "ok": false,
+        "title": "Urutan Perjalanan Ibadah Haji Mulai Karantina di Asrama Haji hingga Kembali ke T"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0059,
+        "ok": true,
+        "title": "Saksi Kubu Ganjar Sebut Ada Pemberian Bantuan Berlogo Prabowo-Gibran di Masa Ten"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0031,
+        "ok": true,
+        "title": "Jajaran KPU Temui Jokowi, Bahas Perkembangan Pilpres dan Pilkada 2024"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0652,
+        "ok": true,
+        "title": "Faizal Assegaf Cs Desak Anies dan Ganjar Gulirkan Hak Angket untuk Ungkap Kecura"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0018,
+        "ok": true,
+        "title": "Helikopter Hilang di Hutan Halmahera, Basarnas Sebut Pencarian Juga Ditentukan F"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0367,
+        "ok": true,
+        "title": "Komisi D DPRD DKI Usulkan Sutiyoso jadi Mediator Polemik Kampung Susun Bayam"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.2726,
+        "ok": true,
+        "title": "Janji Kementerian Pendidikan Agar Dosen PPPK Segera Jadi PNS"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.5312,
+        "ok": false,
+        "title": "Jokowi Resmikan Gedung Pelayanan Kanker Ibu dan Anak RS Dharmais"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0073,
+        "ok": true,
+        "title": "Prabowo Lebaran ke Kediaman Zulhas, Turun Mobil Langsung 'PAN PAN PAN'"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9803,
+        "ok": false,
+        "title": "Marak Kasus Gangguan Ginjal Akut, Buruh Demo di Kemenkes Jumat Besok"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9767,
+        "ok": false,
+        "title": "Faik Fahmi Kembali Ditunjuk Sebagai Direktur Utama Angkasa Pura I"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9984,
+        "ok": false,
+        "title": " Petisi Rahasia yang Menuntut Referendum Kemerdekaan Baru untuk Papua Barat Tela"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0076,
+        "ok": true,
+        "title": "PBNU Dukung Kebijakan Kemenag Ganti Siaran Azan Magrib jadi Running Text saat Mi"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.1709,
+        "ok": true,
+        "title": "PDI-P Tak Masalah Menterinya Dicopot Jokowi, Hasto: Jabatan Tinggal Berapa Hari"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.8379,
+        "ok": false,
+        "title": "Krakatau Steel (KRAS) Siapkan Rencana Besar Lunasi Utang Rp 26 Triliun"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9054,
+        "ok": false,
+        "title": "Terima Kasih, Jokowi! Lewat Tol 'Atlantis', Cuma Bayar Segini"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0226,
+        "ok": true,
+        "title": "Buka Jakarta Fair Kemayoran 2024, Jokowi: Event yang Ditunggu Masyarakat"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0201,
+        "ok": true,
+        "title": "KPU  DKI Jakarta Terima Pendaftaran Calon Independen Pilkada 2024 Sampai Hari In"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0065,
+        "ok": true,
+        "title": "Dipanggil Jokowi, Angga Raka Bahas Soal Penanganan Judi \u201cOnline\u201d"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0088,
+        "ok": true,
+        "title": "Dugaan Pelanggaran Kampanye Ganjar Pranowo, Bawaslu Beri Waktu Pelapor Lengkapi "
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0146,
+        "ok": true,
+        "title": "Anggota F-PSI DKI Sebut Jakarta Macet Sebabkan Kerugian Rp 65 T Per Tahun"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9721,
+        "ok": false,
+        "title": "Dirjen PPKL: Perkuat Pemberdayaan Masyarakat Dalam Pengelolaan Ekosistem Gambut "
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9736,
+        "ok": false,
+        "title": "Ma'ruf Amin Harap Panas Sengketa Pilpres di MK Tidak Belah Masyarakat"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9775,
+        "ok": false,
+        "title": "Penyelundupan Ratusan Karung Tokek Kering Digagalkan, Bravo, Bea Cukai & TNI-Pol"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.3092,
+        "ok": true,
+        "title": "Ganjar dan Puan Tampak Mesra di Solo, Ternyata Ada Niatan Bersua!"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9793,
+        "ok": false,
+        "title": "Begini Upaya Pemerintah Menghilangkan Hambatan Implementasi UU TPKS"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0089,
+        "ok": true,
+        "title": "KKB Hadang dan Bakar Truk yang Angkut Warga di Yahukimo, Sopir Dibunuh"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9878,
+        "ok": false,
+        "title": "Yusril Ihza Mahendra Pimpin Tim Pembela Prabowo-Gibran di MK, Dulu Kuasa Hukum J"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 1,
+        "hoax_prob": 0.9921,
+        "ok": false,
+        "title": "Kemenkes Distribusikan Obat Penawar Ginjal Akut ke RSUP Prof Ngoerah Bali"
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0702,
+        "ok": true,
+        "title": "Mahfud Md Pastikan Rencana Hak Angket Bukan Gertakan, Gugatan ke MK juga Tunggu "
+      },
+      {
+        "tag": "hard_pool_fakta",
+        "expected": 0,
+        "pred": 0,
+        "hoax_prob": 0.0144,
+        "ok": true,
+        "title": "Respons Timnas Amin soal TNI Perbolehkan Prabowo-Gibran Pakai Gedung untuk Kampa"
+      }
+    ]
+  }
+}

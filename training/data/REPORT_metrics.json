@@ -1,0 +1,56 @@
+{
+  "held_out_note": "CPU proof, max_len=128, 2 epochs, ~2.1k train rows; Colab notebook supports full scale",
+  "held_out": {
+    "device": "cpu",
+    "held_out": {
+      "FAKTA": {
+        "precision": 1.0,
+        "recall": 0.9923076923076923,
+        "f1-score": 0.9961389961389961,
+        "support": 130.0
+      },
+      "HOAX": {
+        "precision": 0.9927536231884058,
+        "recall": 1.0,
+        "f1-score": 0.9963636363636363,
+        "support": 137.0
+      },
+      "accuracy": 0.9962546816479401,
+      "macro avg": {
+        "precision": 0.9963768115942029,
+        "recall": 0.9961538461538462,
+        "f1-score": 0.9962513162513162,
+        "support": 267.0
+      },
+      "weighted avg": {
+        "precision": 0.9962818216359985,
+        "recall": 0.9962546816479401,
+        "f1-score": 0.9962542609733622,
+        "support": 267.0
+      }
+    }
+  },
+  "hard_test": {
+    "new": {
+      "n": 110,
+      "accuracy": 0.8545454545454545,
+      "fakta_accuracy": 0.84,
+      "fakta_mean_hoax_prob": 0.156775,
+      "fakta_fp_rate": 0.16,
+      "hoax_accuracy": 1.0,
+      "hoax_mean_hoax_prob": 0.9997400000000001,
+      "yonif143_hoax_prob": 0.0065
+    },
+    "old": {
+      "n": 110,
+      "accuracy": 0.4909090909090909,
+      "fakta_accuracy": 0.44,
+      "fakta_mean_hoax_prob": 0.563333,
+      "fakta_fp_rate": 0.56,
+      "hoax_accuracy": 1.0,
+      "hoax_mean_hoax_prob": 0.99766,
+      "yonif143_hoax_prob": 0.911
+    }
+  },
+  "composition": "source,label,rows,label_name\nmafindo-repo-news40k,0,624,FAKTA\nidn-news-az,0,601,FAKTA\nmafindo-2024-fakta,0,134,FAKTA\ntbh-github-klarifikasi,0,6,FAKTA\nmendeley-600,0,5,FAKTA\npierobeat-500,0,3,FAKTA\nmafindo-2024-hoax,1,500,HOAX\ntbh-github,1,431,HOAX\npierobeat-500,1,225,HOAX\nmendeley-600,1,217,HOAX\n"
+}

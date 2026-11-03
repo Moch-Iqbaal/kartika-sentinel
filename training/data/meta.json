@@ -1,0 +1,71 @@
+{
+  "mafindo_hoax_share_target": 0.35,
+  "train": 2132,
+  "val": 267,
+  "test": 267,
+  "hard": 110,
+  "hoax_by_source": [
+    {
+      "source": "mafindo-2024-hoax",
+      "label": 1,
+      "rows": 500,
+      "label_name": "HOAX"
+    },
+    {
+      "source": "tbh-github",
+      "label": 1,
+      "rows": 431,
+      "label_name": "HOAX"
+    },
+    {
+      "source": "pierobeat-500",
+      "label": 1,
+      "rows": 225,
+      "label_name": "HOAX"
+    },
+    {
+      "source": "mendeley-600",
+      "label": 1,
+      "rows": 217,
+      "label_name": "HOAX"
+    }
+  ],
+  "fakta_by_source": [
+    {
+      "source": "mafindo-repo-news40k",
+      "label": 0,
+      "rows": 591,
+      "label_name": "FAKTA"
+    },
+    {
+      "source": "idn-news-az",
+      "label": 0,
+      "rows": 565,
+      "label_name": "FAKTA"
+    },
+    {
+      "source": "mafindo-2024-fakta",
+      "label": 0,
+      "rows": 124,
+      "label_name": "FAKTA"
+    },
+    {
+      "source": "mendeley-600",
+      "label": 0,
+      "rows": 5,
+      "label_name": "FAKTA"
+    },
+    {
+      "source": "tbh-github-klarifikasi",
+      "label": 0,
+      "rows": 5,
+      "label_name": "FAKTA"
+    },
+    {
+      "source": "pierobeat-500",
+      "label": 0,
+      "rows": 3,
+      "label_name": "FAKTA"
+    }
+  ]
+}
