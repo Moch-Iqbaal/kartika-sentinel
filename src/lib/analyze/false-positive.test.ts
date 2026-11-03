@@ -134,6 +134,27 @@ test("infografis Antara tidak menilainya dari teks metadata", () => {
   assert.equal(KNOWN_FALSE_POSITIVES.some((item) => item.id === "antara-mbg"), true);
 });
 
+
+test("video Tribun Yonif 143 skor 99,3 persen sendirian tetap FAKTA", () => {
+  const title = "450 Prajurit TNI AD Yonif 143 Kembali ke Lampung Usai Bertugas di Perbatasan RI-PNG";
+  const description = "Kapenrem 043 Gatam Kolonel Inf Asep Suryana menyambut kedatangan prajurit di Pelabuhan Panjang. Pasukan kembali ke Kodam XXI Radin Inten setelah bertugas di perbatasan RI-PNG.";
+  const input = card({
+    hoaxScore: 0.993,
+    indobert: 0.993,
+    linear: 0.34,
+    heuristic: 0.28,
+    textChars: `${title} ${description}`.length,
+    text: `${title}\n${description}`,
+    sourceUrl: "https://www.youtube.com/watch?v=YEfOFbJSuYQ",
+  });
+  assert.equal(decideVerdict(input), "not-hoax");
+  const text = buildRingkasan(input);
+  assert.equal(text.headline, "Kemungkinan FAKTA");
+  assert.equal(text.confidence, "Rendah");
+  assert.ok(text.confidenceReason === "dua penilaian tidak sejalan" || text.confidenceReason === "bukti sedikit");
+  assert.doesNotMatch(text.sentences.join(" "), /umn-cyber|IndoBERT|mafindo/i);
+});
+
 test("berita biasa tanpa kata kritik tidak ditandai opini", () => {
   const plain = "Panglima membuka latihan bersama di markas pada Senin pagi dan menjelaskan jadwal kepada awak media yang hadir di lapangan upacara.";
   assert.equal(detectOpinion(plain), null);

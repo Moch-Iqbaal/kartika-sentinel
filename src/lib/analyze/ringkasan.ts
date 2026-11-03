@@ -14,9 +14,8 @@ import type { RiskBand } from "../scoring/risk";
 /**
  * Vonis hanya dua: HOAKS atau FAKTA.
  * Urutan: pemeriksaan fakta hoaks, lalu fakta/berita lain, lalu kritik kebijakan, lalu angka.
- * Tanpa pemeriksaan fakta hoaks, angka tinggi sendirian tidak cukup bila penilaian lain tidak sejalan,
- * atau bila teksnya berita dari kanal berita yang dikenal tanpa ajakan sebar.
- * Pada kedua keadaan itu, hoaks hanya bila kedua angka 0,5 atau lebih.
+ * Tanpa pemeriksaan fakta hoaks, angka tinggi sendirian tidak cukup.
+ * Hoaks dari angka hanya bila kedua penilai mencapai 0,7 dan tidak berselisih jauh.
  * Keyakinan rendah menjelaskan teks pendek, dua penilaian yang tidak sejalan, atau bukti sedikit.
  * Kanal sendiri dan domain artikel sendiri bukan berita penguat. Kanal berita hanya prior ringan.
  * Artikel lama tidak mengubah vonis, kecuali kemiripannya hampir sama.
