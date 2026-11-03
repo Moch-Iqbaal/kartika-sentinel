@@ -1,0 +1,12 @@
+.git
+.next
+node_modules
+data
+src
+supabase
+models
+**/*.md
+**/*.test.ts
+coverage
+.env*
+!.env.example

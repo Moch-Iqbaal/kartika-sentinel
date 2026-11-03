@@ -88,7 +88,7 @@ export function sessionCookieOptions(): {
   return {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: process.env.COOKIE_SECURE === "true" || (process.env.COOKIE_SECURE !== "false" && process.env.NODE_ENV === "production"),
     path: "/",
     maxAge: MAX_AGE_SECONDS,
   };

@@ -1,0 +1,19 @@
+# Oracle Cloud Always Free, atau VM lain. Bukan jalur Cloud Run.
+# Set LOCAL_MODEL_TOKEN di environment sebelum `docker compose up --build`.
+
+services:
+  hoax:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      HOAX_BIND_HOST: 0.0.0.0
+      PORT: "8080"
+      LOCAL_MODEL_TOKEN: ${LOCAL_MODEL_TOKEN:?set LOCAL_MODEL_TOKEN}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=4)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 180s

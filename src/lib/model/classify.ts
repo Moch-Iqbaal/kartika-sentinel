@@ -1,7 +1,7 @@
 import { detectAiText, type AiTextFlag } from "@/lib/model/ai-text";
 import { heuristicHoax, type HeuristicScore } from "@/lib/model/heuristic";
 import { linearHoaxProbability } from "@/lib/model/linear";
-import { classifyWithLocalIndoBert, type LocalModelScore } from "@/lib/model/local-indobert";
+import { probeLocalIndoBert, type LocalModelScore, type ModelAvailability } from "@/lib/model/local-indobert";
 
 export type HoaxEngine = "indobert-local" | "linear-ngram" | "heuristic";
 
@@ -13,6 +13,7 @@ export type HoaxAssessment = {
   linear: { probability: number; version: string } | null;
   heuristic: HeuristicScore;
   ai: AiTextFlag;
+  modelStatus: ModelAvailability;
 };
 
 /**
@@ -28,8 +29,12 @@ export async function assessHoax(
 ): Promise<HoaxAssessment> {
   const heuristic = heuristicHoax(text);
   const linear = linearHoaxProbability(text);
-  const indobert = options?.allowIndobert === false ? null : await classifyWithLocalIndoBert(text);
+  const probe = options?.allowIndobert === false
+    ? ({ state: "dilewati", reason: "Skor batch tidak memanggil IndoBERT." } as const)
+    : await probeLocalIndoBert(text);
   const ai = detectAiText(text);
+  const modelStatus: ModelAvailability = probe.state;
+  const indobert = probe.state === "siap" ? probe.score : null;
 
   if (indobert) {
     return {
@@ -40,6 +45,7 @@ export async function assessHoax(
       linear,
       heuristic,
       ai,
+      modelStatus,
     };
   }
   if (linear) {
@@ -51,6 +57,7 @@ export async function assessHoax(
       linear,
       heuristic,
       ai,
+      modelStatus,
     };
   }
   return {
@@ -61,5 +68,6 @@ export async function assessHoax(
     linear: null,
     heuristic,
     ai,
+    modelStatus,
   };
 }

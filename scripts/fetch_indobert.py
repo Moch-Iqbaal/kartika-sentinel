@@ -9,6 +9,7 @@ model linier serta heuristik. Tidak memakai Inference API.
 
 from __future__ import annotations
 
+import os
 import urllib.request
 from pathlib import Path
 
@@ -28,8 +29,8 @@ def download(url: str, dest: Path) -> None:
 
 
 def main() -> None:
-    model = ROOT / "models" / "umn-cyber-indobert-hoax"
-    tokenizer = ROOT / "models" / "indobert-base-p1"
+    model = Path(os.environ.get("HOAX_MODEL_DIR", ROOT / "models" / "umn-cyber-indobert-hoax"))
+    tokenizer = Path(os.environ.get("HOAX_TOKENIZER_DIR", ROOT / "models" / "indobert-base-p1"))
     model_base = "https://huggingface.co/umn-cyber/indobert-hoax/resolve/main/"
     tok_base = "https://huggingface.co/indobenchmark/indobert-base-p1/resolve/main/"
     for name in ("config.json", "model.safetensors"):

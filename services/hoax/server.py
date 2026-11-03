@@ -22,9 +22,11 @@ from pydantic import BaseModel, Field
 ROOT = Path(__file__).resolve().parents[2]
 MODEL_DIR = Path(os.environ.get("HOAX_MODEL_DIR", ROOT / "models" / "umn-cyber-indobert-hoax"))
 TOKENIZER_DIR = Path(os.environ.get("HOAX_TOKENIZER_DIR", ROOT / "models" / "indobert-base-p1"))
-HOST = "127.0.0.1"
-PORT = int(os.environ.get("HOAX_MODEL_PORT", "43124"))
+# Cloud Run mengisi PORT dan K_SERVICE. Di laptop, tetap loopback.
+BIND = os.environ.get("HOAX_BIND_HOST") or ("0.0.0.0" if os.environ.get("K_SERVICE") or os.environ.get("PORT") else "127.0.0.1")
+PORT = int(os.environ.get("PORT") or os.environ.get("HOAX_MODEL_PORT") or "43124")
 MODEL_ID = "umn-cyber/indobert-hoax"
+_load_lock = threading.Lock()
 
 app = FastAPI(title="Kartika Sentinel IndoBERT", docs_url=None, redoc_url=None)
 state: dict = {"ready": False, "error": None, "model": None, "tokenizer": None, "hoax_index": 1}
@@ -39,6 +41,19 @@ def _authorized(header: str | None) -> None:
     expected = os.environ.get("LOCAL_MODEL_TOKEN", "").strip()
     if expected and header != expected:
         raise HTTPException(status_code=401, detail="Token model lokal salah.")
+
+
+def _public_bind() -> bool:
+    return BIND not in {"127.0.0.1", "localhost", "::1"}
+
+
+def ensure_loaded() -> None:
+    # Muat di dalam permintaan supaya Cloud Run (CPU hanya saat request) sempat menghitung.
+    if state["ready"]:
+        return
+    with _load_lock:
+        if not state["ready"]:
+            _load()
 
 
 def _load() -> None:
@@ -80,7 +95,11 @@ def _load() -> None:
 
 @app.on_event("startup")
 def startup() -> None:
-    threading.Thread(target=_load, daemon=True).start()
+    if _public_bind() and not os.environ.get("LOCAL_MODEL_TOKEN", "").strip():
+        raise RuntimeError("LOCAL_MODEL_TOKEN wajib bila layanan dibuka di luar loopback.")
+    # Pemanasan di thread hanya membantu proses yang CPUnya tidak dibekukan.
+    # Permintaan /classify tetap memanggil ensure_loaded() sendiri.
+    threading.Thread(target=ensure_loaded, daemon=True).start()
 
 
 @app.get("/health")
@@ -96,8 +115,13 @@ def health() -> dict:
 @app.post("/classify")
 def classify(body: ClassifyIn, x_kartika_model_token: str | None = Header(default=None)) -> dict:
     _authorized(x_kartika_model_token)
+    ensure_loaded()
     if not state["ready"]:
-        return {"available": False, "error": state["error"] or "Model masih dimuat."}
+        return {
+            "available": False,
+            "warming": True,
+            "error": state["error"] or "Model masih dimuat.",
+        }
 
     torch = state["torch"]
     tokenizer = state["tokenizer"]
@@ -122,4 +146,6 @@ def classify(body: ClassifyIn, x_kartika_model_token: str | None = Header(defaul
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host=HOST, port=PORT, log_level="info")
+    if _public_bind() and not os.environ.get("LOCAL_MODEL_TOKEN", "").strip():
+        raise SystemExit("LOCAL_MODEL_TOKEN wajib bila layanan dibuka di luar loopback.")
+    uvicorn.run(app, host=BIND, port=PORT, log_level="info")
