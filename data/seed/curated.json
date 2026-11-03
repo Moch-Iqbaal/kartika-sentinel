@@ -1,0 +1,68 @@
+[
+  {
+    "id": "curated-gaza-20000",
+    "source": "Tempo Cek Fakta",
+    "title": "Menyesatkan: Indonesia kirim 20 ribu anggota TNI ke Gaza",
+    "claim": "Video formasi pesawat diklaim menunjukkan 20 ribu prajurit TNI sudah dikirim sebagai pasukan perdamaian ke Gaza.",
+    "verdict": "misleading",
+    "url": "https://www.tempo.co/cekfakta/menyesatkan-indonesia-kirim-20-ribu-anggota-tni-ke-gaza-2079832",
+    "publishedAt": "2025-10-15",
+    "summary": "Tempo Cek Fakta menyimpulkan klaim itu menyesatkan. Video yang beredar adalah latihan udara jelang HUT ke-80 TNI pada 5 Oktober 2025. Artikel yang sama, mengutip laman TNI, menyebut misi kemanusiaan Garuda Merah Putih II (17 Agustus–9 September 2025) berisi 88 personel dengan tiga pesawat C-130J dan airdrop 91,4 ton, bukan pengiriman 20 ribu pasukan.",
+    "license": "kutipan-cek-fakta"
+  },
+  {
+    "id": "curated-gaza-wawancara-ai",
+    "source": "Tempo Cek Fakta",
+    "title": "Keliru: video pejabat militer Israel menanggapi rencana 20 ribu tentara",
+    "claim": "Beredar video yang diklaim wawancara pejabat militer Israel yang tidak gentar jika Indonesia mengirim 20 ribu pasukan ke Gaza.",
+    "verdict": "hoax",
+    "url": "https://www.tempo.co/cekfakta/keliru-video-pejabat-militer-israel-tanggapi-rencana-indonesia-kirim-20-ribu-tentara-ke-gaza-2088972",
+    "publishedAt": "2025-11-04",
+    "summary": "Tempo menilai video itu keliru dan buatan AI. Artikel membandingkan seragam dengan juru bicara IDF dan menyebut pemindaian Hive serta Zhuque. Salinan TurnBackHoax ada di https://turnbackhoax.id/articles/30019. Pernyataan kesiapan di Sidang Umum PBB 23 September 2025 bukan bukti pasukan sudah berangkat.",
+    "license": "kutipan-cek-fakta"
+  },
+  {
+    "id": "curated-papua-udara",
+    "source": "TurnBackHoax / Cek Fakta",
+    "title": "Salah: video serangan markas KKB lewat jalur udara",
+    "claim": "Video diklaim menunjukkan pasukan TNI menembak markas KKB dari udara di Papua.",
+    "verdict": "hoax",
+    "url": "https://kaltim.suara.com/read/2025/10/28/194234/cek-fakta-klaim-serangan-udara-tni-di-papua-dibongkar-ternyata-konten-buatan-ai",
+    "publishedAt": "2025-10-28",
+    "summary": "Liputan ini mengutip TurnBackHoax: video serupa tidak ditemukan di sumber resmi, dan Hive Moderation disebut memberi aggregate score 98,7 persen untuk generate AI. Operasi yang diberitakan media di Soanggama, Intan Jaya, 15 Oktober 2025 adalah kontak senjata di darat. Arsip cek fakta: https://old.cekfakta.com/focus/29691. Catatan Diskominfo Papua: https://diskominfo.papua.go.id/berita/301/hoaks-video-serangan-markas-kkb-lewat-jalur-udara.html.",
+    "license": "kutipan-cek-fakta"
+  },
+  {
+    "id": "curated-gaza-usir",
+    "source": "IDN Times Cek Fakta",
+    "title": "Klaim pasukan perdamaian Indonesia mengusir Israel dari Gaza",
+    "claim": "TNI dalam pasukan perdamaian PBB berhasil mengusir Israel dari Gaza.",
+    "verdict": "hoax",
+    "url": "https://www.idntimes.com/news/world/cek-fakta-pasukan-perdamaian-indonesia-berhasil-usir-israel-dari-gaza-00-bbwlv-l5w7k3",
+    "publishedAt": "2025-10-01",
+    "summary": "IDN Times menyatakan pasukan perdamaian Indonesia tidak ditugaskan ke Gaza dan pengerahan semacam itu butuh mandat Dewan Keamanan PBB. Artikel yang sama membahas airdrop bantuan. Jumlah kru yang dikutip IDN Times (45) berbeda dari angka 88 personel pada cek fakta Tempo. Korpus menyimpan kedua kutipan dan tidak menormalisasi selisih itu.",
+    "license": "kutipan-cek-fakta"
+  },
+  {
+    "id": "curated-ruu-dwifungsi",
+    "source": "Tempo Cek Fakta",
+    "title": "Keliru: klaim revisi UU TNI tidak mengembalikan dwifungsi",
+    "claim": "Revisi UU TNI tidak mengembalikan dwifungsi ABRI.",
+    "verdict": "misleading",
+    "url": "https://www.tempo.co/cekfakta/keliru-klaim-bahwa-revisi-uu-tni-tidak-mengembalikan-dwifungsi-abri-1225197",
+    "publishedAt": "2025-03-20",
+    "summary": "Tempo menilai klaim itu keliru karena revisi memperluas jabatan sipil bagi prajurit aktif. DPR, lewat pernyataan Dasco dan Komisi I, mengatakan tidak ada kembalinya dwifungsi. Rekam ini menyimpan putusan Tempo, bukan putusan hukum final.",
+    "license": "kutipan-cek-fakta"
+  },
+  {
+    "id": "curated-uu-3-2025",
+    "source": "JDIH BPK",
+    "title": "UU Nomor 3 Tahun 2025 tentang perubahan UU TNI",
+    "claim": "Perubahan atas UU TNI diundangkan sebagai UU Nomor 3 Tahun 2025 pada 26 Maret 2025.",
+    "verdict": "true",
+    "url": "https://peraturan.bpk.go.id/Details/319166/uu-no-3-tahun-2025",
+    "publishedAt": "2025-03-26",
+    "summary": "JDIH BPK mencatat tanggal penetapan dan pengundangan 26 Maret 2025. Substansi yang diubah meliputi kedudukan, tugas, penempatan prajurit pada kementerian atau lembaga, dan usia masa dinas.",
+    "license": "rujukan-peraturan"
+  }
+]

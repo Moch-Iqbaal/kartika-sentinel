@@ -1,0 +1,16 @@
+{
+  "factChecks": 446,
+  "curated": 6,
+  "mafindoRowsRead": 14552,
+  "mafindoMilitaryKept": 320,
+  "mafindoMilitaryFound": 832,
+  "mafindoOtherKept": 80,
+  "idnMilitaryKept": 40,
+  "licenses": {
+    "umn-cyber/mafindo-2024": "MIT",
+    "umn-cyber/indobert-hoax": "MIT",
+    "indobenchmark/indobert-base-p1": "MIT",
+    "9uz/IDNHoaxCorpus": "MIT",
+    "SEACrowd/id_hoax_news": "CC-BY-4.0"
+  }
+}
