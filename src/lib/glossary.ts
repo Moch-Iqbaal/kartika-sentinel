@@ -260,6 +260,13 @@ export function glossaryGroups(): GlossaryGroup[] {
           "Vonis hanya hoaks atau fakta. Keyakinan di sampingnya menunjukkan seberapa kuat dasar vonis itu.",
         ),
         term(
+          "badge-aksi",
+          "Aman / Cukup dipantau / Perlu dicek / Perlu ditinjau / Segera ditinjau",
+          "Label aksi di pojok kanan berkas. Mengikuti vonis dan keyakinan, bukan skor risiko mentah.",
+          "FAKTA + keyakinan Tinggi = Aman. FAKTA + Sedang = Cukup dipantau. FAKTA + Rendah = Perlu dicek. HOAKS + Tinggi = Segera ditinjau. HOAKS lainnya = Perlu ditinjau. Belum dinilai = Belum bisa dinilai.",
+          "Apa yang sebaiknya dilakukan analis, berdasarkan vonis dan keyakinan.",
+        ),
+        term(
           "dicek-pada",
           "dicek pada",
           "Waktu pencarian cek fakta saat analisis, dalam waktu Indonesia Barat.",
@@ -308,9 +315,9 @@ export function glossaryGroups(): GlossaryGroup[] {
         term(
           "viralitas",
           "Viralitas",
-          "Seberapa besar sebaran yang tercatat. 0% (rendah) berarti data itu tidak ada.",
-          `Pita sama dengan skor. Viralitas efektif = ${decimal(EFFECTIVE_VIRALITY_FLOOR)} + ${decimal(EFFECTIVE_VIRALITY_SPAN)} × viralitas. Engagement = sebar + ${decimal(VIRALITY_LIKE_WEIGHT)} × suka + ${decimal(VIRALITY_COMMENT_WEIGHT)} × komentar. Langit ${count(VIRALITY_ENGAGEMENT_CEILING)} dan ${count(VIRALITY_VELOCITY_CEILING)}, bobot ${decimal(VIRALITY_ENGAGEMENT_WEIGHT)} dan ${decimal(VIRALITY_VELOCITY_WEIGHT)}, jarak minimal ${decimal(VIRALITY_MIN_HOURS)} jam.`,
-          "Sebaran yang tercatat. 0% berarti tidak ada datanya.",
+          "Seberapa besar sebaran yang terbaca dari teks atau jejak tersimpan. 0% berarti belum ada datanya.",
+          `Angka diambil dari teks bila ada (Views, dilihat, tayangan, suka, repost, komentar, termasuk akhiran K/M/rb/jt). Langit ${count(VIRALITY_ENGAGEMENT_CEILING)} dibulatkan dari rata-rata tayangan TikTok ±18.173 pada Metricool Short-Form Video Study 2024 (https://metricool.com/short-form-video-study/), lalu dinormalkan log. Tanpa views, rumus = sebar + ${decimal(VIRALITY_LIKE_WEIGHT)} × suka + ${decimal(VIRALITY_COMMENT_WEIGHT)} × komentar. Viralitas efektif untuk risiko = ${decimal(EFFECTIVE_VIRALITY_FLOOR)} + ${decimal(EFFECTIVE_VIRALITY_SPAN)} × viralitas. Ini indikator relatif, bukan klaim viral universal.`,
+          "Sebaran dari angka di teks atau jejak. 0% berarti datanya belum ada.",
         ),
         term(
           "viralitas-efektif",

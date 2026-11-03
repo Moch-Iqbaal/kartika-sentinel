@@ -11,7 +11,13 @@ export const BAND_PRIORITAS_MIN = 0.4;
 export const EFFECTIVE_VIRALITY_FLOOR = 0.4;
 export const EFFECTIVE_VIRALITY_SPAN = 0.6;
 
-/** Langit normalisasi umpan demo, bukan konstanta universal. */
+/**
+ * Langit normalisasi engagement/views.
+ * 20.000 dibulatkan dari rata-rata tayangan TikTok ±18.173 pada
+ * Metricool Short-Form Video Study 2024
+ * (https://metricool.com/short-form-video-study/).
+ * Ini indikator relatif terhadap langit itu, bukan klaim viral universal.
+ */
 export const VIRALITY_ENGAGEMENT_CEILING = 20_000;
 export const VIRALITY_VELOCITY_CEILING = 2_000;
 export const VIRALITY_ENGAGEMENT_WEIGHT = 0.55;

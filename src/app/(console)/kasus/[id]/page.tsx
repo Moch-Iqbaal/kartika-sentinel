@@ -45,9 +45,17 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
             <TermTip {...glossaryTip("dicek-pada")} />
           </p>
         </div>
-        <Badge className={!unscored && detail.band === "kritis" ? "border-danger text-danger" : ""}>
-          {unscored ? "Belum bisa dinilai" : detail.band === "kritis" ? "Segera ditinjau" : detail.band === "prioritas" ? "Perlu ditinjau" : "Cukup dipantau"}
-        </Badge>
+        <span className="inline-flex items-center gap-1">
+          <Badge className={
+            report.badge.tone === "kritis" ? "border-danger text-danger"
+              : report.badge.tone === "prioritas" || report.badge.tone === "dicek" ? "border-warning text-warning"
+                : report.badge.tone === "aman" ? "border-info text-info"
+                  : ""
+          }>
+            {report.badge.label}
+          </Badge>
+          <TermTip {...glossaryTip("badge-aksi")} />
+        </span>
       </div>
       <p className="text-sm text-muted">Ini hanya saran. Keputusan tetap pada Anda. Angka bukan penetapan hoaks.</p>
       <CaseEvidence bullets={report.bullets} />
@@ -124,6 +132,7 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
         <summary className="cursor-pointer text-xs text-info">Detail teknis</summary>
         <div className="mt-3 space-y-2 text-sm">
           <p>Penilai: {unscored ? "tidak dijalankan" : "penilaian otomatis"}</p>
+          {report.viralitasNote ? <p className="text-muted">{report.viralitasNote}</p> : null}
           {detail.assessment.indobert ? (
             <p>Penilai utama: {percent(detail.assessment.indobert.probability)}</p>
           ) : (

@@ -28,8 +28,15 @@ export type ScoreLines = {
 
 const NONE = "Belum ada sumber lain yang memberitakan.";
 
-export function scoreLines(hoax: number, sensitivity: number, virality: number): ScoreLines {
-  const viralMeaning = virality <= 0 ? "belum ada data sebaran" : VIRALITY_MEANING;
+export function scoreLines(
+  hoax: number,
+  sensitivity: number,
+  virality: number,
+  engagementLabel?: string | null,
+): ScoreLines {
+  let viralMeaning = VIRALITY_MEANING;
+  if (virality <= 0) viralMeaning = "belum ada data sebaran";
+  else if (engagementLabel) viralMeaning = engagementLabel;
   return {
     utama: metricLine("Skor utama", hoax, SCORE_MEANING),
     utamaBand: plainBand(hoax),

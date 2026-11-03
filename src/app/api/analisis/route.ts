@@ -13,6 +13,8 @@ import { safeFetchBytes } from "@/lib/security/ssrf";
 import { rateLimit } from "@/lib/security/rate-limit";
 import { UnsafeUrlError } from "@/lib/security/ssrf";
 import { assertSameOrigin } from "@/lib/security/untrusted";
+import { parseEngagement, viralityFromEngagement } from "@/lib/scoring/engagement-parse";
+import type { MetricPoint } from "@/lib/scoring/risk";
 
 export const runtime = "nodejs";
 
@@ -97,7 +99,15 @@ export async function POST(request: Request) {
     }
     if (!raw.trim()) return NextResponse.json({ error: "Tidak ada teks yang bisa dinilai." }, { status: 400 });
     const corpus = await corpusFromDb();
-    const card = applyShortTextCaution(await scoreContent(raw, 0, corpus, true), bodyChars);
+    const engagement = parseEngagement(raw);
+    const virality = viralityFromEngagement(engagement);
+    const observedAt = new Date().toISOString();
+    // Kolom DB hanya likes/shares/comments. Angka views dipakai di skor viralitas
+    // lewat viralityFromEngagement, dan dibaca ulang dari teks saat menampilkan kartu.
+    const metrics: MetricPoint[] = engagement.found
+      ? [{ observedAt, likes: engagement.likes, shares: engagement.shares, comments: engagement.comments }]
+      : [];
+    const card = applyShortTextCaution(await scoreContent(raw, virality, corpus, true), bodyChars);
     card.assessment.ai = applyImageReport(card.assessment.ai, image);
     if (youtubeNote) card.assessment.youtube = youtubeNote;
     if (contentPublishedAt) card.assessment.contentPublishedAt = contentPublishedAt;
@@ -109,10 +119,10 @@ export async function POST(request: Request) {
       externalId: crypto.randomUUID(),
       url,
       authorHandle: author,
-      postedAt: new Date().toISOString(),
+      postedAt: observedAt,
       demo: false,
       card,
-      metrics: [],
+      metrics,
       external,
       actor: session.sub,
     });
