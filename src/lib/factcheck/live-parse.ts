@@ -89,6 +89,8 @@ const ENTITY_NOISE = new Set([
   "dan", "atau", "dari", "dengan", "yang", "para", "sebuah", "seorang", "antara", "karena",
   "setelah", "sebelum", "hingga", "sampai", "masih", "sudah", "akan", "bisa", "dapat",
   "jakarta", "indonesia", "nasional", "politik", "hukum",
+  "dikabarkan", "beredar", "pesan", "grup", "membantu", "warga", "membangun", "desa",
+  "perwira", "memeriksa", "isu", "dini", "operasi", "senyap",
 ]);
 
 /** Nama, lembaga, inisial, dan angka khas dari judul/lead — bukan seluruh teks. */
@@ -104,6 +106,7 @@ export function extractEntities(text: string): string[] {
     .replace(/\b(\d{2,3})000\b/g, "$1 ribu");
   const found: string[] = [];
   for (const match of normalized.matchAll(/\b\d{1,3}\s+ribu\b/gi)) found.push(match[0].toLowerCase());
+  // Inisial/ALLCAPS lembaga (TNI, POLRI, LSP) tetap diambil meski ada di BROAD.
   for (const match of normalized.matchAll(/\b[A-ZÀ-Ž]{2,}\b/g)) found.push(match[0].toLowerCase());
 
   // Token kapital satu per satu (judul ID sering Title Case semua kata).
@@ -122,7 +125,8 @@ export function extractEntities(text: string): string[] {
     if (clean.length < 3) continue;
     if (STOP.has(clean) || ENTITY_NOISE.has(clean)) continue;
     const parts = clean.split(/\s+/);
-    if (parts.length === 1 && BROAD.has(clean)) continue;
+    // BROAD single-token dibuang kecuali inisial lembaga pendek (tni/polri/lsp/dpr).
+    if (parts.length === 1 && BROAD.has(clean) && clean.length > 4) continue;
     if (parts.every((word) => STOP.has(word) || ENTITY_NOISE.has(word))) continue;
     if (!out.includes(clean)) out.push(clean);
   }
@@ -264,9 +268,22 @@ export function entitySimilarity(content: string, title: string): number {
   return Math.min(1, score);
 }
 
-/** Skor penguat berita: maks(kata kunci kueri, tumpang tindih entitas). */
+/**
+ * Skor penguat berita.
+ * Parafrase judul lolos lewat entitas. Kata kunci saja tidak cukup bila entitas tidak saling tutup,
+ * supaya teks pendek/rumor tidak ikut FAKTA dari berita topik longgar.
+ */
 export function peerSimilarity(query: string, content: string, title: string): number {
-  return Math.max(keywordSimilarity(query, title), entitySimilarity(content || query, title));
+  const cleaned = query.replace(/\s+when:\S+/gi, " ").replace(/"/g, " ");
+  const kw = keywordSimilarity(cleaned, title);
+  const ent = entitySimilarity(content || cleaned, title);
+  if (ent >= 0.4) return Math.max(ent, kw);
+  const queryWords = cleaned.trim().split(/\s+/).filter(Boolean);
+  const looksLikeTitle = queryWords.length >= 6;
+  if (looksLikeTitle && kw >= 0.5) return kw;
+  if (kw >= 0.65 && ent >= 0.25) return Math.min(kw, 0.75);
+  // Di bawah lantai penguat (0.4) agar tidak jadi independent report.
+  return Math.min(0.35, Math.max(kw, ent));
 }
 
 export function factDateLabel(value: string | null | undefined): string | null {

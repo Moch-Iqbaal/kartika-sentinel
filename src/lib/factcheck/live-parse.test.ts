@@ -251,3 +251,18 @@ test("extractEntities mengambil nama dan lembaga", () => {
   assert.ok(entities.some((e) => /listyo/i.test(e)));
 });
 
+test("teks pendek/rumor tidak lolos peerSimilarity ke topik longgar", () => {
+  const shortText = "Prajurit Yonif 143 membantu warga membangun jembatan di desa.";
+  const unrelated = "Kodim Bali genjot percepatan pembangunan Jembatan Garuda untuk warga";
+  assert.ok(peerSimilarity("yonif 143 jembatan", shortText, unrelated) < 0.4);
+
+  const rumor = "Dikabarkan Divpropam memeriksa perwira terkait isu penyadapan. Kabarnya beredar di WA grup.";
+  const listyoNews = "Listyo Sigit Prabowo ditetapkan tersangka kasus penyadapan Presiden";
+  assert.ok(peerSimilarity("divpropam penyadapan", rumor, listyoNews) < 0.4);
+});
+
+test("Listyo parafrase tetap lolos peerSimilarity", () => {
+  const content = "Eks Kapolri Listyo Sigit Tersangka Penyadapan Prabowo\nBareskrim menetapkan tersangka.";
+  const peer = "Listyo Sigit Prabowo resmi jadi tersangka kasus penyadapan";
+  assert.ok(peerSimilarity("Listyo Sigit penyadapan", content, peer) >= 0.4);
+});
