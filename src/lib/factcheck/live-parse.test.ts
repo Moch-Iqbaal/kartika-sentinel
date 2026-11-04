@@ -267,3 +267,9 @@ test("Listyo parafrase tetap lolos peerSimilarity", () => {
   const peer = "Listyo Sigit Prabowo resmi jadi tersangka kasus penyadapan";
   assert.ok(peerSimilarity("Listyo Sigit penyadapan", content, peer) >= 0.4);
 });
+
+test("klaim pendek butuh skor peer hampir sama", () => {
+  const shortText = "Prajurit Yonif 143 membantu warga membangun jembatan di desa.";
+  const relatedUnit = "Pratu Ferdian jadi prajurit kedua yang gugur di Papua dari Yonif 143 TWEJ";
+  assert.ok(peerSimilarity(shortText, shortText, relatedUnit) < 0.4);
+});

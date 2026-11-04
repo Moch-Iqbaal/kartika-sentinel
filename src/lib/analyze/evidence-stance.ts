@@ -253,11 +253,23 @@ function publisherMarker(publisher: string | null | undefined, source: string | 
   return markerFromKey(blob);
 }
 
+function isBareOutletHome(url: string): boolean {
+  try {
+    const path = new URL(url).pathname.replace(/\/+$/, "");
+    return path === "" || path === "/";
+  } catch {
+    return true;
+  }
+}
+
 function factHostMarker(url: string | null | undefined): string | null {
   if (!url) return null;
   try {
-    const host = new URL(url).hostname.toLowerCase();
-    if (/turnbackhoax|cekfakta/.test(host)) return null;
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    if (/turnbackhoax|cekfakta|news\.google/.test(host)) return null;
+    // Root domain dari Google News tanpa path artikel tidak cukup jadi penguat.
+    if (isBareOutletHome(url)) return null;
     if (!hostMatches(host)) return null;
     return markerFromKey(host.replace(/[^a-z0-9]+/g, ""));
   } catch {
@@ -300,6 +312,7 @@ export function independentReports(
   const found: IndependentReport[] = [];
   for (const fact of facts) {
     if (evidenceStance(fact.rating) === "hoax") continue;
+    if (fact.url && isBareOutletHome(fact.url)) continue;
     const marker = factHostMarker(fact.url) ?? publisherMarker(fact.publisher, fact.source);
     if (!marker || marker === origin) continue;
     let host = "";

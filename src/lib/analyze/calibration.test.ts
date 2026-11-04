@@ -241,3 +241,16 @@ test("outlet baru di daftar kredibel bisa jadi penguat", () => {
   assert.ok(strong.some((item) => item.name === "JPNN"));
 });
 
+test("root domain Google News bukan penguat", () => {
+  const peers = independentReports(null, "Prajurit Yonif 143 membantu warga membangun jembatan di desa.", [{
+    source: "Google News",
+    title: "Berita daerah Lampung hari ini",
+    url: "https://lampung.tribunnews.com/",
+    rating: "Berita",
+    publisher: "Tribun Lampung",
+    publishedAt: "2026-11-03",
+    similarity: 0.9,
+  }]);
+  assert.equal(peers.length, 0);
+});
+

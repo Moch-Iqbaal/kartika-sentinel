@@ -282,15 +282,22 @@ export function peerSimilarity(query: string, content: string, title: string): n
   const cleaned = query.replace(/\s+when:\S+/gi, " ").replace(/"/g, " ");
   const kw = keywordSimilarity(cleaned, title);
   const source = content || cleaned;
+  const compact = source.replace(/\s+/g, " ").trim();
   const ent = entitySimilarity(source, title);
-  if (ent >= 0.4) return Math.max(ent, kw);
-  const queryWords = cleaned.trim().split(/\s+/).filter(Boolean);
-  // Judul penuh hanya untuk teks berita cukup panjang — teks pendek/rumor tidak boleh
-  // lolos lewat keyword longgar ke berita militer lain.
-  const looksLikeTitle = queryWords.length >= 6 && source.replace(/\s+/g, " ").trim().length >= 220;
-  if (looksLikeTitle && kw >= 0.55) return kw;
-  if (kw >= 0.7 && ent >= 0.3) return Math.min(kw, 0.75);
-  return Math.min(0.35, Math.max(kw, ent));
+  let score = 0;
+  if (ent >= 0.4) score = Math.max(ent, kw);
+  else {
+    const queryWords = cleaned.trim().split(/\s+/).filter(Boolean);
+    // Judul penuh hanya untuk teks berita cukup panjang — teks pendek/rumor tidak boleh
+    // lolos lewat keyword longgar ke berita militer lain.
+    const looksLikeTitle = queryWords.length >= 6 && compact.length >= 220;
+    if (looksLikeTitle && kw >= 0.55) score = kw;
+    else if (kw >= 0.7 && ent >= 0.3) score = Math.min(kw, 0.75);
+    else score = Math.min(0.35, Math.max(kw, ent));
+  }
+  // Klaim pendek: harus hampir sama (bukan sekadar nama satuan/lembaga).
+  if (compact.length < 220 && score < 0.7) return Math.min(0.35, score);
+  return score;
 }
 
 export function factDateLabel(value: string | null | undefined): string | null {
