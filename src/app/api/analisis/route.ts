@@ -6,6 +6,7 @@ import { UNSCORED_IMAGE_REASON, UNSCORED_SHORT_CAPTION_REASON, unscoredImageCard
 import { isSession, requireSession } from "@/lib/auth/guard";
 import { corpusFromDb, ensureReady, saveScoredAlert } from "@/lib/db";
 import { collectExternalFacts } from "@/lib/factcheck/live";
+import { SITE_BLOCKED_MESSAGE, isBlockedFetchError, userFacingBlockedError } from "@/lib/ingest/url-fallback";
 import { textFromUrl } from "@/lib/ingest/url-text";
 import { inspectImage } from "@/lib/media/metadata";
 import { applyImageReport } from "@/lib/model/ai-text";
@@ -129,7 +130,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ id });
   } catch (error) {
     if (error instanceof UnsafeUrlError || error instanceof NonContentTextError) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      const message =
+        error instanceof UnsafeUrlError && isBlockedFetchError(error)
+          ? SITE_BLOCKED_MESSAGE
+          : error.message;
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+    if (isBlockedFetchError(error)) {
+      return NextResponse.json({ error: userFacingBlockedError(error).message }, { status: 400 });
     }
     console.error("analisis gagal");
     return NextResponse.json({ error: "Analisis gagal diproses." }, { status: 500 });

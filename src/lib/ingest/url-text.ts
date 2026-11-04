@@ -15,6 +15,7 @@ import {
   type YoutubeCaptionTrack,
   type YoutubePart,
 } from "@/lib/ingest/youtube";
+import { fetchArticleWithFallbacks, type FetchVia } from "@/lib/ingest/url-fallback";
 import { redactSensitive } from "@/lib/security/redact";
 import { safeFetchText, safePostJson, UnsafeUrlError } from "@/lib/security/ssrf";
 import { sanitizeUntrusted } from "@/lib/security/untrusted";
@@ -36,6 +37,8 @@ export type ExtractedPage = {
   } | null;
   /** Tanggal terbit isi, YYYY-MM-DD. Kosong bila halaman tidak menyebutnya. */
   publishedAt?: string | null;
+  /** Jalur unduhan yang berhasil (langsung atau cadangan). */
+  via?: FetchVia;
 };
 
 const YOUTUBE_BROWSER = "Mozilla/5.0 (compatible; KartikaSentinel/0.1; +https://kartika-sentinel.vercel.app)";
@@ -125,12 +128,39 @@ async function textFromYoutube(videoId: string): Promise<ExtractedPage> {
   };
 }
 
+function pageFromHtml(body: string, finalUrl: string, via: FetchVia): ExtractedPage {
+  const extracted = extractArticle(body);
+  const text = sanitizeUntrusted(redactSensitive(scoredPageText(extracted.title, extracted.body)));
+  return {
+    text,
+    finalUrl,
+    authorHandle: null,
+    title: extracted.title,
+    bodyChars: extracted.body.length,
+    publishedAt: parseContentDate(body),
+    via,
+  };
+}
+
+function pageFromPlain(body: string, finalUrl: string, via: FetchVia, title: string | null = null): ExtractedPage {
+  const cleaned = sanitizeUntrusted(redactSensitive(body.slice(0, 6000)));
+  const firstLine = cleaned.split(/\n/).map((line) => line.trim()).find((line) => line.length >= 8) ?? null;
+  return {
+    text: cleaned,
+    finalUrl,
+    authorHandle: null,
+    title: title ?? firstLine,
+    bodyChars: cleaned.length,
+    via,
+  };
+}
+
 export async function textFromUrl(input: string): Promise<ExtractedPage> {
   const parsed = new URL(input);
   const videoId = youtubeVideoId(parsed);
   if (videoId) return textFromYoutube(videoId);
 
-  const response = await safeFetchText(input);
+  const response = await fetchArticleWithFallbacks(input);
   if (response.contentType.includes("json")) {
     const text = sanitizeUntrusted(redactSensitive(response.body.slice(0, 4000)));
     return {
@@ -139,16 +169,13 @@ export async function textFromUrl(input: string): Promise<ExtractedPage> {
       authorHandle: null,
       title: null,
       bodyChars: text.length,
+      via: response.via,
     };
   }
-  const extracted = extractArticle(response.body);
-  const text = sanitizeUntrusted(redactSensitive(scoredPageText(extracted.title, extracted.body)));
-  return {
-    text,
-    finalUrl: response.finalUrl,
-    authorHandle: null,
-    title: extracted.title,
-    bodyChars: extracted.body.length,
-    publishedAt: parseContentDate(response.body),
-  };
+  // Jina dan metadata sudah teks/markdown, bukan HTML portal.
+  if (response.via === "jina" || response.via === "metadata" || response.contentType.includes("text/plain")) {
+    const looksHtml = /<html[\s>]|<article[\s>]|<p[\s>]/i.test(response.body);
+    if (!looksHtml) return pageFromPlain(response.body, response.finalUrl, response.via);
+  }
+  return pageFromHtml(response.body, response.finalUrl, response.via);
 }

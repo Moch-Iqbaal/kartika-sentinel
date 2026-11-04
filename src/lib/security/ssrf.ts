@@ -183,9 +183,16 @@ async function assertResolvedHost(hostname: string): Promise<void> {
   }
 }
 
+export type SafeFetchOptions = {
+  accept?: string;
+  userAgent?: string;
+  timeoutMs?: number;
+  acceptLanguage?: string;
+};
+
 export async function safeFetchText(
   input: string,
-  options?: { accept?: string; userAgent?: string; timeoutMs?: number },
+  options?: SafeFetchOptions,
 ): Promise<{
   finalUrl: string;
   contentType: string;
@@ -196,14 +203,16 @@ export async function safeFetchText(
   for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
     const url = assertPublicHttpUrl(current);
     await assertResolvedHost(url.hostname);
+    const headers: Record<string, string> = {
+      accept: options?.accept ?? "text/html,application/json,text/plain;q=0.9",
+      "user-agent": options?.userAgent ?? "KartikaSentinel/0.1 (fact-check triage; +https://localhost)",
+    };
+    if (options?.acceptLanguage) headers["accept-language"] = options.acceptLanguage;
     const response = await fetch(url, {
       method: "GET",
       redirect: "manual",
       signal: AbortSignal.timeout(timeoutMs),
-      headers: {
-        accept: options?.accept ?? "text/html,application/json,text/plain;q=0.9",
-        "user-agent": options?.userAgent ?? "KartikaSentinel/0.1 (fact-check triage; +https://localhost)",
-      },
+      headers,
     });
     if (response.status >= 300 && response.status < 400) {
       const location = response.headers.get("location");

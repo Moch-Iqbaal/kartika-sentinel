@@ -493,7 +493,7 @@ export function glossaryGroups(): GlossaryGroup[] {
         term("host-gagal", "Nama host tidak dapat diselesaikan", "Nama situs tidak ketemu di DNS."),
         term("host-diblokir", "Host mengarah ke alamat yang diblokir", "Namanya sah, tetapi alamat IP-nya mengarah ke jaringan yang ditolak."),
         term("redirect", "Redirect tanpa tujuan / Terlalu banyak redirect", "Arahannya putus, atau lompatannya terlalu banyak.", "Paling banyak 2 redirect. Setiap tujuan dicek lagi."),
-        term("http-sumber", "Sumber menjawab HTTP …", "Situs tujuan menolak atau tidak ketemu. Nomor statusnya disebut di pesan."),
+        term("http-sumber", "Situs ini menolak dibuka otomatis", "Situs tujuan menolak dibaca dari server. Salin teks beritanya ke tab Teks. Sistem juga mencoba jalur cadangan sebelum pesan ini muncul."),
         term("tipe-konten", "Tipe konten tidak diizinkan", "Jenis berkasnya tidak masuk daftar yang boleh diambil."),
         term("bukan-gambar", "Berkas bukan JPEG, PNG, atau WebP", "Mode gambar hanya menerima ketiga jenis itu."),
         term("gambar-besar", "Gambar melebihi 2 MB", "Gambar di atas batas itu ditolak. Halaman HTML yang besar dipotong, tidak ditolak."),

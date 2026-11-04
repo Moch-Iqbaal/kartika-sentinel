@@ -12,9 +12,14 @@ jatuh ke model linier lalu heuristik.
 
 from __future__ import annotations
 
+import ipaddress
 import os
+import socket
 import threading
 from pathlib import Path
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlparse
+from urllib.request import Request, urlopen
 
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
@@ -35,6 +40,26 @@ state: dict = {"ready": False, "error": None, "model": None, "tokenizer": None, 
 class ClassifyIn(BaseModel):
     # Field data. Bukan instruksi dan tidak ada tool-calling di proses ini.
     text: str = Field(min_length=1, max_length=4000)
+
+
+class FetchIn(BaseModel):
+    # URL berita publik untuk dibaca Mac bila Vercel ditolak situs asal.
+    url: str = Field(min_length=8, max_length=2000)
+
+
+FETCH_MAX_BYTES = 4_000_000
+FETCH_TIMEOUT_SEC = 8.0
+_FETCH_BLOCKED_HOSTS = {
+    "localhost",
+    "localhost.localdomain",
+    "metadata.google.internal",
+    "metadata.google.internal.",
+}
+_BROWSER_UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/122.0.0.0 Safari/537.36"
+)
 
 
 def _authorized(header: str | None) -> None:
@@ -141,6 +166,126 @@ def classify(body: ClassifyIn, x_kartika_model_token: str | None = Header(defaul
         "model": MODEL_ID,
         "probabilities": [round(float(item), 6) for item in probabilities],
     }
+
+
+def _blocked_ip(raw: str) -> bool:
+    value = raw.strip().lower().strip("[]")
+    if "%" in value:
+        value = value.split("%", 1)[0]
+    if value.startswith("::ffff:"):
+        value = value[len("::ffff:") :]
+    try:
+        ip = ipaddress.ip_address(value)
+    except ValueError:
+        return True
+    return bool(
+        ip.is_private
+        or ip.is_loopback
+        or ip.is_link_local
+        or ip.is_multicast
+        or ip.is_reserved
+        or ip.is_unspecified
+    )
+
+
+def _assert_public_http_url(raw: str) -> str:
+    try:
+        parsed = urlparse(raw)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=400, detail="URL tidak valid.") from exc
+    if parsed.scheme not in {"http", "https"}:
+        raise HTTPException(status_code=400, detail="Hanya http dan https yang diizinkan.")
+    if parsed.username or parsed.password:
+        raise HTTPException(status_code=400, detail="URL dengan kredensial ditolak.")
+    host = (parsed.hostname or "").rstrip(".").lower()
+    if not host:
+        raise HTTPException(status_code=400, detail="URL tidak valid.")
+    if host in _FETCH_BLOCKED_HOSTS or host.endswith(".localhost") or host.endswith(".local"):
+        raise HTTPException(status_code=400, detail="Host lokal ditolak.")
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    if port not in {80, 443}:
+        raise HTTPException(status_code=400, detail="Hanya port 80 dan 443 yang diizinkan.")
+    try:
+        ipaddress.ip_address(host)
+        if _blocked_ip(host):
+            raise HTTPException(status_code=400, detail="Alamat IP privat atau metadata ditolak.")
+    except ValueError:
+        try:
+            infos = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+        except OSError as exc:
+            raise HTTPException(status_code=400, detail="Nama host tidak dapat diselesaikan.") from exc
+        if not infos:
+            raise HTTPException(status_code=400, detail="Nama host tidak dapat diselesaikan.")
+        for info in infos:
+            addr = info[4][0]
+            if _blocked_ip(str(addr)):
+                raise HTTPException(status_code=400, detail="Host mengarah ke alamat yang diblokir.")
+    return raw
+
+
+def _read_limited(response, limit: int = FETCH_MAX_BYTES) -> bytes:
+    chunks: list[bytes] = []
+    total = 0
+    while total < limit:
+        piece = response.read(min(65_536, limit - total))
+        if not piece:
+            break
+        chunks.append(piece)
+        total += len(piece)
+    return b"".join(chunks)
+
+
+@app.post("/fetch")
+def fetch_public(body: FetchIn, x_kartika_model_token: str | None = Header(default=None)) -> dict:
+    """GET http(s) publik saja. Cadangan bila Vercel ditolak situs berita."""
+    _authorized(x_kartika_model_token)
+    target = _assert_public_http_url(body.url.strip())
+    request = Request(
+        target,
+        method="GET",
+        headers={
+            "User-Agent": _BROWSER_UA,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.7",
+            "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+        },
+    )
+    try:
+        with urlopen(request, timeout=FETCH_TIMEOUT_SEC) as response:  # noqa: S310 — URL sudah dicek publik
+            content_type = (response.headers.get("Content-Type") or "text/html").split(";")[0].strip().lower()
+            allowed = {
+                "text/html",
+                "text/plain",
+                "application/json",
+                "application/xhtml+xml",
+                "application/xml",
+                "text/xml",
+                "application/rss+xml",
+                "application/atom+xml",
+            }
+            if content_type not in allowed:
+                raise HTTPException(status_code=400, detail="Tipe konten tidak diizinkan.")
+            raw = _read_limited(response)
+            final_url = response.geturl() or target
+    except HTTPException:
+        raise
+    except HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"Sumber menjawab HTTP {exc.code}.") from exc
+    except (URLError, TimeoutError, OSError) as exc:
+        raise HTTPException(status_code=502, detail="Sumber tidak dapat dibuka.") from exc
+    try:
+        _assert_public_http_url(final_url)
+    except HTTPException:
+        raise HTTPException(status_code=400, detail="Redirect mengarah ke alamat yang ditolak.") from None
+    body_text = raw.decode("utf-8", errors="replace")
+    if not body_text.strip():
+        raise HTTPException(status_code=502, detail="Badan respons kosong.")
+    return {
+        "ok": True,
+        "finalUrl": final_url,
+        "contentType": content_type,
+        "body": body_text,
+    }
+
 
 
 if __name__ == "__main__":
