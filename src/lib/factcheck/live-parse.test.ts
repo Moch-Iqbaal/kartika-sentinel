@@ -6,6 +6,11 @@ import {
   dedupeFacts,
   factDateLabel,
   claimQueries,
+  entitySimilarity,
+  extractEntities,
+  googleNewsQueries,
+  peerQueries,
+  peerSimilarity,
   urlFirstQueries,
   parseGoogleNewsRss,
   factQuery,
@@ -213,5 +218,36 @@ test("Google News RSS memakai nama outlet sebagai penerbit", () => {
   assert.ok(facts.length >= 1);
   assert.equal(facts[0].publisher, "Antara");
   assert.match(facts[0].url ?? "", /antaranews\.com/);
+});
+
+test("peerQueries pakai judul dan entitas, bukan seluruh teks", () => {
+  const body = [
+    "Eks Kapolri Listyo Sigit Tersangka Penyadapan Prabowo",
+    "TEMPO.CO, Jakarta - Bareskrim Polri menetapkan Listyo Sigit Prabowo sebagai tersangka.",
+    "Paragraf panjang yang tidak perlu masuk kueri pencarian berita penguat karena terlalu lebar dan mengacaukan Google News.",
+  ].join("\n");
+  const queries = peerQueries(body);
+  assert.ok(queries.some((q) => /listyo/i.test(q)));
+  assert.ok(queries.every((q) => q.length < 160));
+  assert.ok(!queries.some((q) => /Paragraf panjang/i.test(q)));
+});
+
+test("googleNewsQueries menambah jendela when:7d", () => {
+  const queries = googleNewsQueries("Listyo Sigit tersangka penyadapan Prabowo\nBareskrim Polri");
+  assert.ok(queries.length >= 1);
+  assert.ok(queries.every((q) => /when:7d/i.test(q)));
+});
+
+test("entitySimilarity mencocokkan parafrase judul", () => {
+  const content = "Eks Kapolri Listyo Sigit Tersangka Penyadapan Prabowo\nBareskrim menetapkan tersangka.";
+  const peer = "Listyo Sigit Prabowo resmi jadi tersangka kasus penyadapan";
+  assert.ok(entitySimilarity(content, peer) >= 0.4);
+  assert.ok(peerSimilarity("Listyo Sigit penyadapan", content, peer) >= 0.4);
+  assert.ok(entitySimilarity(content, "Harga cabai naik di pasar tradisional Bandung") < 0.4);
+});
+
+test("extractEntities mengambil nama dan lembaga", () => {
+  const entities = extractEntities("Eks Kapolri Listyo Sigit Tersangka Penyadapan Prabowo");
+  assert.ok(entities.some((e) => /listyo/i.test(e)));
 });
 

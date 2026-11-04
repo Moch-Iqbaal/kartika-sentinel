@@ -2,17 +2,24 @@ import { searchGoogleFactChecks } from "@/lib/factcheck/google";
 import {
   claimQueries,
   dedupeFacts,
+  googleNewsQueries,
   parseAntara,
+  parseAntaraNews,
   parseCekfakta,
+  parseDetikNews,
   parseDetikSearch,
+  parseGenericNewsRss,
   parseGoogleNewsRss,
   parseKomdigi,
+  parseKompasNews,
   parseKompasSearch,
   parseKumparanRss,
   parseLiputanRss,
   parseTempoRss,
   parseTirtoRss,
   parseTurnbackhoax,
+  peerQueries,
+  setPeerContentContext,
   urlFirstQueries,
 } from "@/lib/factcheck/live-parse";
 import type { ExternalFact } from "@/lib/factcheck/types";
@@ -56,7 +63,14 @@ type SourceSpec = {
   once?: boolean;
   /** Tidak diunduh. Alasan jujur, bukan parser kosong. */
   skip?: string;
+  /** Mode kueri: fakta (URL+klaim) atau berita penguat (entitas+judul). */
+  mode?: "fact" | "peer" | "news";
 };
+
+function parseOutletRss(source: string, publisher: string) {
+  return (body: string, query: string) =>
+    parseGenericNewsRss(body, query, source, publisher, { requireFactCue: false });
+}
 
 const SOURCES: SourceSpec[] = [
   {
@@ -64,30 +78,35 @@ const SOURCES: SourceSpec[] = [
     url: (query) => `https://turnbackhoax.id/search?query=${encodeURIComponent(query)}`,
     accept: "application/json",
     parse: parseTurnbackhoax,
+    mode: "fact",
   },
   {
     name: "Cek Fakta",
     url: (query) => `https://cekfakta.com/api-search?search=${encodeURIComponent(query)}`,
     accept: "text/html",
     parse: parseCekfakta,
+    mode: "fact",
   },
   {
     name: "Kompas Cek Fakta",
     url: (query) => `https://search.kompas.com/search?q=${encodeURIComponent(`cek fakta ${query}`)}`,
     accept: "text/html",
     parse: parseKompasSearch,
+    mode: "fact",
   },
   {
-    name: "Antara",
+    name: "Antara Cek Fakta",
     url: (query) => `https://www.antaranews.com/search?q=${encodeURIComponent(`cek fakta ${query}`)}`,
     accept: "text/html",
     parse: parseAntara,
+    mode: "fact",
   },
   {
-    name: "Detik",
+    name: "Detik Cek Fakta",
     url: (query) => `https://www.detik.com/search/searchall?query=${encodeURIComponent(`cek fakta ${query}`)}`,
     accept: "text/html",
     parse: parseDetikSearch,
+    mode: "fact",
   },
   {
     name: "Liputan6 Cek Fakta",
@@ -95,6 +114,43 @@ const SOURCES: SourceSpec[] = [
     accept: "application/rss+xml, application/xml, text/xml",
     parse: parseLiputanRss,
     once: true,
+    mode: "fact",
+  },
+  {
+    name: "Komdigi",
+    url: (query) => `https://www.komdigi.go.id/berita?search=${encodeURIComponent(query)}`,
+    accept: "text/html",
+    parse: parseKomdigi,
+    mode: "fact",
+  },
+  // --- Berita penguat: entitas/judul, bukan seluruh teks, tanpa awalan "cek fakta" ---
+  {
+    name: "Google News",
+    url: (query) => `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=id&gl=ID&ceid=ID:id`,
+    accept: "application/rss+xml, application/xml, text/xml",
+    parse: parseGoogleNewsRss,
+    mode: "news",
+  },
+  {
+    name: "Kompas Berita",
+    url: (query) => `https://search.kompas.com/search?q=${encodeURIComponent(query)}`,
+    accept: "text/html",
+    parse: parseKompasNews,
+    mode: "peer",
+  },
+  {
+    name: "Detik Berita",
+    url: (query) => `https://www.detik.com/search/searchall?query=${encodeURIComponent(query)}`,
+    accept: "text/html",
+    parse: parseDetikNews,
+    mode: "peer",
+  },
+  {
+    name: "Antara Berita",
+    url: (query) => `https://www.antaranews.com/search?q=${encodeURIComponent(query)}`,
+    accept: "text/html",
+    parse: parseAntaraNews,
+    mode: "peer",
   },
   {
     name: "Tempo",
@@ -102,6 +158,7 @@ const SOURCES: SourceSpec[] = [
     accept: "application/rss+xml, application/xml, text/xml, text/html",
     parse: parseTempoRss,
     once: true,
+    mode: "peer",
   },
   {
     name: "Tirto",
@@ -109,6 +166,7 @@ const SOURCES: SourceSpec[] = [
     accept: "application/rss+xml, application/xml, text/xml, text/html",
     parse: parseTirtoRss,
     once: true,
+    mode: "peer",
   },
   {
     name: "Kumparan",
@@ -116,23 +174,141 @@ const SOURCES: SourceSpec[] = [
     accept: "application/rss+xml, application/xml, text/xml, text/html",
     parse: parseKumparanRss,
     once: true,
+    mode: "peer",
   },
   {
-    name: "Komdigi",
-    url: (query) => `https://www.komdigi.go.id/berita?search=${encodeURIComponent(query)}`,
-    accept: "text/html",
-    parse: parseKomdigi,
+    name: "CNN Indonesia",
+    url: () => "https://www.cnnindonesia.com/rss",
+    accept: "application/rss+xml, application/xml, text/xml, text/html",
+    parse: parseOutletRss("CNN Indonesia", "CNN Indonesia"),
+    once: true,
+    mode: "peer",
   },
   {
-    name: "Google News",
-    url: (query) => `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=id&gl=ID&ceid=ID:id`,
-    accept: "application/rss+xml, application/xml, text/xml",
-    parse: parseGoogleNewsRss,
+    name: "Republika",
+    url: () => "https://www.republika.co.id/rss",
+    accept: "application/rss+xml, application/xml, text/xml, text/html",
+    parse: parseOutletRss("Republika", "Republika"),
+    once: true,
+    mode: "peer",
+  },
+  {
+    name: "Media Indonesia",
+    url: () => "https://mediaindonesia.com/rss",
+    accept: "application/rss+xml, application/xml, text/xml, text/html",
+    parse: parseOutletRss("Media Indonesia", "Media Indonesia"),
+    once: true,
+    mode: "peer",
+  },
+  {
+    name: "Okezone",
+    url: () => "https://sindikasi.okezone.com/index.php/rss/0/RSS2.0",
+    accept: "application/rss+xml, application/xml, text/xml, text/html",
+    parse: parseOutletRss("Okezone", "Okezone"),
+    once: true,
+    mode: "peer",
+  },
+  {
+    name: "Liputan6",
+    url: () => "https://feed.liputan6.com/rss",
+    accept: "application/rss+xml, application/xml, text/xml, text/html",
+    parse: parseOutletRss("Liputan6", "Liputan6"),
+    once: true,
+    mode: "peer",
+  },
+  {
+    name: "CNBC Indonesia",
+    url: () => "https://www.cnbcindonesia.com/rss",
+    accept: "application/rss+xml, application/xml, text/xml, text/html",
+    parse: parseOutletRss("CNBC Indonesia", "CNBC Indonesia"),
+    once: true,
+    mode: "peer",
+  },
+  {
+    name: "Suara",
+    url: () => "https://www.suara.com/rss",
+    accept: "application/rss+xml, application/xml, text/xml, text/html",
+    parse: parseOutletRss("Suara", "Suara"),
+    once: true,
+    mode: "peer",
+  },
+  {
+    name: "Viva",
+    url: () => "https://www.viva.co.id/rss",
+    accept: "application/rss+xml, application/xml, text/xml, text/html",
+    parse: parseOutletRss("Viva", "Viva"),
+    once: true,
+    mode: "peer",
+  },
+  {
+    name: "Merdeka",
+    url: () => "https://www.merdeka.com/feed",
+    accept: "application/rss+xml, application/xml, text/xml, text/html",
+    parse: parseOutletRss("Merdeka", "Merdeka"),
+    once: true,
+    mode: "peer",
+  },
+  {
+    name: "JPNN",
+    url: () => "https://www.jpnn.com/rss",
+    accept: "application/rss+xml, application/xml, text/xml, text/html",
+    parse: parseOutletRss("JPNN", "JPNN"),
+    once: true,
+    mode: "peer",
+  },
+  {
+    name: "Sindonews",
+    url: () => "https://www.sindonews.com/rss",
+    accept: "application/rss+xml, application/xml, text/xml, text/html",
+    parse: parseOutletRss("Sindonews", "Sindonews"),
+    once: true,
+    mode: "peer",
+  },
+  {
+    name: "Tribun",
+    url: () => "https://www.tribunnews.com/rss",
+    accept: "application/rss+xml, application/xml, text/xml, text/html",
+    parse: parseOutletRss("Tribun", "Tribun"),
+    once: true,
+    mode: "peer",
+  },
+  {
+    name: "IDN Times",
+    url: () => "https://www.idntimes.com/rss",
+    accept: "application/rss+xml, application/xml, text/xml, text/html",
+    parse: parseOutletRss("IDN Times", "IDN Times"),
+    once: true,
+    mode: "peer",
+  },
+  {
+    name: "Katadata",
+    url: () => "https://katadata.co.id/rss",
+    accept: "application/rss+xml, application/xml, text/xml, text/html",
+    parse: parseOutletRss("Katadata", "Katadata"),
+    once: true,
+    mode: "peer",
+  },
+  {
+    name: "Bisnis",
+    url: () => "https://www.bisnis.com/rss",
+    accept: "application/rss+xml, application/xml, text/xml, text/html",
+    parse: parseOutletRss("Bisnis", "Bisnis"),
+    once: true,
+    mode: "peer",
+  },
+  {
+    name: "Kontan",
+    url: () => "https://www.kontan.co.id/rss",
+    accept: "application/rss+xml, application/xml, text/xml, text/html",
+    parse: parseOutletRss("Kontan", "Kontan"),
+    once: true,
+    mode: "peer",
   },
 ];
 
 async function searchOne(spec: SourceSpec, queries: string[]): Promise<{ facts: ExternalFact[]; probe: SourceProbe }> {
   if (spec.skip) return { facts: [], probe: { name: spec.name, state: "dilewati", detail: spec.skip } };
+  if (queries.length === 0) return { facts: [], probe: { name: spec.name, state: "kosong", detail: "tanpa kueri" } };
   let blocked: string | null = null;
   let sawBody = false;
   const found: ExternalFact[] = [];
@@ -148,7 +324,6 @@ async function searchOne(spec: SourceSpec, queries: string[]): Promise<{ facts: 
     }
     if (!page.body) continue;
     sawBody = true;
-    // Untuk sumber once (RSS), cocokkan setiap frasa klaim ke feed yang sama.
     if (spec.once) {
       for (const query of queries) found.push(...spec.parse(page.body, query));
     } else {
@@ -165,25 +340,39 @@ async function searchOne(spec: SourceSpec, queries: string[]): Promise<{ facts: 
   return { facts: [], probe: { name: spec.name, state: "kosong" } };
 }
 
+function queriesFor(spec: SourceSpec, text: string, sourceUrl?: string | null): string[] {
+  if (spec.mode === "news") return googleNewsQueries(text);
+  if (spec.mode === "peer") return peerQueries(text).slice(0, 2);
+  return urlFirstQueries(text, sourceUrl);
+}
+
 /**
  * Cek fakta saat analisis. Semua sumber dicoba bersamaan.
- * URL artikel dicari dulu, lalu judul, lalu frasa klaim.
- * Sumber yang menolak tidak menggagalkan yang lain.
+ * Google News memakai judul/entitas + jendela 7 hari; sumber cek fakta memakai URL lalu klaim.
  */
 export async function searchLiveFactChecksDetailed(
   text: string,
   sourceUrl?: string | null,
 ): Promise<{ facts: ExternalFact[]; sources: SourceProbe[] }> {
-  const queries = urlFirstQueries(text, sourceUrl);
-  if (queries.length === 0 || queries.every((query) => query.trim().length < 3)) {
+  setPeerContentContext(text);
+  const factQueries = urlFirstQueries(text, sourceUrl);
+  const peer = peerQueries(text);
+  const news = googleNewsQueries(text);
+  if (
+    factQueries.every((query) => query.trim().length < 3) &&
+    peer.every((query) => query.trim().length < 3) &&
+    news.every((query) => query.trim().length < 3)
+  ) {
     return { facts: [], sources: [] };
   }
-  const key = `${(sourceUrl ?? "").toLowerCase()}|${queries.join("|").toLowerCase()}`;
+  const key = `${(sourceUrl ?? "").toLowerCase()}|${[...factQueries, ...peer, ...news].join("|").toLowerCase()}`;
   const cached = cache.get(key);
   if (cached && Date.now() - cached.at < LIVE_FACT_CACHE_MS) {
     return { facts: cached.facts, sources: cached.sources };
   }
-  const rows = await Promise.all(SOURCES.map((spec) => searchOne(spec, queries)));
+  const rows = await Promise.all(
+    SOURCES.map((spec) => searchOne(spec, queriesFor(spec, text, sourceUrl))),
+  );
   const facts = dedupeFacts(rows.flatMap((row) => row.facts));
   const sources = rows.map((row) => row.probe);
   cache.set(key, { at: Date.now(), facts, sources });

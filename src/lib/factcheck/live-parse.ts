@@ -6,6 +6,16 @@ import type { ExternalFact } from "./types";
 
 export { normalizeFactDate };
 
+/** Konteks isi untuk skor entitas saat parse RSS/pencarian berita. */
+let peerContentContext = "";
+export function setPeerContentContext(text: string): void {
+  peerContentContext = text || "";
+}
+export function getPeerContentContext(): string {
+  return peerContentContext;
+}
+
+
 const STOP = new Set([
   "yang", "dan", "di", "ke", "dari", "untuk", "ini", "itu", "dengan", "pada", "ada", "adalah",
   "atau", "juga", "tidak", "tak", "sudah", "telah", "akan", "oleh", "sebagai", "para", "sebuah",
@@ -63,16 +73,106 @@ export function claimQueries(text: string): string[] {
     .replace(/\b(\d{1,3})\.000\b/g, "$1 ribu")
     .replace(/\b(\d{2,3})000\b/g, "$1 ribu");
   const queries = [primary];
-  const entities = [
-    ...normalized.matchAll(/\b[A-ZÀ-Ž]{2,}\b/g),
-    ...normalized.matchAll(/\b[A-ZÀ-Ž][a-zà-ž]{3,}\b/g),
-  ].map((match) => match[0].toLowerCase());
-  const uniqueEntities = [...new Set(entities)].filter((word) => !STOP.has(word) && !BROAD.has(word));
+  const uniqueEntities = extractEntities(normalized);
   if (uniqueEntities.length >= 2) queries.push(uniqueEntities.slice(0, 3).join(" "));
   const used = new Set(primary.split(" "));
   const rest = contentTokens(normalized).filter((word) => !BROAD.has(word) && !used.has(word) && !/^(me|di|ter|ber|mem|men|meng|per)/.test(word));
   if (rest.length >= 2) queries.push(rest.slice(0, 3).join(" "));
   return [...new Set(queries.map((query) => query.trim()).filter((query) => query.split(/\s+/).length >= 2))].slice(0, 3);
+}
+
+/** Kata judul yang terlalu generik untuk entitas. */
+const ENTITY_NOISE = new Set([
+  "eks", "mantan", "resmi", "jadi", "kasus", "soal", "tentang", "terkait", "ungkap", "sebut",
+  "klaim", "video", "foto", "berita", "breaking", "update", "live", "hari", "ini", "itu",
+  "tersangka", "ditetapkan", "menjadi", "sebagai", "atas", "dalam", "pada", "oleh", "untuk",
+  "dan", "atau", "dari", "dengan", "yang", "para", "sebuah", "seorang", "antara", "karena",
+  "setelah", "sebelum", "hingga", "sampai", "masih", "sudah", "akan", "bisa", "dapat",
+  "jakarta", "indonesia", "nasional", "politik", "hukum",
+]);
+
+/** Nama, lembaga, inisial, dan angka khas dari judul/lead — bukan seluruh teks. */
+export function extractEntities(text: string): string[] {
+  const head = text
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter((line) => line.length >= 8 && !/^Kanal:/i.test(line) && !/^https?:\/\//i.test(line))
+    .slice(0, 4)
+    .join("\n");
+  const normalized = head
+    .replace(/\b(\d{1,3})\.000\b/g, "$1 ribu")
+    .replace(/\b(\d{2,3})000\b/g, "$1 ribu");
+  const found: string[] = [];
+  for (const match of normalized.matchAll(/\b\d{1,3}\s+ribu\b/gi)) found.push(match[0].toLowerCase());
+  for (const match of normalized.matchAll(/\b[A-ZÀ-Ž]{2,}\b/g)) found.push(match[0].toLowerCase());
+
+  // Token kapital satu per satu (judul ID sering Title Case semua kata).
+  const caps = [...normalized.matchAll(/\b[A-ZÀ-Ž][A-Za-zÀ-ž]{2,}\b/g)].map((m) => m[0].toLowerCase());
+  const distinctive = caps.filter((word) => !STOP.has(word) && !ENTITY_NOISE.has(word) && !BROAD.has(word));
+  for (const word of distinctive) found.push(word);
+
+  // Pasangan nama berurutan dari token khas, mis. "listyo sigit".
+  for (let i = 0; i < distinctive.length - 1; i += 1) {
+    found.push(`${distinctive[i]} ${distinctive[i + 1]}`);
+  }
+
+  const out: string[] = [];
+  for (const item of found) {
+    const clean = item.replace(/\s+/g, " ").trim();
+    if (clean.length < 3) continue;
+    if (STOP.has(clean) || ENTITY_NOISE.has(clean)) continue;
+    const parts = clean.split(/\s+/);
+    if (parts.length === 1 && BROAD.has(clean)) continue;
+    if (parts.every((word) => STOP.has(word) || ENTITY_NOISE.has(word))) continue;
+    if (!out.includes(clean)) out.push(clean);
+  }
+  // Utamakan frasa 2 kata lalu token tunggal.
+  out.sort((a, b) => b.split(/\s+/).length - a.split(/\s+/).length || a.length - b.length);
+  return out.slice(0, 8);
+}
+
+function titleLine(text: string): string | null {
+  const line = text
+    .split(/\n+/)
+    .map((item) => item.trim())
+    .find((item) => item.length >= 12 && !/^Kanal:/i.test(item) && !/^https?:\/\//i.test(item) && !/^[A-Z0-9.]+,\s/i.test(item));
+  return line ? line.replace(/\s+/g, " ").slice(0, 120) : null;
+}
+
+/**
+ * Kueri penguat berita: judul, entitas utama, frasa dikutip.
+ * Dipakai Google News dan pencarian berita — bukan seluruh badan artikel.
+ */
+export function peerQueries(text: string): string[] {
+  const title = titleLine(text);
+  const entities = extractEntities(text);
+  const pairs = entities.filter((item) => item.includes(" "));
+  const singles = entities.filter((item) => !item.includes(" "));
+  const out: string[] = [];
+  if (title) out.push(title);
+  if (pairs.length >= 1) {
+    const key = pairs[0];
+    const extra = singles.filter((word) => !key.includes(word)).slice(0, 2);
+    out.push([key, ...extra].join(" ").trim());
+    out.push(`"${key}"`);
+  } else if (singles.length >= 2) {
+    out.push(singles.slice(0, 3).join(" "));
+    out.push(`"${singles.slice(0, 2).join(" ")}"`);
+  } else if (entities.length === 1 && title) {
+    out.push(`${entities[0]} ${title.split(/\s+/).slice(0, 3).join(" ")}`);
+  }
+  for (const claim of claimQueries(text)) {
+    if (!out.includes(claim)) out.push(claim);
+  }
+  return [...new Set(out.map((item) => item.trim()).filter((item) => item.length >= 6))].slice(0, 4);
+}
+
+/** Varian Google News dengan jendela 7 hari. */
+export function googleNewsQueries(text: string): string[] {
+  return peerQueries(text).slice(0, 3).map((query) => {
+    const base = query.replace(/\s+when:\S+/gi, "").trim();
+    return `${base} when:7d`;
+  });
 }
 
 export function factQuery(text: string): string {
@@ -117,7 +217,10 @@ export function relevantHit(query: string, haystack: string): boolean {
 }
 
 function claimWords(query: string): string[] {
-  return contentTokens(query).filter((word) => !OUTLET_WORDS.has(word));
+  const cleaned = query
+    .replace(/\s+when:\S+/gi, " ")
+    .replace(/"/g, " ");
+  return contentTokens(cleaned).filter((word) => !OUTLET_WORDS.has(word) && word !== "when");
 }
 
 /** Bagian kata klaim yang sama. 1 artinya seluruh frasa ada di artikel. */
@@ -127,6 +230,43 @@ export function keywordSimilarity(query: string, haystack: string): number {
   const haystackWords = new Set(contentTokens(haystack).filter((word) => !OUTLET_WORDS.has(word)));
   const shared = queryWords.filter((word) => haystackWords.has(word)).length;
   return Math.min(1, shared / queryWords.length);
+}
+
+/**
+ * Kemiripan berbasis entitas (nama/lembaga/angka) agar parafrase judul tetap cocok.
+ * Tetap ada lantai lewat keywordSimilarity di peerSimilarity.
+ */
+export function entitySimilarity(content: string, title: string): number {
+  const entities = extractEntities(content);
+  if (entities.length === 0) return 0;
+  const hay = title.toLowerCase();
+  const hayTokens = new Set(contentTokens(title));
+  // Token khas unik dari entitas (nama/lembaga), bukan seluruh frasa noise.
+  const tokens = [...new Set(
+    entities.flatMap((entity) => entity.split(/\s+/))
+      .filter((word) => word.length >= 3 && !STOP.has(word) && !ENTITY_NOISE.has(word)),
+  )].slice(0, 6);
+  if (tokens.length === 0) return 0;
+  let hits = 0;
+  for (const token of tokens) {
+    if (hayTokens.has(token) || hay.includes(token)) hits += 1;
+  }
+  // Frasa 2+ kata yang utuh mendapat bonus kecil.
+  for (const entity of entities) {
+    if (entity.includes(" ") && hay.includes(entity)) {
+      hits += 0.25;
+      break;
+    }
+  }
+  const score = hits / Math.max(tokens.length, 2);
+  // Lantai: minimal 2 token khas sama, atau 1 frasa nama utuh + 1 token.
+  if (hits < 1.25 && tokens.length >= 2) return Math.min(score, 0.35);
+  return Math.min(1, score);
+}
+
+/** Skor penguat berita: maks(kata kunci kueri, tumpang tindih entitas). */
+export function peerSimilarity(query: string, content: string, title: string): number {
+  return Math.max(keywordSimilarity(query, title), entitySimilarity(content || query, title));
 }
 
 export function factDateLabel(value: string | null | undefined): string | null {
@@ -172,17 +312,26 @@ export function cekfaktaArticleUrl(id: string): string | null {
 
 type Ranked = ExternalFact & { similarity: number };
 
-function rankFacts(query: string, items: Array<ExternalFact & { haystack: string }>, now = new Date()): ExternalFact[] {
+function rankFacts(
+  query: string,
+  items: Array<ExternalFact & { haystack: string }>,
+  now = new Date(),
+  contentForEntities?: string,
+): ExternalFact[] {
   const ranked: Ranked[] = [];
+  const entitySource = contentForEntities || query;
   for (const item of items) {
     if (!item.title.trim()) continue;
-    if (!relevantHit(query, item.haystack)) continue;
+    // Entitas dari isi boleh menyelamatkan parafrase judul; tetap butuh 1 token khas.
+    const byKeyword = relevantHit(query, item.haystack);
+    const byEntity = entitySimilarity(entitySource, item.title) >= 0.4;
+    if (!byKeyword && !byEntity) continue;
     const url = item.url && hasHttpUrl(item.url) ? item.url : null;
     ranked.push({
       ...item,
       url,
       publishedAt: normalizeFactDate(item.publishedAt),
-      similarity: keywordSimilarity(query, item.haystack),
+      similarity: peerSimilarity(query, entitySource, item.title),
     });
   }
   ranked.sort((left, right) => compareByRecency(left, right, now));
@@ -401,8 +550,75 @@ export function parseKomdigi(body: string, query: string): ExternalFact[] {
       haystack: title,
     });
   }
-  return rankFacts(query, items);
+  return rankFacts(query, items, new Date(), peerContentContext);
 }
+
+
+/** Pencarian Antara untuk berita biasa (bukan hanya cek fakta). */
+export function parseAntaraNews(body: string, query: string): ExternalFact[] {
+  const pattern = /<a href="(https:\/\/www\.antaranews\.com\/berita\/\d+\/[^"]+)" title="([^"]+)"[\s\S]{0,1200}?<span class="text-dark text-capitalize">([^<]*)<\/span>/gi;
+  const items: Array<ExternalFact & { haystack: string }> = [];
+  for (const match of body.matchAll(pattern)) {
+    const url = match[1].split("?")[0];
+    const title = plainText(match[2]);
+    if (!title || title.length < 12) continue;
+    if (/hoaks|cek fakta|cekfakta/i.test(title)) continue;
+    items.push({
+      source: "Antara",
+      title,
+      url,
+      rating: "Berita",
+      publisher: "Antara",
+      publishedAt: plainText(match[3]) || null,
+      haystack: title,
+    });
+  }
+  return rankFacts(query, items, new Date(), peerContentContext);
+}
+
+/** Pencarian Detik untuk berita biasa. */
+export function parseDetikNews(body: string, query: string): ExternalFact[] {
+  const pattern = /href="(https:\/\/[^"]*detik\.com\/[^"]+\/d-\d+\/[^"?#]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+  const items: Array<ExternalFact & { haystack: string }> = [];
+  for (const match of body.matchAll(pattern)) {
+    const title = plainText(match[2]);
+    const url = match[1];
+    if (title.length < 12) continue;
+    if (/\/cek.?fakta\//i.test(url) || /hoaks|cek fakta|klarifikasi/i.test(title)) continue;
+    items.push({
+      source: "Detik",
+      title,
+      url,
+      rating: "Berita",
+      publisher: "Detik",
+      publishedAt: null,
+      haystack: title,
+    });
+  }
+  return rankFacts(query, items, new Date(), peerContentContext);
+}
+
+/** Pencarian Kompas untuk berita biasa (bukan rubrik cekfakta). */
+export function parseKompasNews(body: string, query: string): ExternalFact[] {
+  const pattern = /href="(https:\/\/(?:www\.|nasional\.|regional\.|money\.|tekno\.)?kompas\.com\/(?!cekfakta)[^"]+\/read\/(\d{4})\/(\d{2})\/(\d{2})\/[^"]+)"[\s\S]{0,900}?(?:alt|title)="([^"]+)"/gi;
+  const items: Array<ExternalFact & { haystack: string }> = [];
+  for (const match of body.matchAll(pattern)) {
+    const title = plainText(match[5]);
+    if (!title || title.length < 12) continue;
+    if (/hoaks|cek fakta|cekfakta/i.test(title)) continue;
+    items.push({
+      source: "Kompas",
+      title,
+      url: match[1].split("?")[0],
+      rating: "Berita",
+      publisher: "Kompas",
+      publishedAt: `${match[2]}-${match[3]}-${match[4]}`,
+      haystack: title,
+    });
+  }
+  return rankFacts(query, items, new Date(), peerContentContext);
+}
+
 
 
 /** RSS generik: Tempo, Tirto, Kumparan, Google News. */
@@ -440,7 +656,7 @@ export function parseGenericNewsRss(
       haystack: title,
     });
   }
-  return rankFacts(query, items);
+  return rankFacts(query, items, new Date(), peerContentContext);
 }
 
 export function parseGoogleNewsRss(body: string, query: string): ExternalFact[] {
@@ -468,7 +684,7 @@ export function parseGoogleNewsRss(body: string, query: string): ExternalFact[] 
       haystack: title,
     });
   }
-  return rankFacts(query, items);
+  return rankFacts(query, items, new Date(), peerContentContext);
 }
 
 export function parseTempoRss(body: string, query: string): ExternalFact[] {

@@ -223,3 +223,21 @@ test("cnn artis tidak menguatkan rumor divpropam", () => {
   }]);
   assert.equal(strong[0]?.name, "CNN Indonesia");
 });
+
+test("outlet baru di daftar kredibel bisa jadi penguat", () => {
+  const strong = independentReports(
+    "https://www.tempo.co/politik/listyo",
+    "Listyo Sigit tersangka penyadapan Prabowo",
+    [{
+      source: "Google News",
+      title: "Listyo Sigit Prabowo ditetapkan tersangka penyadapan",
+      url: "https://www.jpnn.com/news/listyo",
+      rating: "Berita",
+      publisher: "JPNN",
+      publishedAt: "2026-11-03",
+      similarity: 0.8,
+    }],
+  );
+  assert.ok(strong.some((item) => item.name === "JPNN"));
+});
+

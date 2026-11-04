@@ -30,6 +30,24 @@ const CREDIBLE_HOSTS = [
   "suara.com",
   "matranews.id",
   "aktual.com",
+  "tirto.id",
+  "okezone.com",
+  "sindonews.com",
+  "jpnn.com",
+  "beritasatu.com",
+  "inews.id",
+  "rri.co.id",
+  "tvri.go.id",
+  "kontan.co.id",
+  "bisnis.com",
+  "katadata.co.id",
+  "jawapos.com",
+  "viva.co.id",
+  "merdeka.com",
+  "idntimes.com",
+  "tni.mil.id",
+  "polri.go.id",
+  "kemhan.go.id",
 ];
 
 const NEWSROOM_MARKERS = [
@@ -47,6 +65,24 @@ const NEWSROOM_MARKERS = [
   "republika",
   "kumparan",
   "suara",
+  "tirto",
+  "okezone",
+  "sindonews",
+  "jpnn",
+  "beritasatu",
+  "inews",
+  "rri",
+  "tvri",
+  "kontan",
+  "bisnis",
+  "katadata",
+  "jawapos",
+  "viva",
+  "merdeka",
+  "idntimes",
+  "tnimil",
+  "polri",
+  "kemhan",
 ];
 
 export function evidenceStance(value: string | null | undefined): EvidenceStance {
@@ -78,13 +114,33 @@ function labelFromKey(key: string): string | null {
   if (key.includes("tempo")) return "Tempo";
   if (key.includes("liputan6")) return "Liputan6";
   if (key.includes("cnnindonesia")) return "CNN Indonesia";
+  if (key.includes("cnbcindonesia")) return "CNBC Indonesia";
   if (key.includes("metrotv")) return "Metro TV";
   if (key.includes("tvone")) return "tvOne";
   if (key.includes("tribun")) return "Tribun";
   if (key.includes("republika")) return "Republika";
+  if (key.includes("mediaindonesia")) return "Media Indonesia";
   if (key.includes("antara")) return "Antara";
   if (key.includes("kumparan")) return "Kumparan";
   if (key.includes("suara")) return "Suara";
+  if (key.includes("tirto")) return "Tirto";
+  if (key.includes("okezone")) return "Okezone";
+  if (key.includes("sindonews")) return "Sindonews";
+  if (key.includes("jpnn")) return "JPNN";
+  if (key.includes("beritasatu")) return "BeritaSatu";
+  if (key.includes("inews")) return "iNews";
+  if (key.includes("rri")) return "RRI";
+  if (key.includes("tvri")) return "TVRI";
+  if (key.includes("kontan")) return "Kontan";
+  if (key.includes("bisnis")) return "Bisnis";
+  if (key.includes("katadata")) return "Katadata";
+  if (key.includes("jawapos")) return "Jawa Pos";
+  if (key.includes("viva")) return "Viva";
+  if (key.includes("merdeka")) return "Merdeka";
+  if (key.includes("idntimes")) return "IDN Times";
+  if (key.includes("tnimil") || key.includes("tnimilid")) return "situs resmi TNI";
+  if (key.includes("kemhan")) return "situs resmi Kemhan";
+  if (key.includes("polri")) return "situs resmi Polri";
   return null;
 }
 
@@ -123,11 +179,18 @@ export function credibleReporting(sourceUrl: string | null | undefined, text: st
 function markerFromKey(key: string): string | null {
   if (!key) return null;
   for (const marker of NEWSROOM_MARKERS) {
-    if (key.includes(marker)) return marker === "kompastv" ? "kompas" : marker === "tribunnews" ? "tribun" : marker;
+    if (key.includes(marker)) {
+      if (marker === "kompastv") return "kompas";
+      if (marker === "tribunnews") return "tribun";
+      if (marker === "tnimil") return "mil";
+      return marker;
+    }
   }
   if (key.includes("polri")) return "polri";
-  if (key.includes("milid")) return "mil";
+  if (key.includes("milid") || key.includes("tnimil")) return "mil";
+  if (key.includes("kemhan")) return "gov";
   if (key.includes("goid")) return "gov";
+  if (key.includes("mediaindonesia")) return "mediaindonesia";
   return null;
 }
 
@@ -153,6 +216,15 @@ function bylineMarker(text: string): string | null {
     [/\btvonenews\.com\b/, "tvone"],
     [/\bmetrotvnews\.com\b/, "metrotv"],
     [/\bcnbcindonesia\.com\b/, "cnbcindonesia"],
+    [/\bmediaindonesia\.com\b/, "mediaindonesia"],
+    [/\btirto\.id\b/, "tirto"],
+    [/\bokezone\.com\b/, "okezone"],
+    [/\bsindonews\.com\b/, "sindonews"],
+    [/\bjpnn\.com\b/, "jpnn"],
+    [/\bviva\.co\.id\b/, "viva"],
+    [/\bmerdeka\.com\b/, "merdeka"],
+    [/\bidntimes\.com\b/, "idntimes"],
+    [/\bjawapos\.com\b/, "jawapos"],
   ];
   for (const [pattern, marker] of patterns) {
     if (pattern.test(head)) return marker;
@@ -236,7 +308,8 @@ export function independentReports(
     } catch {
       continue;
     }
-    const name = labelFromHost(host);
+    // Google News kadang hanya punya tautan google; pakai penanda penerbit.
+    const name = labelFromHost(host) ?? labelFromKey(marker);
     if (!name || found.some((item) => item.name === name)) continue;
     // Nama outlet sama dengan asal teks tidak pernah jadi penguat.
     if (ownName && name.toLowerCase() === ownName.toLowerCase()) continue;
