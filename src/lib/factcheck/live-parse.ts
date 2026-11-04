@@ -248,7 +248,12 @@ export function entitySimilarity(content: string, title: string): number {
   // Token khas unik dari entitas (nama/lembaga), bukan seluruh frasa noise.
   const tokens = [...new Set(
     entities.flatMap((entity) => entity.split(/\s+/))
-      .filter((word) => word.length >= 3 && !STOP.has(word) && !ENTITY_NOISE.has(word)),
+      .filter((word) => {
+        if (STOP.has(word) || ENTITY_NOISE.has(word)) return false;
+        // Inisial 2-3 huruf (lsp/wa) terlalu mudah salah cocok; izinkan lembaga 3 huruf dikenal.
+        if (word.length <= 3) return word === "tni" || word === "dpr" || word === "tniad";
+        return word.length >= 4;
+      }),
   )].slice(0, 6);
   if (tokens.length === 0) return 0;
   let hits = 0;
@@ -276,13 +281,15 @@ export function entitySimilarity(content: string, title: string): number {
 export function peerSimilarity(query: string, content: string, title: string): number {
   const cleaned = query.replace(/\s+when:\S+/gi, " ").replace(/"/g, " ");
   const kw = keywordSimilarity(cleaned, title);
-  const ent = entitySimilarity(content || cleaned, title);
+  const source = content || cleaned;
+  const ent = entitySimilarity(source, title);
   if (ent >= 0.4) return Math.max(ent, kw);
   const queryWords = cleaned.trim().split(/\s+/).filter(Boolean);
-  const looksLikeTitle = queryWords.length >= 6;
-  if (looksLikeTitle && kw >= 0.5) return kw;
-  if (kw >= 0.65 && ent >= 0.25) return Math.min(kw, 0.75);
-  // Di bawah lantai penguat (0.4) agar tidak jadi independent report.
+  // Judul penuh hanya untuk teks berita cukup panjang — teks pendek/rumor tidak boleh
+  // lolos lewat keyword longgar ke berita militer lain.
+  const looksLikeTitle = queryWords.length >= 6 && source.replace(/\s+/g, " ").trim().length >= 220;
+  if (looksLikeTitle && kw >= 0.55) return kw;
+  if (kw >= 0.7 && ent >= 0.3) return Math.min(kw, 0.75);
   return Math.min(0.35, Math.max(kw, ent));
 }
 
