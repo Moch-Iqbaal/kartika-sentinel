@@ -296,7 +296,16 @@ export function peerSimilarity(query: string, content: string, title: string): n
     else score = Math.min(0.35, Math.max(kw, ent));
   }
   // Klaim pendek: harus hampir sama (bukan sekadar nama satuan/lembaga).
-  if (compact.length < 220 && score < 0.7) return Math.min(0.35, score);
+  if (compact.length < 220) {
+    if (score < 0.7) return Math.min(0.35, score);
+    const unitish = /^(yonif|yonta|kodim|korem|batalyon|divisi|brigif|kostrad|paspampres|tni|polri|\d+)$/;
+    const titleTok = new Set(contentTokens(title));
+    const topical = contentTokens(compact).filter(
+      (word) => titleTok.has(word) && !unitish.test(word) && !BROAD.has(word) && !ENTITY_NOISE.has(word),
+    );
+    // Tanpa kata topik bersama (jembatan/membantu/dll) nama satuan saja tidak cukup.
+    if (topical.length < 1) return Math.min(0.35, score);
+  }
   return score;
 }
 

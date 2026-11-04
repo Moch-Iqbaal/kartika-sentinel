@@ -272,4 +272,6 @@ test("klaim pendek butuh skor peer hampir sama", () => {
   const shortText = "Prajurit Yonif 143 membantu warga membangun jembatan di desa.";
   const relatedUnit = "Pratu Ferdian jadi prajurit kedua yang gugur di Papua dari Yonif 143 TWEJ";
   assert.ok(peerSimilarity(shortText, shortText, relatedUnit) < 0.4);
+  const sameClaim = "Prajurit Yonif 143 membantu warga membangun jembatan di desa terpencil";
+  assert.ok(peerSimilarity(shortText, shortText, sameClaim) >= 0.4);
 });
