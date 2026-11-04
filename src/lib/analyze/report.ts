@@ -34,16 +34,22 @@ export function scoreLines(
   virality: number,
   engagementLabel?: string | null,
 ): ScoreLines {
-  let viralMeaning = VIRALITY_MEANING;
-  if (virality <= 0) viralMeaning = "belum ada data sebaran";
-  else if (engagementLabel) viralMeaning = engagementLabel;
+  // Tanpa angka sebaran: jangan tampilkan 0% yang menyesatkan.
+  const noSpread = !(Number.isFinite(virality) && virality > 0) && !engagementLabel;
+  const viralitas = noSpread
+    ? "Viralitas: belum ada data sebaran"
+    : metricLine(
+        "Viralitas",
+        virality,
+        engagementLabel || VIRALITY_MEANING,
+      );
   return {
     utama: metricLine("Skor utama", hoax, SCORE_MEANING),
     utamaBand: plainBand(hoax),
     sensitivitas: metricLine("Sensitivitas", sensitivity, SENSITIVITY_MEANING),
     sensitivitasBand: plainBand(sensitivity),
-    viralitas: metricLine("Viralitas", virality, viralMeaning),
-    viralitasBand: plainBand(virality),
+    viralitas,
+    viralitasBand: noSpread ? "rendah" : plainBand(virality),
   };
 }
 

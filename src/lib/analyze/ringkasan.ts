@@ -13,12 +13,12 @@ import type { RiskBand } from "../scoring/risk";
 
 /**
  * Vonis hanya dua: HOAKS atau FAKTA.
- * Urutan: pemeriksaan fakta hoaks, lalu fakta/berita lain, lalu kritik kebijakan, lalu angka.
- * Tanpa pemeriksaan fakta hoaks, angka tinggi sendirian tidak cukup.
- * Hoaks dari angka hanya bila kedua penilai mencapai 0,7 dan tidak berselisih jauh.
- * Keyakinan rendah menjelaskan teks pendek, dua penilaian yang tidak sejalan, atau bukti sedikit.
- * Kanal sendiri dan domain artikel sendiri bukan berita penguat. Kanal berita hanya prior ringan.
- * Artikel lama tidak mengubah vonis, kecuali kemiripannya hampir sama.
+ * FAKTA hanya bila ada media/sumber resmi lain (bukan asal teks) yang memberitakan sama,
+ * dan tidak ada pemeriksaan fakta yang menyebut hoaks.
+ * HOAKS bila pemeriksaan fakta menyebut hoaks, atau tidak ada penguat independen,
+ * atau kedua penilai >= 0,7 dan sejalan (tanpa penguat).
+ * IndoBERT tidak boleh menjatuhkan HOAKS sendirian bila sudah ada penguat.
+ * Kanal/domain sendiri bukan berita penguat.
  */
 
 export type SummaryVerdict = "hoax" | "not-hoax" | "unscored";
@@ -159,34 +159,119 @@ function agreedHoaxCall(input: RingkasanInput): boolean {
   return primary >= HOAX_ALONE_MIN && backup >= HOAX_ALONE_MIN;
 }
 
+const RUMOR_CUES = /\b(dikabarkan|kabarnya|beredar|inisial|belum\s+membantah|belum\s+membenarkan|katanya|viral|diteruskan|wa\s*grup|grup\s*wa|forward)\b/i;
+
+export function hasRumorLanguage(text: string | undefined): boolean {
+  if (!text) return false;
+  return RUMOR_CUES.test(text);
+}
+
+/** Ada penguat independen: media lain atau pemeriksaan yang menyebut benar. */
+export function hasIndependentCorroboration(input: RingkasanInput): boolean {
+  return hasValidCheck(input) || otherOutlets(input).length > 0;
+}
+
+/**
+ * FAKTA hanya dengan penguat. Tanpa penguat = HOAKS.
+ * IndoBERT tidak menjatuhkan HOAKS sendirian bila penguat sudah ada (cabang di atas).
+ */
 export function decideVerdict(input: RingkasanInput): SummaryVerdict {
   if (input.unscored) return "unscored";
   if (hasHoaxCheck(input)) return "hoax";
-  if (hasValidCheck(input) || otherOutlets(input).length > 0) return "not-hoax";
-  if (input.opinion) return "not-hoax";
-  if (agreedHoaxCall(input)) return "hoax";
-  return "not-hoax";
+  if (hasIndependentCorroboration(input)) return "not-hoax";
+  return "hoax";
 }
 
-function analystLine(): string {
-  return "Keputusan akhir ada pada analis.";
+/** Judul atau kalimat pembuka dari teks yang dinilai. Tidak mengarang. */
+export function contentLead(text: string | undefined): string | null {
+  if (!text) return null;
+  const lines = text
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter((line) => line.length >= 12)
+    .filter((line) => !/^kanal\s*:/i.test(line))
+    .filter((line) => !/^https?:\/\//i.test(line));
+  const first = lines[0] ?? "";
+  if (!first) return null;
+  // Potong di akhir kalimat bila ada, atau batas 160 karakter.
+  const sentence = first.match(/^(.{12,160}?[.!?])(?:\s|$)/);
+  let lead = (sentence?.[1] ?? first).trim();
+  if (lead.length > 160) lead = `${lead.slice(0, 157).trim()}...`;
+  lead = lead.replace(/\s+/g, " ");
+  return lead.replace(/[.!?]+$/, "");
 }
 
-function checkerLine(rawNames: string[], kind: "hoax" | "valid"): string {
-  const shown = names(rawNames).map((name) => publicSourceName(name));
-  if (shown.length === 0) {
-    return kind === "hoax"
-      ? "Pemeriksaan fakta menyebut ini hoaks."
-      : "Pemeriksaan fakta menyebut ini benar.";
+function contentSentence(input: RingkasanInput): string {
+  const lead = contentLead(input.text);
+  if (!lead) return "Isi yang dinilai tidak punya kalimat pembuka yang jelas.";
+  return `Berita ini menyebut ${lead}.`;
+}
+
+function joinOutlets(values: string[]): string {
+  const shown = values.map((name) => name.trim()).filter(Boolean);
+  if (shown.length === 0) return "";
+  if (shown.length === 1) return shown[0];
+  if (shown.length === 2) return `${shown[0]} dan ${shown[1]}`;
+  return `${shown.slice(0, -1).join(", ")}, dan ${shown[shown.length - 1]}`;
+}
+
+function checkerNames(rawNames: string[]): string[] {
+  return names(rawNames).map((name) => publicSourceName(name));
+}
+
+function verdictSentence(input: RingkasanInput, verdict: SummaryVerdict): string {
+  const score = percent(verdictScore(input));
+  const outlets = otherOutlets(input);
+  const hoaxNames = checkerNames(names(input.hoaxCheckers));
+  const validNames = checkerNames(names(input.validCheckers));
+  if (verdict === "hoax" && hoaxNames.length > 0) {
+    return `Kemungkinan HOAKS karena ${joinOutlets(hoaxNames)} menyebut klaim ini hoaks.`;
   }
-  return kind === "hoax"
-    ? `${shown[0]} menyebut ini hoaks.`
-    : `${shown[0]} menyebut ini benar.`;
+  if (verdict === "hoax" && hasHoaxCheck(input)) {
+    return "Kemungkinan HOAKS karena pemeriksaan fakta menyebut klaim ini hoaks.";
+  }
+  if (verdict === "hoax") {
+    // Tanpa penguat independen — kalimat wajib dari pemilik.
+    return "Belum ada media atau sumber resmi lain yang memberitakan hal ini, jadi isinya belum bisa dipercaya.";
+  }
+  if (verdict === "not-hoax" && validNames.length > 0) {
+    return `Kemungkinan FAKTA karena ${joinOutlets(validNames)} menyebut klaim ini benar.`;
+  }
+  if (verdict === "not-hoax" && outlets.length > 0) {
+    return `Kemungkinan FAKTA karena isi yang sama juga diberitakan ${joinOutlets(outlets.slice(0, 3))}.`;
+  }
+  if (verdict === "not-hoax" && input.opinion) {
+    return `Kemungkinan FAKTA. ${OPINION_SENTENCE}`;
+  }
+  return `Kemungkinan FAKTA. Angka kemiripan hoaks ${score}.`;
+}
+
+function confidenceSentence(reason: string | null): string | null {
+  if (!reason) return null;
+  return `Keyakinan rendah karena ${reason}.`;
+}
+
+function nextStepSentence(input: RingkasanInput, verdict: SummaryVerdict): string {
+  if (verdict === "unscored") {
+    return "Langkah berikutnya: tempel keterangan atau teks isi bila ingin dinilai.";
+  }
+  if (verdict === "hoax" && hasHoaxCheck(input)) {
+    return "Langkah berikutnya: cocokkan dengan situs cek fakta atau keterangan resmi sebelum menindaklanjuti.";
+  }
+  if (verdict === "hoax") {
+    return "Langkah berikutnya: cari berita resmi atau media independen yang memberitakan klaim yang sama sebelum menindaklanjuti.";
+  }
+  if (otherOutlets(input).length > 0 || hasValidCheck(input)) {
+    return "Langkah berikutnya: simpan tautan media yang sama sebagai bukti, lalu pantau bila muncul versi berbeda.";
+  }
+  return "Langkah berikutnya: cek satu sumber resmi lagi sebelum menutup berkas.";
 }
 
 export function buildRingkasan(input: RingkasanInput): Ringkasan {
   const verdict = decideVerdict(input);
-  const thin = !hasHoaxCheck(input) && !hasValidCheck(input) && otherOutlets(input).length === 0;
+  const outlets = otherOutlets(input);
+  const corroborated = hasIndependentCorroboration(input);
+  const thin = !hasHoaxCheck(input) && !corroborated;
   const confidence = input.unscored
     ? null
     : decideConfidence({
@@ -199,6 +284,9 @@ export function buildRingkasan(input: RingkasanInput): Ringkasan {
       externalCount: input.externalCount,
       thinEvidence: thin,
       disagree: enginesDisagree(input),
+      outletCount: outlets.length,
+      factCheckMatch: hasHoaxCheck(input) || hasValidCheck(input),
+      hoaxFromNoCorroboration: decideVerdict(input) === "hoax" && !hasHoaxCheck(input) && !corroborated,
     });
   const confidenceLabel = (confidence ? CONFIDENCE_LABEL[confidence.level] : null) as Ringkasan["confidence"];
   const confidenceReason = confidence?.level === "rendah" ? confidence.because : null;
@@ -209,36 +297,24 @@ export function buildRingkasan(input: RingkasanInput): Ringkasan {
       headline: VERDICT_LINE.unscored,
       sentences: [
         input.unscoredReason || "Tidak ada teks yang bisa dinilai.",
-        "Tempel keterangan gambar bila ingin dinilai.",
-        analystLine(),
+        nextStepSentence(input, verdict),
       ],
       confidence: null,
       confidenceReason: null,
     };
   }
 
-  const score = percent(verdictScore(input));
-  const outlets = otherOutlets(input);
-  let lead: string;
-  if (verdict === "hoax" && hasHoaxCheck(input)) lead = checkerLine(names(input.hoaxCheckers), "hoax");
-  else if (verdict === "not-hoax" && hasValidCheck(input)) lead = checkerLine(names(input.validCheckers), "valid");
-  else if (verdict === "not-hoax" && outlets.length > 0) lead = `${outlets[0]} memberitakan hal yang sama.`;
-  else if (verdict === "not-hoax" && input.opinion) lead = OPINION_SENTENCE;
-  else if (verdict === "not-hoax") {
-    if (enginesDisagree(input) && plainNewsReport(input.text ?? "", input.sourceUrl)) {
-      lead = "Dua penilaian tidak sejalan. Ini terbaca sebagai berita dari kanal berita, dan tidak ada pemeriksaan fakta yang menyebut hoaks.";
-    } else if (enginesDisagree(input)) lead = "Dua penilaian tidak sejalan, dan tidak ada pemeriksaan fakta yang menyebut hoaks.";
-    else if (plainNewsReport(input.text ?? "", input.sourceUrl)) {
-      lead = "Ini terbaca sebagai berita dari kanal berita, dan tidak ada pemeriksaan fakta yang menyebut hoaks.";
-    } else lead = "Tidak ada pemeriksaan fakta yang menyebut hoaks.";
-  } else lead = `Angka kemiripan hoaks ${score}.`;
+  const sentences = [
+    contentSentence(input),
+    verdictSentence(input, verdict),
+    confidenceSentence(confidenceReason),
+    nextStepSentence(input, verdict),
+  ].filter((sentence): sentence is string => Boolean(sentence));
 
-  const reason = confidenceReason ? `Keyakinan rendah: ${confidenceReason}.` : null;
-  const sentences = [lead, reason, analystLine()].filter((sentence): sentence is string => Boolean(sentence));
   return {
     verdict,
     headline: VERDICT_LINE[verdict],
-    sentences: sentences.slice(0, 3),
+    sentences: sentences.slice(0, 5),
     confidence: confidenceLabel,
     confidenceReason,
   };

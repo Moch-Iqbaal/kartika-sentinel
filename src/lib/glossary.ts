@@ -255,9 +255,9 @@ export function glossaryGroups(): GlossaryGroup[] {
         term(
           "vonis-laporan",
           "Kemungkinan HOAKS / Kemungkinan FAKTA",
-          "Hanya dua pilihan: kemungkinan hoaks atau kemungkinan fakta. Angka tinggi sendirian tidak cukup bila penilaian lain tidak sejalan dan tidak ada yang menyebut hoaks.",
-          `Pemeriksaan fakta hoaks menang dulu. Berita dari media lain, atau pemeriksaan yang menyebut benar, menjadi fakta. Tanpa itu, hoaks hanya bila kedua angka ${percent(HOAX_ALONE_MIN)} atau lebih dan selisihnya tidak besar. Satu angka, meski ${percent(HOAX_CALL_MIN)} atau 99%, tidak cukup. Kanal video sendiri tidak dihitung sebagai berita lain. Bukti berumur ${RECENCY_OLD_DAYS} hari atau lebih dibanding tanggal berita hanya mengubah vonis bila kemiripan minimal ${decimal(NEAR_SAME_SIMILARITY)}. Selain itu tampil sebagai Artikel lama. Keyakinan rendah menjelaskan teks pendek, penilaian yang tidak sejalan, atau bukti sedikit.`,
-          "Vonis hanya hoaks atau fakta. Keyakinan di sampingnya menunjukkan seberapa kuat dasar vonis itu.",
+          "Hanya dua pilihan. FAKTA hanya bila media atau sumber resmi lain memberitakan klaim yang sama. Tanpa penguat itu, hasilnya HOAKS.",
+          `Pemeriksaan fakta yang menyebut hoaks menang dulu. FAKTA hanya bila ada media/sumber resmi lain (bukan situs atau kanal asal teks) yang memberitakan sama, dan tidak ada pemeriksaan fakta hoaks. Tanpa penguat independen, vonisnya HOAKS — terutama untuk bahasa rumor seperti dikabarkan, beredar, atau viral. Kedua angka ${percent(HOAX_ALONE_MIN)} yang sejalan juga menguatkan HOAKS bila tidak ada penguat. IndoBERT tidak menjatuhkan HOAKS sendirian bila penguat sudah ada. Keyakinan Tinggi bila 2+ media menguatkan atau ada padanan cek fakta; Sedang bila 1 media; Rendah bila HOAKS hanya karena belum ada penguat.`,
+          "Vonis hanya hoaks atau fakta. Keyakinan menunjukkan seberapa kuat dasar vonis itu.",
         ),
         term(
           "badge-aksi",
@@ -276,7 +276,7 @@ export function glossaryGroups(): GlossaryGroup[] {
         term(
           "ringkasan-laporan",
           "Ringkasan",
-          "Paling banyak tiga kalimat biasa. Bukan rumus, dan keputusan tetap di analis.",
+          "Tiga sampai lima kalimat biasa: isi yang dinilai, vonis beserta alasannya, keyakinan, dan langkah berikutnya untuk analis.",
         ),
         term(
           "pita-angka",

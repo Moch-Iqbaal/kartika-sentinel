@@ -1,12 +1,10 @@
 import { MIN_RELIABLE_CHARS } from "../ingest/short-text";
-import { ENGINE_DIVERGENCE } from "../model/divergence";
 
 /**
- * Keyakinan hasil, bukan keyakinan isyarat AI.
- * Tinggi hanya bila tiga syarat sekaligus terpenuhi:
- * teks cukup panjang, IndoBERT dan model linier selisihnya di bawah ambang
- * yang sudah dipakai berkas, dan ada padanan cek fakta.
- * Teks pendek atau selisih mesin pada ambang memaksa Rendah.
+ * Keyakinan mengikuti bukti penguat, bukan jargon mesin.
+ * Tinggi: 2+ media lain menguatkan, atau ada padanan pemeriksaan fakta.
+ * Sedang: 1 media lain menguatkan.
+ * Rendah: HOAKS hanya karena belum ada penguat, atau teks terlalu pendek.
  */
 
 export type ResultConfidence = "tinggi" | "sedang" | "rendah";
@@ -30,6 +28,12 @@ export type ConfidenceInput = {
   thinEvidence?: boolean;
   /** Dua penilaian berselisih, termasuk bila cadangan bukan angka linier. */
   disagree?: boolean;
+  /** Jumlah media lain yang menguatkan (bukan asal teks). */
+  outletCount?: number;
+  /** Ada padanan pemeriksaan fakta (hoaks atau benar). */
+  factCheckMatch?: boolean;
+  /** HOAKS hanya karena tidak ada penguat independen. */
+  hoaxFromNoCorroboration?: boolean;
 };
 
 export type ConfidenceDecision = {
@@ -37,46 +41,36 @@ export type ConfidenceDecision = {
   because: string;
 };
 
-function finite(value: number | null | undefined): number | null {
-  if (value == null || !Number.isFinite(value)) return null;
-  return value;
-}
-
 export function decideConfidence(input: ConfidenceInput): ConfidenceDecision {
   const chars = Number.isFinite(input.textChars) ? input.textChars : 0;
   const short = input.shortText || chars < MIN_RELIABLE_CHARS;
-  const left = finite(input.indobert);
-  const right = finite(input.linear);
-  const gap = left == null || right == null ? null : Math.abs(left - right);
-  const evidence = input.matchCount + input.externalCount > 0;
+  const outlets = Math.max(0, input.outletCount ?? 0);
+  const fact = Boolean(input.factCheckMatch);
+
+  if (input.hoaxFromNoCorroboration) {
+    return { level: "rendah", because: "belum ada media lain yang memberitakan" };
+  }
   if (short) {
-    if (input.shortKind === "words") {
-      return { level: "rendah", because: "teks pendek" };
-    }
-    return { level: "rendah", because: "teks pendek" };
+    return { level: "rendah", because: "teks yang dinilai masih pendek" };
   }
-  if (input.disagree || (gap != null && gap >= ENGINE_DIVERGENCE)) {
-    return { level: "rendah", because: "dua penilaian tidak sejalan" };
-  }
-  if (input.thinEvidence) {
-    return { level: "rendah", because: "bukti sedikit" };
-  }
-  if (gap != null && evidence) {
+  if (fact || outlets >= 2) {
     return {
       level: "tinggi",
-      because: "IndoBERT dan model linier sejalan, teks cukup panjang, dan ada padanan cek fakta",
+      because: fact
+        ? "ada padanan pemeriksaan fakta"
+        : "dua atau lebih media lain memberitakan hal yang sama",
     };
   }
-  if (gap != null) {
-    return { level: "sedang", because: "mesin sejalan dan teks cukup panjang, tetapi tidak ada padanan cek fakta" };
+  if (outlets === 1) {
+    return { level: "sedang", because: "satu media lain memberitakan hal yang sama" };
   }
-  if (evidence) {
-    return {
-      level: "sedang",
-      because: "hanya satu mesin yang dipakai, jadi kesepakatan belum terukur, meski ada padanan cek fakta",
-    };
+  if (input.thinEvidence) {
+    return { level: "rendah", because: "bukti pendukung masih sedikit" };
   }
-  return { level: "sedang", because: "hanya satu mesin yang dipakai dan tidak ada padanan cek fakta" };
+  if (input.disagree) {
+    return { level: "rendah", because: "penilaian otomatis belum sepenuhnya sejalan dengan bukti" };
+  }
+  return { level: "sedang", because: "bukti penguat masih terbatas" };
 }
 
 export function confidenceSentence(decision: ConfidenceDecision): string {

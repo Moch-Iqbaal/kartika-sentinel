@@ -8,6 +8,7 @@ import { DEMO_ADMIN_ID, DEMO_ANALYST_ID, demoAccounts } from "@/lib/auth/demo-us
 import type { Session } from "@/lib/auth/token";
 import type { ExternalFact, FactCheck, FactMatch } from "@/lib/factcheck/types";
 import { assessmentIsUnscored } from "@/lib/analyze/unscored";
+import { presentDashboardFromAssessment } from "@/lib/analyze/dashboard";
 import { articleUrlFor } from "@/lib/factcheck/turnbackhoax";
 import { strongMatches } from "@/lib/factcheck/threshold";
 import { cardRecommendation, recommendation } from "@/lib/format";
@@ -348,15 +349,32 @@ function rationaleIsUnscored(raw: string): boolean {
 }
 
 function mapList(row: Row): AlertListItem {
-  const riskScore = num(row.risk_score);
+  let rationale: Record<string, unknown> = {};
+  try {
+    rationale = JSON.parse(text(row.rationale) || "{}") as Record<string, unknown>;
+  } catch {
+    rationale = {};
+  }
+  const assessment = (rationale.assessment ?? {}) as import("@/lib/model/classify").HoaxAssessment;
+  const external = Array.isArray(rationale.external)
+    ? rationale.external as import("@/lib/factcheck/types").ExternalFact[]
+    : [];
+  const presented = presentDashboardFromAssessment({
+    text: text(row.input_text),
+    sourceUrl: text(row.url) || null,
+    assessment,
+    external,
+    sensitivity: Number(rationale.sensitivity ?? 0),
+    virality: num(row.virality),
+  });
   return {
     id: text(row.id),
-    riskScore,
-    band: riskBand(riskScore),
+    riskScore: presented.riskScore,
+    band: presented.band,
     status: text(row.status) as AlertStatus,
     virality: num(row.virality),
     hoaxScore: num(row.hoax_score),
-    unscored: rationaleIsUnscored(text(row.rationale)),
+    unscored: presented.verdict === "unscored" || rationaleIsUnscored(text(row.rationale)),
     topicTags: JSON.parse(text(row.topic_tags) || "[]") as string[],
     aiFlag: num(row.ai_flag) === 1,
     modelVersion: text(row.model_version),
@@ -365,19 +383,22 @@ function mapList(row: Row): AlertListItem {
     authorHash: text(row.author_handle_hash) || null,
     postedAt: text(row.posted_at) || null,
     demo: num(row.demo) === 1,
+    verdictLabel: presented.verdictLabel,
+    badgeLabel: presented.badge.label,
+    badgeTone: presented.badge.tone,
   };
 }
 
 export function listAlerts(): AlertListItem[] {
   const rows = db().prepare(`
     select a.id, a.risk_score, a.status, a.virality, an.hoax_score, an.topic_tags, an.ai_flag,
-           an.model_version, an.input_text, an.rationale, p.platform, p.author_handle_hash, p.posted_at, p.demo
+           an.model_version, an.input_text, an.rationale, p.platform, p.author_handle_hash, p.posted_at, p.demo, p.url
     from alerts a
     join analyses an on an.id = a.analysis_id
     left join posts p on p.id = an.post_id
     order by a.risk_score desc
   `).all() as Row[];
-  return rows.map(mapList);
+  return rows.map(mapList).sort((a, b) => b.riskScore - a.riskScore);
 }
 
 export function velocitySeries(): VelocitySeries[] {

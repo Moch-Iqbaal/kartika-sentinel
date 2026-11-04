@@ -69,32 +69,32 @@ test("kanal video sendiri bukan berita lain", () => {
   assert.equal(other[0]?.name, "Antara");
 });
 
-test("video Kompas 62,4 persen tidak menjadi hoaks bila cadangan tidak sejalan", () => {
-  const text = buildRingkasan(input());
-  assert.equal(decideVerdict(input()), "not-hoax");
-  assert.equal(text.headline, "Kemungkinan FAKTA");
-  assert.equal(text.confidenceReason, "dua penilaian tidak sejalan");
-  assert.match(text.sentences[0], /tidak ada pemeriksaan fakta yang menyebut hoaks/);
-  assert.doesNotMatch(text.sentences.join(" "), /memberitakan hal yang sama|Belum bisa dipastikan|umn-cyber|IndoBERT/);
+test("video Kompas tanpa penguat menjadi HOAKS", () => {
+  const text = buildRingkasan(input({ text: KOMPAS_TEXT, sourceUrl: KOMPAS }));
+  assert.equal(decideVerdict(input({ text: KOMPAS_TEXT, sourceUrl: KOMPAS })), "hoax");
+  assert.equal(text.headline, "Kemungkinan HOAKS");
+  assert.match(text.sentences.join(" "), /Belum ada media atau sumber resmi lain/);
+  assert.doesNotMatch(text.sentences.join(" "), /dua penilaian tidak sejalan|IndoBERT/);
 });
 
-test("video Tribun 99,3 persen mengikuti angka bila tidak ada sumber lain", () => {
+test("video Tribun 99,3 persen tanpa penguat menjadi HOAKS", () => {
   const card = input({
     hoaxScore: REPORTED_TRIBUN,
     indobert: REPORTED_TRIBUN,
     linear: REPORTED_TRIBUN,
     heuristic: REPORTED_TRIBUN,
+    text: TRIBUN_TEXT,
   });
-  const text = buildRingkasan(card);
-  assert.equal(text.headline, "Kemungkinan HOAKS");
-  assert.equal(text.confidenceReason, "bukti sedikit");
-  assert.match(text.sentences.join(" "), /99,3%/);
+  assert.equal(buildRingkasan(card).headline, "Kemungkinan HOAKS");
 });
 
 test("media lain yang bukan asal mengubah vonis menjadi fakta", () => {
-  const text = buildRingkasan(input({ otherOutlets: ["Antara"] }));
+  const text = buildRingkasan(input({
+    otherOutlets: ["Antara", "CNN Indonesia"],
+    text: KOMPAS_TEXT,
+  }));
   assert.equal(text.headline, "Kemungkinan FAKTA");
-  assert.match(text.sentences[0], /Antara memberitakan hal yang sama/);
+  assert.match(text.sentences.join(" "), /Antara dan CNN Indonesia/);
 });
 
 test("pemeriksaan fakta hoaks mengalahkan angka rendah", () => {
@@ -104,18 +104,19 @@ test("pemeriksaan fakta hoaks mengalahkan angka rendah", () => {
     linear: 0.2,
     hoaxCheckers: ["TurnBackHoax"],
     matches: [{ verdict: "hoax", similarity: 0.8 }],
+    text: "Klaim yang sudah dibantah.",
   }));
   assert.equal(text.headline, "Kemungkinan HOAKS");
-  assert.match(text.sentences[0], /TurnBackHoax menyebut ini hoaks/);
+  assert.match(text.sentences.join(" "), /TurnBackHoax menyebut klaim ini hoaks/);
 });
 
 const YONIF_TEXT = [
   "450 Prajurit TNI AD Yonif 143 Kembali ke Lampung Usai Bertugas di Perbatasan RI-PNG",
   "Kanal: Tribunnews",
-  "Download aplikasi berita TribunX di Play Store atau App Store untuk dapatkan pengalaman baru TRIBUN-VIDEO.COM - Tribunners, sebanyak 450 prajurit TNI AD Yonif 143 Tri Wira Eka Jaya kembali ke Lampung setelah menyelesaikan tugas pengamanan perbatasan Indonesia-Papua Nugini. Kedatangan mereka disambut di Pelabuhan Panjang, Bandar Lampung, Selasa (3/11/2026). Pjs Kapenrem 043 Gatam, Kapten Denny Charliansyah, memastikan seluruh 450 personel kembali dengan selamat dan jumlah yang sama seperti saat diberangkatkan.",
+  "Download aplikasi berita TribunX di Play Store atau App Store untuk dapatkan pengalaman baru TRIBUN-VIDEO.COM - Tribunners, sebanyak 450 prajurit TNI AD Yonif 143 Tri Wira Eka Jaya kembali ke Lampung setelah menyelesaikan tugas pengamanan perbatasan Indonesia-Papua Nugini.",
 ].join("\n\n");
 
-test("berita Tribun kepulangan Yonif 143 tidak menjadi hoaks dari angka tinggi sendirian", () => {
+test("berita Tribun Yonif 143 dengan penguat menjadi FAKTA", () => {
   const card = input({
     hoaxScore: 0.993,
     indobert: 0.993,
@@ -124,30 +125,73 @@ test("berita Tribun kepulangan Yonif 143 tidak menjadi hoaks dari angka tinggi s
     textChars: YONIF_TEXT.length,
     text: YONIF_TEXT,
     sourceUrl: "https://www.youtube.com/watch?v=YEfOFbJSuYQ",
+    otherOutlets: ["Antara", "Detik"],
   });
   const text = buildRingkasan(card);
   assert.equal(decideVerdict(card), "not-hoax");
   assert.equal(text.headline, "Kemungkinan FAKTA");
-  assert.equal(text.confidenceReason, "dua penilaian tidak sejalan");
-  assert.match(text.sentences[0], /berita dari kanal berita/);
-  const unrelated = input({
-    hoaxScore: 0.2806,
-    indobert: null,
-    linear: 0.2806,
-    heuristic: 0.22,
-    engine: "linear-ngram",
-    matches: [{ verdict: "hoax", similarity: 0.6711 }],
+  assert.match(text.sentences[0], /Berita ini menyebut/);
+  assert.match(text.sentences.join(" "), /Antara dan Detik/);
+  assert.equal(text.confidence, "Tinggi");
+});
+
+test("Tempo Listyo dengan penguat CNN menjadi FAKTA", () => {
+  const body = [
+    "Eks Kapolri Listyo Sigit Tersangka Penyadapan Prabowo",
+    "TEMPO.CO, Jakarta - Bareskrim Polri menetapkan tiga tersangka dugaan penyadapan ilegal terhadap Presiden.",
+  ].join("\n\n");
+  const card = input({
+    text: body,
+    sourceUrl: "https://www.tempo.co/politik/eks-kapolri-listyo-sigit",
+    otherOutlets: ["CNN Indonesia", "Kumparan"],
+    hoaxScore: 0.3,
+    indobert: 0.3,
+    linear: 0.25,
   });
-  assert.equal(decideVerdict(unrelated), "not-hoax");
-  assert.doesNotMatch(buildRingkasan(unrelated).sentences.join(" "), /menyebut ini hoaks/);
-  assert.doesNotMatch(text.sentences.join(" "), /memberitakan hal yang sama|umn-cyber|IndoBERT|n-gram/);
-  const named = buildRingkasan(input({
-    hoaxScore: 0.2,
-    indobert: 0.2,
-    linear: 0.2,
-    hoaxCheckers: ["umn-cyber/mafindo-2024"],
+  const text = buildRingkasan(card);
+  assert.equal(text.headline, "Kemungkinan FAKTA");
+  assert.match(text.sentences.join(" "), /CNN Indonesia dan Kumparan/);
+  assert.doesNotMatch(text.sentences.join(" "), /Tempo memberitakan/);
+});
+
+test("tempo sendiri tidak jadi penguat walau ada artikel tempo lain", () => {
+  const source = "https://www.tempo.co/politik/eks-kapolri-listyo-sigit";
+  const body = [
+    "Eks Kapolri Listyo Sigit Tersangka Penyadapan Prabowo",
+    "TEMPO.CO, Jakarta - Bareskrim Polri menetapkan tiga tersangka dugaan penyadapan ilegal terhadap Presiden.",
+  ].join("\n\n");
+  assert.equal(originMarker(source, body), "tempo");
+  const own = independentReports(source, body, [{
+    source: "Tempo",
+    title: "Listyo Sigit ditetapkan tersangka",
+    url: "https://www.tempo.co/politik/listyo-sigit-ditetapkan-tersangka",
+    rating: null,
+    publisher: "Tempo",
+  }, {
+    source: "CNN Indonesia",
+    title: "Polri tetapkan Listyo tersangka",
+    url: "https://www.cnnindonesia.com/nasional/listyo",
+    rating: null,
+    publisher: "CNN Indonesia",
+  }]);
+  assert.equal(own.some((item) => item.name === "Tempo"), false);
+  assert.equal(own[0]?.name, "CNN Indonesia");
+});
+
+test("rumor X Divpropam tanpa penguat menjadi HOAKS", () => {
+  const rumor = [
+    "Dikabarkan Divpropam memeriksa perwira terkait isu penyadapan.",
+    "Kabarnya beredar di WA grup. Polri belum membantah maupun membenarkan.",
+  ].join(" ");
+  const text = buildRingkasan(input({
+    text: rumor,
+    sourceUrl: "https://x.com/liclerc/status/2117550017837928494",
+    hoaxScore: 0.05,
+    indobert: 0.05,
+    linear: 0.1,
+    textChars: rumor.length,
   }));
-  assert.equal(named.headline, "Kemungkinan HOAKS");
-  assert.match(named.sentences[0], /Mafindo menyebut ini hoaks/);
-  assert.doesNotMatch(named.sentences.join(" "), /umn-cyber/);
+  assert.equal(text.headline, "Kemungkinan HOAKS");
+  assert.match(text.sentences.join(" "), /Belum ada media atau sumber resmi lain yang memberitakan hal ini, jadi isinya belum bisa dipercaya/);
+  assert.equal(text.confidence, "Rendah");
 });

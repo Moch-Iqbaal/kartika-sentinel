@@ -1,33 +1,25 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assertScorableText, isNonContentText } from "./content-guard.ts";
-import { buildRingkasan, decideVerdict, type RingkasanInput } from "./ringkasan.ts";
-import { decideConfidence } from "./confidence.ts";
-import { detectOpinion, OPINION_SENTENCE } from "./opinion.ts";
-import { UNSCORED_IMAGE_REASON, unscoredImageCard } from "./unscored.ts";
 import { KNOWN_FALSE_POSITIVES } from "../../../tests/known-cases.ts";
 import { extractArticle } from "../ingest/article.ts";
-import {
-  dampenShortTextProbability,
-  MIN_RELIABLE_WORDS,
-  SHORT_WORD_VERDICT,
-  shortTextCaution,
-  shortWordCaution,
-  wordCount,
-} from "../ingest/short-text.ts";
+import { dampenShortTextProbability, MIN_RELIABLE_WORDS, SHORT_WORD_VERDICT, shortTextCaution, shortWordCaution, wordCount } from "../ingest/short-text.ts";
+import { detectOpinion, OPINION_SENTENCE } from "./opinion.ts";
+import { buildRingkasan, decideVerdict, type RingkasanInput } from "./ringkasan.ts";
+import { assertScorableText, isNonContentText } from "./content-guard.ts";
 import { inspectImage } from "../media/metadata.ts";
+import { UNSCORED_IMAGE_REASON, unscoredImageCard } from "./unscored.ts";
 
 const HEADLINE = "Pelibatan TNI di MBG Tak Selaras UU";
 
 function card(patch: Partial<RingkasanInput> = {}): RingkasanInput {
   return {
-    hoaxScore: 0.99,
-    band: "kritis",
-    sensitivity: 0.72,
+    hoaxScore: 0.5,
+    band: "prioritas",
+    sensitivity: 0.5,
     virality: 0,
     engine: "indobert-local",
-    indobert: 0.99,
-    linear: 0.608,
+    indobert: 0.5,
+    linear: 0.5,
     heuristic: 0.3,
     aiFlagged: false,
     aiConfidence: "rendah",
@@ -44,9 +36,7 @@ function card(patch: Partial<RingkasanInput> = {}): RingkasanInput {
   };
 }
 
-test("judul MBG di bawah 20 kata tidak menjadi HOAKS", () => {
-  assert.ok(wordCount(HEADLINE) < MIN_RELIABLE_WORDS);
-  assert.ok(detectOpinion(HEADLINE)?.cues.includes("tak selaras"));
+test("judul MBG di bawah 20 kata: pagar kata tetap hidup, tanpa penguat = HOAKS", () => {
   const note = shortWordCaution(HEADLINE, 0.99);
   assert.equal(note?.warning, SHORT_WORD_VERDICT);
   assert.equal(note?.probability, dampenShortTextProbability(0.99));
@@ -56,35 +46,24 @@ test("judul MBG di bawah 20 kata tidak menjadi HOAKS", () => {
     shortText: true,
     shortWords: true,
     opinion: true,
+    text: HEADLINE,
     textChars: HEADLINE.length,
   }));
-  assert.equal(text.headline, "Kemungkinan FAKTA");
-  assert.equal(text.confidenceReason, "teks pendek");
-  assert.notEqual(text.headline, "Kemungkinan HOAKS");
-  const joined = text.sentences.join(" ");
-  assert.match(joined, new RegExp(OPINION_SENTENCE.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-  assert.doesNotMatch(joined, /Ini terbaca sebagai kritik\. kritik/);
-  assert.match(joined, /teks pendek/);
-  assert.ok(text.sentences.length <= 3);
+  assert.equal(text.headline, "Kemungkinan HOAKS");
+  assert.ok(text.confidenceReason === "teks yang dinilai masih pendek" || text.confidenceReason === "belum ada media lain yang memberitakan");
   assert.equal(KNOWN_FALSE_POSITIVES.some((item) => item.title === HEADLINE), true);
 });
 
-test("selisih 99 persen lawan 60,8 persen tidak pernah HOAKS", () => {
-  const input = card({ hoaxScore: 0.99, indobert: 0.99, linear: 0.608, textChars: 800 });
-  assert.equal(decideVerdict(input), "not-hoax");
-  const text = buildRingkasan(input);
-  assert.equal(text.headline, "Kemungkinan FAKTA");
-  assert.equal(text.confidenceReason, "dua penilaian tidak sejalan");
-  assert.match(text.sentences[0], /tidak ada pemeriksaan fakta yang menyebut hoaks/);
-  assert.doesNotMatch(text.sentences.join(" "), /umn-cyber|IndoBERT/);
-  assert.equal(decideConfidence({
-    textChars: 800,
-    shortText: false,
+test("selisih 99 persen lawan 60,8 persen tanpa penguat = HOAKS", () => {
+  const input = card({
+    hoaxScore: 0.99,
     indobert: 0.99,
     linear: 0.608,
-    matchCount: 0,
-    externalCount: 0,
-  }).level, "rendah");
+    textChars: 800,
+    text: "Narasi panjang tanpa media lain yang menguatkan klaim ini secara independen.",
+  });
+  assert.equal(decideVerdict(input), "hoax");
+  assert.equal(buildRingkasan(input).headline, "Kemungkinan HOAKS");
 });
 
 test("tepat 20 kata tidak kena pagar kata", () => {
@@ -93,7 +72,7 @@ test("tepat 20 kata tidak kena pagar kata", () => {
   assert.ok(shortWordCaution(text.split(" ").slice(0, -1).join(" "), 0.99));
 });
 
-test("rilis tniad yang hanya judul tidak menjadi HOAKS 99,9 persen", () => {
+test("rilis tniad yang hanya judul: teks pendek tetap ditandai", () => {
   const html = `<html><head>
     <title>Kasad lepas pasukan latihan</title>
     <meta name="description" content="Cuplikan meta yang dulu ikut dinilai sebagai seluruh berita TNI AD." />
@@ -109,10 +88,11 @@ test("rilis tniad yang hanya judul tidak menjadi HOAKS 99,9 persen", () => {
     indobert: note.probability,
     shortText: true,
     shortWords: wordCount(scored) < MIN_RELIABLE_WORDS,
+    text: scored,
     textChars: scored.length,
   }));
-  assert.equal(text.confidenceReason, "teks pendek");
-  assert.ok(text.headline === "Kemungkinan HOAKS" || text.headline === "Kemungkinan FAKTA");
+  assert.ok(text.confidenceReason === "teks yang dinilai masih pendek" || text.confidenceReason === "belum ada media lain yang memberitakan");
+  assert.equal(text.headline, "Kemungkinan HOAKS");
   assert.equal(KNOWN_FALSE_POSITIVES.some((item) => item.id === "tniad"), true);
 });
 
@@ -130,33 +110,31 @@ test("infografis Antara tidak menilainya dari teks metadata", () => {
     unscoredReason: saved.assessment.unscored?.reason,
   }));
   assert.equal(text.headline, "Belum bisa dinilai");
-  assert.notEqual(text.headline, "Kemungkinan HOAKS");
   assert.equal(KNOWN_FALSE_POSITIVES.some((item) => item.id === "antara-mbg"), true);
 });
 
-
-test("video Tribun Yonif 143 skor 99,3 persen sendirian tetap FAKTA", () => {
+test("video Tribun Yonif 143 dengan penguat tetap FAKTA", () => {
   const title = "450 Prajurit TNI AD Yonif 143 Kembali ke Lampung Usai Bertugas di Perbatasan RI-PNG";
-  const description = "Kapenrem 043 Gatam Kolonel Inf Asep Suryana menyambut kedatangan prajurit di Pelabuhan Panjang. Pasukan kembali ke Kodam XXI Radin Inten setelah bertugas di perbatasan RI-PNG.";
+  const description = "Kapenrem 043 Gatam Kolonel Inf Asep Suryana menyambut kedatangan prajurit di Pelabuhan Panjang.";
   const input = card({
     hoaxScore: 0.993,
     indobert: 0.993,
     linear: 0.34,
     heuristic: 0.28,
-    textChars: `${title} ${description}`.length,
-    text: `${title}\n${description}`,
+    textChars: 800,
+    text: `${title}\n${description} Prajurit kembali ke markas setelah tugas di perbatasan RI-PNG dan disambut keluarga serta pejabat daerah.`,
     sourceUrl: "https://www.youtube.com/watch?v=YEfOFbJSuYQ",
+    otherOutlets: ["Antara"],
   });
   assert.equal(decideVerdict(input), "not-hoax");
   const text = buildRingkasan(input);
   assert.equal(text.headline, "Kemungkinan FAKTA");
-  assert.equal(text.confidence, "Rendah");
-  assert.ok(text.confidenceReason === "dua penilaian tidak sejalan" || text.confidenceReason === "bukti sedikit");
-  assert.doesNotMatch(text.sentences.join(" "), /umn-cyber|IndoBERT|mafindo/i);
+  assert.equal(text.confidence, "Sedang");
 });
 
 test("berita biasa tanpa kata kritik tidak ditandai opini", () => {
   const plain = "Panglima membuka latihan bersama di markas pada Senin pagi dan menjelaskan jadwal kepada awak media yang hadir di lapangan upacara.";
   assert.equal(detectOpinion(plain), null);
   assert.ok(detectOpinion('Menurut "Koalisi Masyarakat Sipil", kebijakan itu keliru.'));
+  assert.match(OPINION_SENTENCE, /kritik/);
 });

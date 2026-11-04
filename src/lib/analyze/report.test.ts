@@ -28,7 +28,8 @@ test("pita angka mengikuti batas yang sama dengan nilainya", () => {
   assert.equal(lines.sensitivitasBand, "tinggi");
   assert.match(lines.sensitivitas, /72%/);
   assert.equal(lines.viralitasBand, "rendah");
-  assert.match(lines.viralitas, /belum ada data sebaran/);
+  assert.equal(lines.viralitas, "Viralitas: belum ada data sebaran");
+  assert.doesNotMatch(lines.viralitas, /0%/);
 });
 
 test("bukti paling banyak tiga butir dan tidak mengandalkan satu sumber", () => {

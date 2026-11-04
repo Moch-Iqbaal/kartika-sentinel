@@ -25,6 +25,11 @@ export type AlertListItem = {
   authorHash: string | null;
   postedAt: string | null;
   demo: boolean;
+  /** Vonis akhir yang dihitung ulang saat dibaca. */
+  verdictLabel: string;
+  /** Label aksi sama dengan halaman berkas. */
+  badgeLabel: string;
+  badgeTone: string;
 };
 
 export type VelocitySeries = {

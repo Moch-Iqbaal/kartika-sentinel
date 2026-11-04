@@ -6,6 +6,7 @@ import type { Session } from "@/lib/auth/token";
 import { embedText } from "@/lib/embed/hashing";
 import type { ExternalFact, FactCheck } from "@/lib/factcheck/types";
 import { assessmentIsUnscored } from "@/lib/analyze/unscored";
+import { presentDashboardFromAssessment } from "@/lib/analyze/dashboard";
 import { articleUrlFor } from "@/lib/factcheck/turnbackhoax";
 import { strongMatches } from "@/lib/factcheck/threshold";
 import { cardRecommendation, recommendation } from "@/lib/format";
@@ -103,24 +104,39 @@ export async function ensureReady(): Promise<void> {
 function mapAlert(row: Record<string, unknown>): AlertListItem {
   const analysis = first(row.analyses);
   const post = first(analysis.posts);
-  const riskScore = Number(row.risk_score ?? 0);
   const tags = analysis.topic_tags;
+  const rationale = asRecord(analysis.rationale);
+  const assessment = asRecord(rationale.assessment) as import("@/lib/model/classify").HoaxAssessment;
+  const text = String(analysis.input_text ?? "");
+  const sourceUrl = post.url ? String(post.url) : null;
+  const external = Array.isArray(rationale.external) ? rationale.external as import("@/lib/factcheck/types").ExternalFact[] : [];
+  const presented = presentDashboardFromAssessment({
+    text,
+    sourceUrl,
+    assessment: assessment as import("@/lib/model/classify").HoaxAssessment,
+    external,
+    sensitivity: Number(rationale.sensitivity ?? 0),
+    virality: Number(row.virality ?? 0),
+  });
   return {
     id: String(row.id),
-    riskScore,
-    band: riskBand(riskScore),
+    riskScore: presented.riskScore,
+    band: presented.band,
     status: String(row.status) as AlertStatus,
     virality: Number(row.virality ?? 0),
     hoaxScore: Number(analysis.hoax_score ?? 0),
-    unscored: assessmentIsUnscored(asRecord(asRecord(analysis.rationale).assessment)),
+    unscored: presented.verdict === "unscored" || assessmentIsUnscored(asRecord(rationale.assessment)),
     topicTags: Array.isArray(tags) ? tags.map(String) : [],
     aiFlag: Boolean(analysis.ai_flag),
     modelVersion: String(analysis.model_version ?? ""),
-    excerpt: String(analysis.input_text ?? "").slice(0, 180),
+    excerpt: text.slice(0, 180),
     platform: String(post.platform ?? ""),
     authorHash: post.author_handle_hash ? String(post.author_handle_hash) : null,
     postedAt: post.posted_at ? String(post.posted_at) : null,
     demo: Boolean(post.demo),
+    verdictLabel: presented.verdictLabel,
+    badgeLabel: presented.badge.label,
+    badgeTone: presented.badge.tone,
   };
 }
 
@@ -135,7 +151,7 @@ const LIST_SELECT = `
 export async function listAlerts(): Promise<AlertListItem[]> {
   await ensureReady();
   const rows = unwrap(await supabaseAdmin().from("alerts").select(LIST_SELECT).order("risk_score", { ascending: false }));
-  return (rows as Record<string, unknown>[]).map(mapAlert);
+  return (rows as Record<string, unknown>[]).map(mapAlert).sort((a, b) => b.riskScore - a.riskScore);
 }
 
 export async function velocitySeries() {
@@ -204,17 +220,28 @@ export async function getCase(alertId: string): Promise<CaseDetail | null> {
     comments: Number(metric.comments ?? 0),
   }));
   const ai = asRecord(assessment.ai);
+  const text = String(analysis.input_text ?? "");
+  const sourceUrl = post.url ? String(post.url) : null;
+  const external = Array.isArray(rationale.external) ? rationale.external as ExternalFact[] : [];
+  const presented = presentDashboardFromAssessment({
+    text,
+    sourceUrl,
+    assessment: rationale.assessment as import("@/lib/model/classify").HoaxAssessment,
+    external,
+    sensitivity: Number(rationale.sensitivity ?? 0),
+    virality: Number(record.virality ?? 0),
+  });
   return {
     alertId: String(record.id),
-    riskScore,
-    band,
+    riskScore: presented.riskScore,
+    band: presented.band,
     alertStatus: String(record.status) as AlertStatus,
     virality: Number(record.virality ?? 0),
     hoaxScore: Number(analysis.hoax_score ?? 0),
     sensitivity: Number(rationale.sensitivity ?? 0),
     modelVersion: String(analysis.model_version ?? ""),
     engine: String(assessment.engine ?? "heuristic"),
-    text: String(analysis.input_text ?? ""),
+    text,
     topics: Array.isArray(rationale.topics) ? rationale.topics as CaseDetail["topics"] : [],
     ai: {
       flagged: Boolean(ai.flagged),
@@ -243,18 +270,18 @@ export async function getCase(alertId: string): Promise<CaseDetail | null> {
         similarity: Number(item.similarity ?? 0),
       };
     })),
-    external: Array.isArray(rationale.external) ? rationale.external as ExternalFact[] : [],
+    external,
     metrics,
     platform: String(post.platform ?? ""),
     authorHash: post.author_handle_hash ? String(post.author_handle_hash) : null,
-    sourceUrl: post.url ? String(post.url) : null,
+    sourceUrl,
     demo: Boolean(post.demo),
     postedAt: post.posted_at ? String(post.posted_at) : null,
     caseId: caseRow.id ? String(caseRow.id) : null,
     caseTitle: caseRow.title ? String(caseRow.title) : null,
     caseStatus: caseRow.status ? String(caseRow.status) as CaseStatus : null,
     assignedTo: record.assigned_to ? String(record.assigned_to) : null,
-    recommendation: String(rationale.recommendation ?? recommendation(band)),
+    recommendation: String(rationale.recommendation ?? recommendation(presented.band)),
     analystNote: caseRow.analyst_note ? String(caseRow.analyst_note) : null,
     modelStatus: (assessment.modelStatus as CaseDetail["modelStatus"]) || "dilewati",
     timeline: [

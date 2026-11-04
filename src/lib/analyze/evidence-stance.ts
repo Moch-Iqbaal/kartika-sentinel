@@ -121,16 +121,48 @@ function markerFromKey(key: string): string | null {
   return null;
 }
 
-/** Penanda media asal teks. Kanal video dan domain artikel adalah asal, bukan penguat. */
+/** Byline portal di 3 baris awal, mis. "TEMPO.CO, Jakarta" atau "Kompas.com -". */
+function bylineMarker(text: string): string | null {
+  const head = text
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, 3)
+    .join("\n")
+    .toLowerCase();
+  const patterns: Array<[RegExp, string]> = [
+    [/\btempo\.co\b/, "tempo"],
+    [/\bkompas\.com\b/, "kompas"],
+    [/\bkompas\.tv\b/, "kompas"],
+    [/\bdetik\.com\b/, "detik"],
+    [/\bcnn\s*indonesia\b/, "cnnindonesia"],
+    [/\bantaranews\.com\b|\(antara\)|antara news/, "antara"],
+    [/\btribunnews\.com\b/, "tribun"],
+    [/\bliputan6\.com\b/, "liputan6"],
+    [/\brepublika\.co\.id\b/, "republika"],
+    [/\btvonenews\.com\b/, "tvone"],
+    [/\bmetrotvnews\.com\b/, "metrotv"],
+    [/\bcnbcindonesia\.com\b/, "cnbcindonesia"],
+  ];
+  for (const [pattern, marker] of patterns) {
+    if (pattern.test(head)) return marker;
+  }
+  return null;
+}
+
+/** Penanda media asal teks. Kanal, domain, dan byline adalah asal, bukan penguat. */
 export function originMarker(sourceUrl: string | null | undefined, text: string): string | null {
   const fromChannel = markerFromKey(channelKey(text));
   if (fromChannel) return fromChannel;
-  if (!sourceUrl) return null;
-  try {
-    return markerFromKey(new URL(sourceUrl).hostname.toLowerCase().replace(/[^a-z0-9]+/g, ""));
-  } catch {
-    return null;
+  if (sourceUrl) {
+    try {
+      const fromHost = markerFromKey(new URL(sourceUrl).hostname.toLowerCase().replace(/[^a-z0-9]+/g, ""));
+      if (fromHost) return fromHost;
+    } catch {
+      // URL rusak bukan bukti.
+    }
   }
+  return bylineMarker(text);
 }
 
 
@@ -180,6 +212,7 @@ export function independentReports(
   options?: { contentPublishedAt?: string | null; now?: Date },
 ): IndependentReport[] {
   const origin = originMarker(sourceUrl, text);
+  const ownName = credibleLabel(sourceUrl, text);
   const now = options?.now ?? new Date();
   const contentPublishedAt = options?.contentPublishedAt ?? null;
   const found: IndependentReport[] = [];
@@ -195,6 +228,8 @@ export function independentReports(
     }
     const name = labelFromHost(host);
     if (!name || found.some((item) => item.name === name)) continue;
+    // Nama outlet sama dengan asal teks tidak pernah jadi penguat.
+    if (ownName && name.toLowerCase() === ownName.toLowerCase()) continue;
     const similarity = fact.similarity ?? 0;
     const publishedAt = fact.publishedAt ?? null;
     found.push({
