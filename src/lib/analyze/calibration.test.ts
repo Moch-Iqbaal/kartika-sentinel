@@ -57,6 +57,7 @@ test("kanal video sendiri bukan berita lain", () => {
     url: "https://www.tribunnews.com/nasional/insentif-mbg",
     rating: null,
     publisher: "Tribun",
+    similarity: 0.9,
   }]);
   assert.deepEqual(own, []);
   const other = independentReports(KOMPAS, KOMPAS_TEXT, [{
@@ -65,6 +66,7 @@ test("kanal video sendiri bukan berita lain", () => {
     url: "https://www.antaranews.com/berita/9/pemerintah-jelaskan-insentif",
     rating: null,
     publisher: "Antara",
+    similarity: 0.7,
   }]);
   assert.equal(other[0]?.name, "Antara");
 });
@@ -167,12 +169,14 @@ test("tempo sendiri tidak jadi penguat walau ada artikel tempo lain", () => {
     url: "https://www.tempo.co/politik/listyo-sigit-ditetapkan-tersangka",
     rating: null,
     publisher: "Tempo",
+    similarity: 0.8,
   }, {
     source: "CNN Indonesia",
     title: "Polri tetapkan Listyo tersangka",
     url: "https://www.cnnindonesia.com/nasional/listyo",
     rating: null,
     publisher: "CNN Indonesia",
+    similarity: 0.75,
   }]);
   assert.equal(own.some((item) => item.name === "Tempo"), false);
   assert.equal(own[0]?.name, "CNN Indonesia");
@@ -194,4 +198,28 @@ test("rumor X Divpropam tanpa penguat menjadi HOAKS", () => {
   assert.equal(text.headline, "Kemungkinan HOAKS");
   assert.match(text.sentences.join(" "), /Belum ada media atau sumber resmi lain yang memberitakan hal ini, jadi isinya belum bisa dipercaya/);
   assert.equal(text.confidence, "Rendah");
+});
+
+
+test("cnn artis tidak menguatkan rumor divpropam", () => {
+  const rumor = "Dikabarkan Divpropam memeriksa perwira. Kabarnya beredar di WA grup, Polri belum membantah.";
+  const weak = independentReports(null, rumor, [{
+    source: "CNN Indonesia",
+    title: "KPK Belum Terima Laporan Terkait Artis Inisial R di Kasus Rafael Alun",
+    url: "https://www.cnnindonesia.com/nasional/artis-inisial-r",
+    rating: null,
+    publisher: "CNN Indonesia",
+    similarity: 0.22,
+  }]);
+  assert.deepEqual(weak, []);
+  const strong = independentReports("https://www.tempo.co/politik/listyo", "Listyo Sigit tersangka penyadapan Prabowo", [{
+    source: "CNN Indonesia",
+    title: "Jenderal Listyo Sigit tersangka sadap Prabowo",
+    url: "https://www.cnnindonesia.com/nasional/listyo-sigit-tersangka",
+    rating: null,
+    publisher: "CNN Indonesia",
+    similarity: 0.72,
+    publishedAt: "2026-11-03",
+  }]);
+  assert.equal(strong[0]?.name, "CNN Indonesia");
 });

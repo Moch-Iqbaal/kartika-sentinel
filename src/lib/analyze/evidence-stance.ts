@@ -6,6 +6,7 @@
  */
 
 import { countsAsPrimary } from "../factcheck/recency";
+import { MATCH_MIN_SIMILARITY } from "../factcheck/threshold";
 
 export type EvidenceStance = "hoax" | "valid" | "none";
 
@@ -24,6 +25,11 @@ const CREDIBLE_HOSTS = [
   "mediaindonesia.com",
   "tvonenews.com",
   "cnbcindonesia.com",
+  "kumparan.com",
+  "suarasurabaya.net",
+  "suara.com",
+  "matranews.id",
+  "aktual.com",
 ];
 
 const NEWSROOM_MARKERS = [
@@ -39,6 +45,8 @@ const NEWSROOM_MARKERS = [
   "tribunnews",
   "tribun",
   "republika",
+  "kumparan",
+  "suara",
 ];
 
 export function evidenceStance(value: string | null | undefined): EvidenceStance {
@@ -75,6 +83,8 @@ function labelFromKey(key: string): string | null {
   if (key.includes("tribun")) return "Tribun";
   if (key.includes("republika")) return "Republika";
   if (key.includes("antara")) return "Antara";
+  if (key.includes("kumparan")) return "Kumparan";
+  if (key.includes("suara")) return "Suara";
   return null;
 }
 
@@ -231,6 +241,8 @@ export function independentReports(
     // Nama outlet sama dengan asal teks tidak pernah jadi penguat.
     if (ownName && name.toLowerCase() === ownName.toLowerCase()) continue;
     const similarity = fact.similarity ?? 0;
+    // Berita penguat harus cukup mirip; hindari CNN soal topik lain ikut terhitung.
+    if (similarity < MATCH_MIN_SIMILARITY) continue;
     const publishedAt = fact.publishedAt ?? null;
     found.push({
       name,
